@@ -5,7 +5,7 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { DEFAULT_OUTAGE_STATES, DEFAULT_POWER_THRESHOLD, normalizeConfig } from './model';
+import { DEFAULT_OUTAGE_STATES, normalizeConfig } from './model';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
@@ -30,7 +30,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', soc_reached_entities: 'SOC atteint',
         voltage_entity: 'Tension (V)', outage_entity: 'Alarme de coupure', outage_states: 'États de coupure',
         tariff_color_entity: 'Couleur tarifaire (Bleu / Blanc / Rouge)', sun_entity: 'Soleil',
-        power_threshold: 'Seuil des flèches de la batterie', animate: 'Animations',
+        power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
         loading: 'Chargement de l\'éditeur…',
     },
@@ -41,7 +41,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Charge (%)', power_entity: 'Power (W)', soc_reached_entities: 'SOC reached',
         voltage_entity: 'Voltage (V)', outage_entity: 'Outage alarm', outage_states: 'Outage states',
         tariff_color_entity: 'Tariff colour (Bleu / Blanc / Rouge)', sun_entity: 'Sun',
-        power_threshold: 'Threshold for the battery arrows', animate: 'Animations',
+        power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
         loading: 'Loading the editor…',
     },
@@ -55,11 +55,11 @@ export function editorLabel(lang: Lang, key: string): string {
 const HELPERS: Record<Lang, Record<string, string>> = {
     fr: {
         soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
-        power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓.',
+        power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓. 20 W si vide.',
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
-        power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow.',
+        power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow. 20 W when empty.',
     },
 };
 
@@ -86,6 +86,7 @@ export function editorSchema(lang: Lang): SchemaItem[] {
             schema: [
                 { name: 'soc_entity', selector: sensor() },
                 { name: 'power_entity', selector: sensor() },
+                { name: 'power_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'soc_reached_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
             ],
         },
@@ -103,7 +104,6 @@ export function editorSchema(lang: Lang): SchemaItem[] {
             schema: [
                 { name: 'tariff_color_entity', selector: sensor() },
                 { name: 'sun_entity', selector: { entity: { domain: 'sun' } } },
-                { name: 'power_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'animate', selector: { boolean: {} } },
             ],
         },
@@ -122,7 +122,6 @@ export function editorSchema(lang: Lang): SchemaItem[] {
 export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
     return {
         production_max: DEFAULT_PRODUCTION_MAX,
-        power_threshold: DEFAULT_POWER_THRESHOLD,
         sun_entity: 'sun.sun',
         animate: true,
         ...config,
@@ -152,7 +151,7 @@ function prune(obj: Record<string, unknown>): Record<string, unknown> {
  */
 export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, unknown>): EnergySkyCardConfig {
     const merged = prune({ ...previous, ...value }) as Record<string, unknown>;
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, power_threshold: DEFAULT_POWER_THRESHOLD, sun_entity: 'sun.sun', animate: true };
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }

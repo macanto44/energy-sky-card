@@ -74,7 +74,7 @@ test/
 ## Behaviour notes
 
 - An unavailable daily sensor is left out of the sum; with none available the line reads "— kWh produits".
-- The battery complement « · SOC atteint » shows when any `battery.soc_reached_entities` entity is on; nothing otherwise. The 0.1.0 name `lock_entities` is renamed by `normalizeConfig` (model.ts), in the card and in the editor (which saves the new name).
+- The battery complement « · SOC atteint » shows when any `battery.soc_reached_entities` entity is on; nothing otherwise. The 0.1.0 names (`battery.lock_entities`, top-level `power_threshold`, now `battery.power_threshold`) are moved by `normalizeConfig` (model.ts), in the card and in the editor (which saves the new name).
 - Power entities in kW / MW and energy entities in Wh / MWh are converted from their `unit_of_measurement`.
 
 ## Sizing

@@ -75,6 +75,7 @@ tap_action:
 | `daily_production_entities` | — | Compteurs journaliers (kWh ; Wh converti), additionnés. Sans eux, pas de ligne « kWh produits ». |
 | `battery.soc_entity` | — | Charge de la batterie (%). Sans elle, pas de case Batterie. |
 | `battery.power_entity` | — | Puissance batterie (W), positive en charge : flèches ↑ / ↓. |
+| `battery.power_threshold` | `20` | En dessous de cette puissance (W), la batterie est au repos : pas de flèche. (Avant 0.1.2 : `power_threshold` au premier niveau, toujours accepté.) |
 | `battery.soc_reached_entities` | — | Une ou plusieurs entités `on` / `off` (`input_boolean`, `binary_sensor`, `switch`) qui disent que la batterie a atteint sa charge cible. Si l'une est `on`, la case affiche « · SOC atteint » ; sinon rien. Sans elles, jamais de mention. (Avant 0.1.2 : `lock_entities`, toujours accepté.) |
 | `grid.power_entity` | — | Puissance réseau (W), positive à l'achat. |
 | `grid.voltage_entity` | — | Tension réseau (V). |
@@ -84,7 +85,6 @@ tap_action:
 | `tariff_color_entity` | — | Couleur tarifaire du jour (`Bleu`, `Blanc`, `Rouge`). Inconnue : Bleu. |
 | `tariff_palettes` | voir plus bas | Remplace ou ajoute des palettes (YAML seulement). |
 | `sun_entity` | `sun.sun` | `below_horizon` : la nuit. |
-| `power_threshold` | `20` | Seuil (W) des flèches ↑ / ↓ de la batterie. |
 | `animate` | `true` | `false` coupe toutes les animations. |
 | `tap_action`, `hold_action`, `double_tap_action` | plus d'infos sur la production | Les actions natives de Home Assistant (`navigate`, `more-info`, `perform-action`, `url`, `none`…). |
 
@@ -161,6 +161,7 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `production_max` | `6000` | Power (W) at which the halo is strongest. |
 | `daily_production_entities` | — | Daily energy meters (kWh), summed. |
 | `battery.soc_entity` / `power_entity` | — | SOC (%), power (W, positive when charging). |
+| `battery.power_threshold` | `20` | Below this power (W) the battery is idle: no ↑ / ↓ arrow. Before 0.1.2: top-level `power_threshold`, still accepted. |
 | `battery.soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) saying the battery has reached its target charge: when any is on, the cell reads "· SOC reached". E.g. a template `binary_sensor` with `{{ states('sensor.battery_soc') \| float(0) >= 95 }}`. Before 0.1.2: `lock_entities`, still accepted. |
 | `grid.power_entity` / `voltage_entity` / `outage_entity` | — | Power (W, positive when importing), voltage (V), outage alarm. |
 | `grid.outage_states` | `[warning, alarm]` | States of `outage_entity` that mean an outage. |
@@ -168,7 +169,6 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `tariff_color_entity` | — | Today's tariff colour (`Bleu`, `Blanc`, `Rouge`); unknown is Bleu. |
 | `tariff_palettes` | see above | Three colours per tariff, top to bottom (YAML only). |
 | `sun_entity` | `sun.sun` | `below_horizon` means night. |
-| `power_threshold` | `20` | Threshold (W) for the battery ↑ / ↓ arrows. |
 | `animate` | `true` | `false` turns every animation off. |
 | `tap_action`, `hold_action`, `double_tap_action` | more-info of production | Home Assistant's own actions. `navigate` to `'#my-popup'` opens a Bubble Card pop-up. |
 

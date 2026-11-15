@@ -41,8 +41,8 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     if (c.animate !== undefined && typeof c.animate !== 'boolean') {
         throw configError('animate doit valoir true ou false', 'animate must be true or false');
     }
-    for (const name of ['production_max', 'power_threshold'] as const) {
-        const value = c[name];
+    const numbers: [string, unknown][] = [['production_max', c.production_max], ['battery.power_threshold', c.battery?.power_threshold]];
+    for (const [name, value] of numbers) {
         if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
             throw configError(`${name} doit être un nombre positif`, `${name} must be a positive number`);
         }

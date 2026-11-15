@@ -57,6 +57,13 @@ describe('battery', () => {
         expect(metric(view(), 'battery')).toMatchObject({ extra: '', extraShort: '' });
     });
 
+    it('still reads the 0.1.0 top-level power_threshold', () => {
+        const { power_threshold, ...battery } = FULL_CONFIG.battery!;
+        const config = normalizeConfig({ ...FULL_CONFIG, battery, power_threshold: 1000 });
+        expect(metric(view({ 'sensor.victron_system_battery_power': 500 }, config), 'battery').value).toBe(`25${nb}%`);
+        expect(metric(view({ 'sensor.victron_system_battery_power': 1500 }, config), 'battery').value).toBe(`25${nb}%${nb}↑`);
+    });
+
     it('still reads the 0.1.0 name, battery.lock_entities', () => {
         const { soc_reached_entities, ...battery } = FULL_CONFIG.battery!;
         const config = normalizeConfig({ ...FULL_CONFIG, battery: { ...battery, lock_entities: soc_reached_entities } });

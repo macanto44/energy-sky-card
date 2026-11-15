@@ -10,15 +10,20 @@ export const DEFAULT_POWER_THRESHOLD = 20;
 export const DEFAULT_OUTAGE_STATES = ['warning', 'alarm'];
 
 /**
- * The config under today's option names: battery.lock_entities (0.1.0–0.1.1)
- * becomes battery.soc_reached_entities. A config already using the new name
- * keeps it and drops the old one.
+ * The config under today's option names (0.1.0–0.1.1 names still work):
+ * battery.lock_entities becomes battery.soc_reached_entities, and the
+ * top-level power_threshold becomes battery.power_threshold. Where both
+ * names are set, the new one wins and the old one is dropped.
  */
 export function normalizeConfig<T extends Partial<EnergySkyCardConfig>>(config: T): T {
-    const battery = config.battery;
-    if (!battery || !('lock_entities' in battery)) return config;
-    const { lock_entities, ...rest } = battery;
-    return { ...config, battery: { ...rest, soc_reached_entities: rest.soc_reached_entities ?? lock_entities } };
+    const hasOldThreshold = 'power_threshold' in config;
+    const hasOldLocks = !!config.battery && 'lock_entities' in config.battery;
+    if (!hasOldThreshold && !hasOldLocks) return config;
+    const { power_threshold, ...top } = config as T & { power_threshold?: number };
+    const { lock_entities, ...battery } = (config.battery ?? {}) as NonNullable<EnergySkyCardConfig['battery']> & { lock_entities?: string[] };
+    if (hasOldLocks) battery.soc_reached_entities ??= lock_entities;
+    if (hasOldThreshold) battery.power_threshold ??= power_threshold;
+    return { ...top, battery } as T;
 }
 
 export type MetricKey = 'battery' | 'grid' | 'voltage' | 'tomorrow';
@@ -151,7 +156,7 @@ function tomorrowMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: N
 
 export function buildView(config: EnergySkyCardConfig, hass: HomeAssistant): CardView {
     const loc = numberLocale(hass);
-    const threshold = config.power_threshold ?? DEFAULT_POWER_THRESHOLD;
+    const threshold = config.battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
     const context = config.daily_production_entities?.length
         ? localize(loc.lang, 'produced', { value: formatKWhValue(dailyProduction(config, hass), loc) })
         : undefined;

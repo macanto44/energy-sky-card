@@ -41,9 +41,9 @@ describe('schema', () => {
     it('covers every option except the palettes, with nested battery and grid', () => {
         expect(fields(editorSchema('fr'))).toEqual([
             './production_entity', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
-            'battery/soc_entity', 'battery/power_entity', 'battery/soc_reached_entities',
+            'battery/soc_entity', 'battery/power_entity', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
-            './tariff_color_entity', './sun_entity', './power_threshold', './animate',
+            './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
         ]);
     });
@@ -85,9 +85,9 @@ describe('the editor', () => {
     it('keeps the palettes, which only YAML sets', () => {
         const config = { ...FULL_CONFIG, tariff_palettes: { Bleu: ['#111111', '#222222', '#333333'] as [string, string, string] } };
         const { change, changes } = mount(config);
-        change({ power_threshold: 50 });
+        change({ battery: { ...FULL_CONFIG.battery, power_threshold: 50 } });
         expect(changes.at(-1)?.tariff_palettes).toEqual(config.tariff_palettes);
-        expect(changes.at(-1)?.power_threshold).toBe(50);
+        expect(changes.at(-1)?.battery?.power_threshold).toBe(50);
     });
 
     it('removes a cleared entity', () => {
@@ -104,6 +104,16 @@ describe('the « SOC atteint » option', () => {
         expect(form.computeLabel!({ name: 'soc_reached_entities' })).toBe('SOC atteint');
         expect(form.computeHelper!({ name: 'soc_reached_entities' })).toMatch(/affiche « · SOC atteint »/);
         expect(form.computeHelper!({ name: 'production_entity' })).toBeUndefined();
+    });
+
+    it('moves the old top-level power_threshold into battery on the next save', () => {
+        const old = { ...MINIMAL, power_threshold: 50, battery: { soc_entity: 'sensor.soc' } } as EnergySkyCardConfig;
+        const { form, change, changes } = mount(old);
+        expect(form.data?.battery).toEqual({ soc_entity: 'sensor.soc', power_threshold: 50 });
+        expect(form.data).not.toHaveProperty('power_threshold');
+        change({ animate: false });
+        expect(changes.at(-1)).toMatchObject({ battery: { soc_entity: 'sensor.soc', power_threshold: 50 } });
+        expect(changes.at(-1)).not.toHaveProperty('power_threshold');
     });
 
     it('moves the old battery.lock_entities to soc_reached_entities on the next save', () => {

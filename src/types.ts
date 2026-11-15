@@ -24,6 +24,8 @@ export interface EnergySkyCardConfig {
         power_entity?: string;
         /** Entities on when the battery has reached its target charge: « SOC atteint » */
         soc_reached_entities?: string[];
+        /** Below this power (W) the battery is idle: no ↑ / ↓ arrow */
+        power_threshold?: number;
         /** @deprecated 0.1.0–0.1.1 name of soc_reached_entities, still read */
         lock_entities?: string[];
     };
@@ -37,6 +39,7 @@ export interface EnergySkyCardConfig {
     tariff_color_entity?: string;
     tariff_palettes?: Record<string, [string, string, string]>;
     sun_entity?: string;
+    /** @deprecated 0.1.0–0.1.1 place of battery.power_threshold, still read */
     power_threshold?: number;
     animate?: boolean;
     tap_action?: Record<string, unknown>;

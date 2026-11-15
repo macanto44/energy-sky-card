@@ -24,6 +24,7 @@ export const FULL_CONFIG: EnergySkyCardConfig = {
     battery: {
         soc_entity: 'sensor.victron_system_battery_soc',
         power_entity: 'sensor.victron_system_battery_power',
+        power_threshold: 20,
         soc_reached_entities: ['input_boolean.verrou_batterie_manuel', 'input_boolean.ve_verrou_soc_actif', 'input_boolean.reserve_batterie_nuit', 'input_boolean.verrou_batterie_four'],
     },
     grid: {
@@ -35,7 +36,6 @@ export const FULL_CONFIG: EnergySkyCardConfig = {
     forecast_tomorrow_entity: 'sensor.energy_production_tomorrow_2',
     tariff_color_entity: 'sensor.edf_tempo_couleur_aujourd_hui',
     sun_entity: 'sun.sun',
-    power_threshold: 20,
 };
 
 /** The readings of brief annex B (14/11/2026) */
