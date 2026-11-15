@@ -40,6 +40,8 @@ export interface EnergySkyCardConfig {
     battery?: {
         soc_entity?: string;
         power_entity?: string;
+        /** The battery's temperature, shown after the charge: « 78 % ↑ · 24 °C » */
+        temperature_entity?: string;
         /** Entities on when the battery has reached its target charge: « SOC atteint » */
         soc_reached_entities?: string[];
         /** Below this power (W) the battery is idle: no ↑ / ↓ arrow */

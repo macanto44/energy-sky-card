@@ -76,6 +76,7 @@ test/
 
 - An unavailable daily sensor is left out of the sum; with none available the line reads "— kWh produits".
 - The battery complement « · SOC atteint » shows when any `battery.soc_reached_entities` entity is on; nothing otherwise. The 0.1.0 names (`battery.lock_entities`, top-level `power_threshold`, now `battery.power_threshold`) are moved by `normalizeConfig` (model.ts), in the card and in the editor (which saves the new name).
+- `battery.temperature_entity`: the temperature follows the charge in the battery value (« 78 % ↑ · 24 °C », the sensor's unit, rounded); left out without a reading.
 - Power entities in kW / MW and energy entities in Wh / MWh are converted from their `unit_of_measurement`.
 - `production_entity` is a string or a list (summed by `productionPower`, used by the hero and the halo). `grid.invert` / `battery.invert` flip the sensor's sign (`gridPower`, `batteryPower`).
 - Cells (`configuredCells` in model.ts): `cells` if set (≤ 4, built-in kinds deduplicated, free cells keyed `custom-<index>`), else the built-in ones whose entities are set. A free cell's name and icon are user text: written with textContent / setAttribute only. The editor shows them as four slots (`cell_1` … `cell_4`, plus `_entity` / `_name` / `_icon` for a free one) and writes `cells` only when they differ from the automatic choice.
@@ -83,7 +84,7 @@ test/
 
 ## Sizing
 
-`getGridOptions()` → 12 × 4 (248 px), min 6 × 3. Default spacing copies the prototype's (roomy, grid anchored to the bottom); `fit()` (on resize via ResizeObserver, and when the hero text changes) tries the roomy spacing with the hero at 56 / 48 / 40 px (`data-hero`), then the compact spacing (`data-compact`, for 3 rows / 184 px) at the same sizes, keeping the first where the hero line and the content don't overflow. A metric line still too wide switches the complements to their short form (`data-short-extra`: « SOC atteint » → « SOC ✓ »). Other lines end in an ellipsis. `npm run test:browser` checks that nothing overflows at 304 px (a 320 px phone) in French and English, extreme values included.
+`getGridOptions()` → 12 × 4 (248 px), min 6 × 3. Default spacing copies the prototype's (roomy, grid anchored to the bottom); `fit()` (on resize via ResizeObserver, and when the hero text changes) tries the roomy spacing with the hero at 56 / 48 / 40 px (`data-hero`), then the compact spacing (`data-compact`, for 3 rows / 184 px) at the same sizes, keeping the first where the hero line and the content don't overflow. A metric line still too wide switches the complements to their short form (`data-short-extra`: « SOC atteint » → « SOC ✓ »); still too wide, a cell with a tight form (`MetricView.tight`, the battery with a temperature) uses it (`data-tight-extra`: « 100 % ↓ · -13° ✓ », narrow spaces). Other lines end in an ellipsis. `npm run test:browser` checks that nothing overflows at 304 px (a 320 px phone) in French and English, extreme values included.
 
 ## Motion
 

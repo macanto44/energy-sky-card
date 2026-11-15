@@ -24,10 +24,10 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
-function mount(): EnergySkyCard {
+function mount(config = FULL_CONFIG, states: Record<string, string | number> = ANNEX_B): EnergySkyCard {
     const card = document.createElement(CARD_NAME) as EnergySkyCard;
-    card.setConfig(FULL_CONFIG);
-    card.hass = makeHass(ANNEX_B);
+    card.setConfig(config);
+    card.hass = makeHass(states);
     document.body.appendChild(card);
     return card;
 }
@@ -102,6 +102,24 @@ describe('fit', () => {
         expect(card.hasAttribute('data-short-extra')).toBe(true);
         card.hass = makeHass(ANNEX_B);
         expect(card.hasAttribute('data-short-extra')).toBe(false);
+    });
+
+    it('goes to the tight battery form only when the short one is still too wide', () => {
+        const lineWidth = (el: HTMLElement) => {
+            if (!el.classList.contains('value')) return 0;
+            const host = (el.getRootNode() as ShadowRoot).host as HTMLElement;
+            return host.hasAttribute('data-tight-extra') ? 120 : 160;
+        };
+        Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get(this: HTMLElement) { return lineWidth(this); } });
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get(this: HTMLElement) { return this.classList.contains('value') ? 124 : 0; } });
+        const config = { ...FULL_CONFIG, battery: { ...FULL_CONFIG.battery, temperature_entity: 'sensor.bat_temp' } };
+        const card = mount(config, { ...ANNEX_B, 'sensor.bat_temp': 21, 'input_boolean.reserve_batterie_nuit': 'on' });
+        card.fit();
+        expect(card.hasAttribute('data-tight-extra')).toBe(true);
+        const line = card.shadowRoot!.querySelector('[data-metric="battery"] .value') as HTMLElement;
+        expect(line.hasAttribute('data-tight')).toBe(true);
+        expect(line.querySelector('.value-tight')!.textContent).toMatch(/^25.%\u202F·\u202F21°$/);
+        expect(card.shadowRoot!.querySelector('[data-metric="grid"] .value')!.hasAttribute('data-tight')).toBe(false);
     });
 
     it('re-fits when the hero text changes', () => {

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- `battery.temperature_entity`: the battery's temperature after its charge, « 78 % ↑ · 24 °C » (also in the editor's Battery block). On a cell too narrow, « 100 % ↓ · -13° ✓ ».
+
 ## [0.2.0] — 2026-11-15
 
 - `battery.invert` and `grid.invert`, for sensors that are positive when discharging or exporting.

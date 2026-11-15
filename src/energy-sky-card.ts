@@ -93,7 +93,7 @@ interface Refs {
     context: HTMLElement;
     contextFull: HTMLElement;
     contextShort: HTMLElement;
-    metrics: Map<MetricKey, { icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement }>;
+    metrics: Map<MetricKey, { icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement; valueTight: HTMLElement; extraTight: HTMLElement }>;
 }
 
 export class EnergySkyCard extends HTMLElement {
@@ -170,7 +170,7 @@ export class EnergySkyCard extends HTMLElement {
                     <div class="grid">${cells.map(cell => `
                         <div class="metric" data-metric="${cell.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
-                            <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span></div>
+                            <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span><span class="value-tight"></span><span class="extra extra-tight"></span></div>
                         </div>`).join('')}</div>
                 </div>
             </ha-card>`;
@@ -187,7 +187,7 @@ export class EnergySkyCard extends HTMLElement {
                 const icon = q('ha-icon', el);
                 // Set as an attribute, never in markup: a free cell's icon comes from the config
                 icon.setAttribute('icon', cell.kind === 'custom' ? cell.custom!.icon || CUSTOM_CELL_ICON : METRIC_ICONS[cell.kind]);
-                return [cell.key, { icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el) }];
+                return [cell.key, { icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el), valueTight: q('.value-tight', el), extraTight: q('.extra-tight', el) }];
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
@@ -207,6 +207,8 @@ export class EnergySkyCard extends HTMLElement {
      * Measured, so it holds for any size, value or language. Then a metric
      * line still too wide (« 100 % ↓ · SOC atteint » on a 320 px phone)
      * switches the complements to their short form (data-short-extra), and
+     * one still too wide to the tight form (data-tight-extra: « 100 % ↓ · -13° ✓ »),
+     * and
      * a context line too wide at night « Consommation » → « Conso. »
      * (data-short-context).
      */
@@ -235,9 +237,11 @@ export class EnergySkyCard extends HTMLElement {
         if (!this.refs) return;
         const tooWide = (l: HTMLElement) => l.scrollWidth > l.clientWidth + 1;
         this.removeAttribute('data-short-extra');
+        this.removeAttribute('data-tight-extra');
         this.removeAttribute('data-short-context');
         const lines = [...this.refs.metrics.values()].map(m => m.value.parentElement as HTMLElement);
         if (lines.some(tooWide)) this.setAttribute('data-short-extra', '');
+        if (lines.some(tooWide)) this.setAttribute('data-tight-extra', '');
         if (!this.refs.context.hidden && tooWide(this.refs.context)) this.setAttribute('data-short-context', '');
     }
 
@@ -270,6 +274,10 @@ export class EnergySkyCard extends HTMLElement {
             setText(el.value, metric.value);
             setText(el.extra, metric.extra);
             setText(el.extraShort, metric.extraShort);
+            // Only a cell with a tight form gets one (data-tight on its line)
+            setText(el.valueTight, metric.tight?.value ?? '');
+            setText(el.extraTight, metric.tight?.extra ?? '');
+            el.value.parentElement!.toggleAttribute('data-tight', !!metric.tight);
             if (metric.icon && el.icon.getAttribute('icon') !== metric.icon) el.icon.setAttribute('icon', metric.icon);
         }
         // A longer hero ("12,3 kW" after "8 W") or metric may not fit any more

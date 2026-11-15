@@ -22,6 +22,35 @@ function mount(config: EnergySkyCardConfig, states: Record<string, any> = ANNEX_
     return card;
 }
 
+describe('battery temperature', () => {
+    const withTemp = { ...FULL_CONFIG, battery: { ...FULL_CONFIG.battery, temperature_entity: 'sensor.bat_temp' } };
+    const bat = (state: string | number, unit = '°C', extra: Record<string, any> = {}) =>
+        metric(withTemp, { ...ANNEX_B, ...extra, 'sensor.bat_temp': entity('sensor.bat_temp', state, { unit_of_measurement: unit }) }, 'battery');
+
+    it('follows the charge and arrow, after a dot, rounded to the degree', () => {
+        expect(bat(23.6)?.value).toBe(`25${nb}% · 24 °C`);
+        expect(bat(-3.4, '°C', { 'sensor.victron_system_battery_power': 900 })?.value).toMatch(/^25.%.↑ · -3 °C$/);
+        expect(bat(75.2, '°F')?.value).toBe(`25${nb}% · 75 °F`);
+    });
+
+    it('keeps the SOC complement after it', () => {
+        const v = bat(20, '°C', { 'input_boolean.ve_verrou_soc_actif': 'on' });
+        expect(v?.value).toBe(`25${nb}% · 20 °C`);
+        expect(v?.extra).toBe(' · SOC atteint');
+        expect(v?.tight).toEqual({ value: `25${nb}%\u202F·\u202F20°`, extra: '\u202F✓' });
+    });
+
+    it('is left out without a reading or without the option', () => {
+        expect(bat('unavailable')?.value).toBe(`25${nb}%`);
+        expect(bat('unavailable')?.tight).toBeUndefined();
+        expect(metric(FULL_CONFIG, ANNEX_B, 'battery')?.value).toBe(`25${nb}%`);
+    });
+
+    it('is tracked', () => {
+        expect(trackedEntities(withTemp)).toContain('sensor.bat_temp');
+    });
+});
+
 describe('sign of the battery and grid sensors', () => {
     it('reads the grid as positive when importing, or flipped with grid.invert', () => {
         expect(metric(FULL_CONFIG, ANNEX_B, 'grid')?.value).toBe(`748${nb}W`);

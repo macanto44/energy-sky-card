@@ -57,3 +57,9 @@ export function formatPercent(value: number | undefined, locale: NumberLocale): 
     if (value === undefined || !Number.isFinite(value)) return NO_VALUE;
     return `${formatNumber(Math.round(value), 0, locale)}${locale.lang === 'fr' ? ' ' : ''}%`;
 }
+
+/** A temperature rounded to the degree, with its sensor's unit: "24 °C" */
+export function formatTemperature(degrees: number | undefined, unit: string, locale: NumberLocale): string {
+    if (degrees === undefined || !Number.isFinite(degrees)) return NO_VALUE;
+    return `${formatNumber(Math.round(degrees), 0, locale)} ${unit || '°C'}`;
+}

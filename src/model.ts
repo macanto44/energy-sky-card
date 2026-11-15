@@ -4,7 +4,7 @@
 import type { CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 import { energyKWh, numericState, powerW } from './utils';
 import { localize, numberLocale, type NumberLocale } from './localize';
-import { NO_VALUE, formatEnergy, joinParts, formatKWhValue, formatNumber, formatPercent, formatPower, formatVoltage, powerParts, type ValueParts } from './format';
+import { NO_VALUE, formatEnergy, joinParts, formatKWhValue, formatNumber, formatPercent, formatPower, formatTemperature, formatVoltage, powerParts, type ValueParts } from './format';
 
 export const DEFAULT_POWER_THRESHOLD = 20;
 export const DEFAULT_OUTAGE_STATES = ['warning', 'alarm'];
@@ -48,6 +48,11 @@ export interface MetricView {
     extra: string;
     /** The complement for a cell too narrow for it, " · SOC ✓" */
     extraShort: string;
+    /**
+     * The last resort for a cell still too wide with the short complement:
+     * « 100 % ↓ · -13° ✓ », narrow spaces (a battery with its temperature)
+     */
+    tight?: { value: string; extra: string };
     /** The icon, for a free cell (its config's, else its entity's) */
     icon?: string;
 }
@@ -136,7 +141,7 @@ export function trackedEntities(config: EnergySkyCardConfig): string[] {
         config.consumption_entity,
         ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
         ...(config.daily_production_entities ?? []),
-        config.battery?.soc_entity, config.battery?.power_entity, ...(config.battery?.soc_reached_entities ?? []),
+        config.battery?.soc_entity, config.battery?.power_entity, config.battery?.temperature_entity, ...(config.battery?.soc_reached_entities ?? []),
         config.grid?.power_entity, config.grid?.voltage_entity, config.grid?.outage_entity,
         config.forecast_tomorrow_entity, config.tariff_color_entity,
         config.sun_entity ?? 'sun.sun',
@@ -185,12 +190,17 @@ function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Nu
     const dir = direction(batteryPower(config, hass), threshold);
     const arrow = soc === undefined ? '' : dir === 'up' ? ' ↑' : dir === 'down' ? ' ↓' : '';
     const reached = socReached(config, hass);
+    const tempEntity = hass.states[config.battery?.temperature_entity ?? ''];
+    const temp = numericState(tempEntity);
+    const charge = formatPercent(soc, loc) + arrow;
+    const unit = String(tempEntity?.attributes.unit_of_measurement ?? '');
     return {
         key: 'battery',
         label: localize(loc.lang, 'battery'),
-        value: formatPercent(soc, loc) + arrow,
+        value: temp === undefined ? charge : `${charge} · ${formatTemperature(temp, unit, loc)}`,
         extra: reached ? ` · ${localize(loc.lang, 'soc_reached')}` : '',
         extraShort: reached ? ` · ${localize(loc.lang, 'soc_reached_short')}` : '',
+        ...(temp === undefined ? {} : { tight: { value: `${charge}\u202F·\u202F${formatNumber(Math.round(temp), 0, loc)}°`, extra: reached ? '\u202F✓' : '' } }),
     };
 }
 

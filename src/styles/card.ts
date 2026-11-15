@@ -170,4 +170,8 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .context-short, :host([data-short-context]) .context-full { display: none; }
 :host([data-short-context]) .context-short { display: inline; }
 :host([data-short-extra]) .extra-short { display: inline; }
+/* The last resort, for a cell that has it (the battery with its temperature): « 100 % ↓ · -13° ✓ » */
+.value-tight, .extra-tight,
+:host([data-tight-extra]) [data-tight] .value-main, :host([data-tight-extra]) [data-tight] .extra { display: none; }
+:host([data-tight-extra]) [data-tight] .value-tight, :host([data-tight-extra]) [data-tight] .extra-tight { display: inline; }
 `;

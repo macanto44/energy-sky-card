@@ -75,6 +75,7 @@ tap_action:
 | `daily_production_entities` | — | Compteurs journaliers (kWh ; Wh converti), additionnés. Sans eux, pas de ligne « kWh produits ». |
 | `battery.soc_entity` | — | Charge de la batterie (%). Sans elle, pas de case Batterie. |
 | `battery.power_entity` | — | Puissance batterie (W), positive en charge : flèches ↑ / ↓. |
+| `battery.temperature_entity` | — | Température de la batterie, affichée après la charge : « 78 % ↑ · 24 °C ». Sur une carte étroite, « 78 % ↑ · 24° ». |
 | `battery.invert` | `false` | `true` si votre capteur est positif en **décharge** (Huawei, SolarEdge… selon l'intégration). |
 | `battery.power_threshold` | `20` | En dessous de cette puissance (W), la batterie est au repos : pas de flèche. (Avant 0.1.2 : `power_threshold` au premier niveau, toujours accepté.) |
 | `battery.soc_reached_entities` | — | Une ou plusieurs entités `on` / `off` (`input_boolean`, `binary_sensor`, `switch`) qui disent que la batterie a atteint sa charge cible. Si l'une est `on`, la case affiche « · SOC atteint » ; sinon rien. Sans elles, jamais de mention. (Avant 0.1.2 : `lock_entities`, toujours accepté.) |
@@ -187,6 +188,7 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `production_max` | `6000` | Power (W) at which the halo is strongest. |
 | `daily_production_entities` | — | Daily energy meters (kWh), summed. |
 | `battery.soc_entity` / `power_entity` | — | SOC (%), power (W, positive when charging). |
+| `battery.temperature_entity` | — | Battery temperature, shown after the charge: "78% ↑ · 24 °C" ("78% ↑ · 24°" on a narrow card). |
 | `battery.invert` / `grid.invert` | `false` | `true` when your sensor is positive when discharging / exporting (the card expects positive when charging / importing). |
 | `battery.power_threshold` | `20` | Below this power (W) the battery is idle: no ↑ / ↓ arrow. Before 0.1.2: top-level `power_threshold`, still accepted. |
 | `battery.soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) saying the battery has reached its target charge: when any is on, the cell reads "· SOC reached". E.g. a template `binary_sensor` with `{{ states('sensor.battery_soc') \| float(0) >= 95 }}`. Before 0.1.2: `lock_entities`, still accepted. |
