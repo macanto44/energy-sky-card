@@ -12,7 +12,7 @@ export interface Star {
 }
 
 export const FIXED_STARS = 24;
-export const TWINKLING_STARS = 10;
+export const TWINKLING_STARS = 14;
 export const STAR_SEED = 0x5eed;
 
 /** mulberry32: a tiny deterministic PRNG */
@@ -60,5 +60,5 @@ export function generateStars(seed = STAR_SEED): Star[] {
 export function starsMarkup(stars: Star[] = generateStars()): string {
     return stars.map(s =>
         `<i class="star${s.twinkle ? ' twinkle' : ''}" style="left:${s.x}%;top:${s.y}%;width:${s.size}px;height:${s.size}px;animation-delay:-${s.delay}s"></i>`,
-    ).join('');
+    ).join('') + '<i class="shooting"></i>';
 }

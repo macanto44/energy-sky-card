@@ -116,11 +116,12 @@ describe('background', () => {
         expect(haCard.style.getPropertyValue('--esc-halo-alpha')).toBe('0.275');
     });
 
-    it('turns to night, with 34 stars', () => {
+    it('turns to night, with 38 stars and a shooting star', () => {
         const card = mount();
         expect(card.dataset.mode).toBe('night');
-        expect(card.shadowRoot!.querySelectorAll('.layer.night .star').length).toBe(34);
-        expect(card.shadowRoot!.querySelectorAll('.star.twinkle').length).toBe(10);
+        expect(card.shadowRoot!.querySelectorAll('.layer.night .star').length).toBe(38);
+        expect(card.shadowRoot!.querySelectorAll('.layer.night .shooting').length).toBe(1);
+        expect(card.shadowRoot!.querySelectorAll('.star.twinkle').length).toBe(14);
     });
 
     it('rejects a palette that is not three hex colours', () => {

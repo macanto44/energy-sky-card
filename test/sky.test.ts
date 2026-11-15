@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    DEFAULT_PALETTES, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, composite, computeBackground, contrastRatio,
+    DEFAULT_PALETTES, HALO_BREATHE_PEAK, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, composite, computeBackground, contrastRatio,
     gradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
 } from '../src/sky';
 import { generateStars, inTextZone, starsMarkup, FIXED_STARS, TWINKLING_STARS } from '../src/stars';
@@ -67,8 +67,8 @@ describe('halo', () => {
  * the context line 36–50 %, labels 57–64 % and 78–86 %, values 64–76 % and
  * 85–98 %. Thresholds: values and
  * the context line 4.5:1; labels (drawn at 75 % opacity) 3:1; the hero,
- * 56 px large text, 3:1 (WCAG 1.4.3), with the halo at full strength
- * reaching it at a fifth of its alpha (it is centred at 88 % 12 %, beyond
+ * 56 px large text, 3:1 (WCAG 1.4.3), with the halo at full strength and
+ * at the peak of its breath (12 % larger) reaching it at a quarter of its alpha (it is centred at 88 % 12 %, beyond
  * the hero's right end).
  */
 const WHITE: Rgb = [1, 1, 1];
@@ -77,7 +77,7 @@ const minAt = (ys: number[], f: (y: number) => number) => Math.min(...ys.map(f))
 function contrasts(palette: Palette) {
     const at = (y: number) => gradientAt(palette, y);
     return {
-        hero: minAt([0.076, 0.2, 0.377], y => contrastRatio(WHITE, composite(at(y), HALO_RGB, HALO_MAX_ALPHA * 0.2))),
+        hero: minAt([0.076, 0.2, 0.377], y => contrastRatio(WHITE, composite(at(y), HALO_RGB, HALO_MAX_ALPHA * HALO_BREATHE_PEAK * 0.25))),
         context: minAt([0.36, 0.43, 0.497], y => contrastRatio(WHITE, at(y))),
         label: minAt([0.57, 0.643, 0.78, 0.855], y => contrastRatio(composite(at(y), WHITE, 0.75), at(y))),
         value: minAt([0.643, 0.763, 0.852, 0.975], y => contrastRatio(WHITE, at(y))),
@@ -112,7 +112,7 @@ describe('stars', () => {
         expect(starsMarkup()).toBe(starsMarkup());
     });
 
-    it('count 24 fixed and 10 twinkling, 1.4 to 2.2 px, inside the card', () => {
+    it('count 24 fixed and 14 twinkling, 1.4 to 2.2 px, inside the card', () => {
         const stars = generateStars();
         expect(stars.filter(s => !s.twinkle).length).toBe(FIXED_STARS);
         expect(stars.filter(s => s.twinkle).length).toBe(TWINKLING_STARS);

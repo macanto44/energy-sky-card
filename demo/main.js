@@ -1,4 +1,4 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, bare, probe)
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, bare, probe, seek)
 import { SCENARIOS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
@@ -23,6 +23,17 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     fig.querySelector('.cell').appendChild(card);
     root.appendChild(fig);
   }
+}
+// ?seek=ms: freeze every animation at that time (to screenshot a moment of it)
+if (params.has('seek')) {
+  setTimeout(() => {
+    for (const card of document.querySelectorAll('energy-sky-card')) {
+      for (const a of card.shadowRoot.querySelector('ha-card').getAnimations({ subtree: true })) {
+        a.pause();
+        a.currentTime = Number(params.get('seek'));
+      }
+    }
+  }, 1000);
 }
 // ?probe: report each card's motion state and its running animations (for headless checks)
 if (params.has('probe')) {

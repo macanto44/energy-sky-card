@@ -24,6 +24,11 @@ export const DEFAULT_TARIFF = 'Bleu';
 export const NIGHT_PALETTE: Palette = ['#1d2b4d', '#121b36', '#0b1026'];
 export const HALO_RGB: Rgb = [255 / 255, 214 / 255, 140 / 255];
 export const HALO_MAX_ALPHA = 0.55;
+/**
+ * The breathing halo peaks at this multiple of its alpha, 12 % larger: it
+ * breathes down (×0.55) rather than up, so the hero keeps its 3:1 contrast
+ */
+export const HALO_BREATHE_PEAK = 1;
 export const DEFAULT_PRODUCTION_MAX = 6000;
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
