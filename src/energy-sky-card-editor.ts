@@ -38,6 +38,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         tariff_color_entity: 'Couleur tarifaire (Bleu / Blanc / Rouge)', sun_entity: 'Soleil',
         power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
+        cell_tap: 'Appui sur une case', cell_tap_auto: 'Automatique', cell_tap_more_info: 'Ouvre l\'entité de la case', cell_tap_card: 'Comme la carte',
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
@@ -55,6 +56,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         tariff_color_entity: 'Tariff colour (Bleu / Blanc / Rouge)', sun_entity: 'Sun',
         power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
+        cell_tap: 'Tap on a cell', cell_tap_auto: 'Automatic', cell_tap_more_info: 'Opens the cell\'s entity', cell_tap_card: 'Same as the card',
         loading: 'Loading the editor…',
     },
 };
@@ -76,6 +78,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
         cell_1: 'Les cases du bas, dans l\'ordre. « Libre » affiche n\'importe quelle entité.',
+        cell_tap: 'Automatique : un appui sur une case ouvre son entité, sauf si un « Appui » est choisi pour la carte, qui s\'applique alors partout.',
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
@@ -86,6 +89,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
         cell_1: 'The bottom cells, in order. "Free" shows any entity.',
+        cell_tap: 'Automatic: a tap on a cell opens its entity, unless a Tap action is set for the card, which then applies everywhere.',
     },
 };
 
@@ -164,6 +168,7 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             name: '', type: 'expandable', flatten: true, title: t('actions'), icon: 'mdi:gesture-tap',
             schema: [
                 { name: 'tap_action', selector: { ui_action: {} } },
+                { name: 'cell_tap', selector: { select: { mode: 'dropdown', options: (['auto', 'more-info', 'card'] as const).map(value => ({ value, label: t(`cell_tap_${value.replace('-', '_')}`) })) } } },
                 { name: 'hold_action', selector: { ui_action: {} } },
                 { name: 'double_tap_action', selector: { ui_action: {} } },
             ],
@@ -217,6 +222,7 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         sun_entity: 'sun.sun',
         animate: true,
         night_hero: 'production',
+        cell_tap: 'auto',
         ...config,
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
         ...cellSlots(config),
@@ -262,7 +268,7 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
         if (b?.invert === false) delete b.invert;
         if (b && !Object.keys(b).length) delete merged[block];
     }
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production' };
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', cell_tap: 'auto' };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }

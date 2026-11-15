@@ -108,6 +108,8 @@ ha-card {
 :host([data-compact]) .grid { padding-top: 7px; row-gap: 4px; }
 :host([data-compact]) .value { margin-top: 0; }
 ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+/* A cell that opens its own entity (cell_tap) */
+.metric[data-cell-target]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
 .content {
     position: relative;
     z-index: 1;

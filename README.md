@@ -44,6 +44,8 @@ Avant 2026.11, la même chose se fait dans HACS : **⋮ → Dépôts personnalis
 
 ## Configuration
 
+Ajoutée depuis le sélecteur de cartes, elle se pré-remplit avec les capteurs du **tableau de bord Énergie** (production, batterie, réseau, et les capteurs des mêmes appareils : charge, température, tension, production du jour, prévision de demain) et la couleur Tempo du jour si une entité la donne. Vérifiez le sens des puissances (voir plus bas).
+
 La carte se configure dans l'éditeur visuel (tout sauf les palettes) ou en YAML :
 
 ```yaml
@@ -95,6 +97,7 @@ tap_action:
 | `sun_entity` | `sun.sun` | `below_horizon` : la nuit. |
 | `animate` | `true` | `false` coupe toutes les animations. |
 | `tap_action`, `hold_action`, `double_tap_action` | plus d'infos sur la production | Les actions natives de Home Assistant (`navigate`, `more-info`, `perform-action`, `url`, `none`…). |
+| `cell_tap` | `auto` | Un appui sur une case : `more-info` ouvre l'entité de la case (Batterie → la charge, Réseau → la puissance…), `card` fait l'action de la carte. `auto` : l'entité de la case, sauf si la carte a un `tap_action`, qui s'applique alors partout. |
 
 ### Le sens des puissances
 
@@ -182,6 +185,8 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 ## Configuration
 
+Added from the card picker, it fills itself in from the **Energy dashboard** (production, battery, grid, and the sensors on the same devices: charge, temperature, voltage, energy today, tomorrow's forecast) and today's Tempo colour when an entity gives it. Check the power signs (`invert`).
+
 Use the visual editor (everything but the palettes) or YAML. The options are those of the table above:
 
 | Option | Default | Description |
@@ -205,6 +210,7 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `sun_entity` | `sun.sun` | `below_horizon` means night. |
 | `animate` | `true` | `false` turns every animation off. |
 | `tap_action`, `hold_action`, `double_tap_action` | more-info of production | Home Assistant's own actions. `navigate` to `'#my-popup'` opens a Bubble Card pop-up. |
+| `cell_tap` | `auto` | A tap on a cell: `more-info` opens the cell's entity (Battery → its charge, Grid → its power…), `card` runs the card's tap action. `auto`: the cell's entity, unless the card has a `tap_action`, which then applies everywhere. |
 
 The default palettes are slightly darker at the top than the original prototype's, so white text meets WCAG contrast where it sits (tested).
 

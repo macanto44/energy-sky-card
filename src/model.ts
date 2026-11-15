@@ -101,6 +101,24 @@ export function configuredCells(config: EnergySkyCardConfig): CellSpec[] {
     });
 }
 
+/** The entity a tap on a cell opens: the one its value comes from */
+export function cellEntity(config: EnergySkyCardConfig, cell: CellSpec): string | undefined {
+    switch (cell.kind) {
+        case 'battery': return config.battery?.soc_entity;
+        case 'grid': return config.grid?.power_entity ?? config.grid?.outage_entity;
+        case 'voltage': return config.grid?.voltage_entity ?? config.grid?.outage_entity;
+        case 'tomorrow': return config.forecast_tomorrow_entity;
+        case 'consumption': return config.consumption_entity;
+        case 'custom': return cell.custom?.entity;
+    }
+}
+
+/** Whether a tap on a cell opens its entity's dialog rather than running the card's tap action */
+export function cellTapOpensEntity(config: Pick<EnergySkyCardConfig, 'cell_tap' | 'tap_action'>): boolean {
+    if (config.cell_tap === 'card') return false;
+    return config.cell_tap === 'more-info' || config.tap_action === undefined;
+}
+
 /** The cells' keys, in grid order */
 export function configuredMetrics(config: EnergySkyCardConfig): MetricKey[] {
     return configuredCells(config).map(c => c.key);

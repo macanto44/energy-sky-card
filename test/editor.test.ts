@@ -46,7 +46,7 @@ describe('schema', () => {
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './cell_1', './cell_2', './cell_3', './cell_4',
             './tariff_color_entity', './sun_entity', './animate',
-            './tap_action', './hold_action', './double_tap_action',
+            './tap_action', './cell_tap', './hold_action', './double_tap_action',
         ]);
     });
 

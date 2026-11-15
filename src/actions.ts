@@ -72,8 +72,10 @@ class GestureListener {
     private holdFired = false;
     private holdTimer?: ReturnType<typeof setTimeout>;
     private pendingTap?: ReturnType<typeof setTimeout>;
+    /** Where the press started (a cell may have its own action) */
+    private path: EventTarget[] = [];
 
-    constructor(private el: HTMLElement, private host: HTMLElement, private config: () => ActionsConfig) {
+    constructor(private el: HTMLElement, private host: HTMLElement, private resolve: (path: EventTarget[]) => ActionsConfig) {
         el.addEventListener('pointerdown', e => this.down(e));
         el.addEventListener('pointermove', e => this.move(e));
         el.addEventListener('pointerup', () => this.up());
@@ -81,14 +83,19 @@ class GestureListener {
         el.addEventListener('pointerleave', () => this.reset());
         el.addEventListener('keydown', e => this.key(e));
         el.addEventListener('contextmenu', e => {
-            if (active(this.config().hold_action)) e.preventDefault();
+            if (active(this.resolve(e.composedPath()).hold_action)) e.preventDefault();
         });
+    }
+
+    private config(): ActionsConfig {
+        return this.resolve(this.path);
     }
 
     private down(e: PointerEvent): void {
         if (e.button !== 0) return;
         this.reset();
         this.origin = { x: e.clientX, y: e.clientY };
+        this.path = e.composedPath();
         this.holdFired = false;
         if (!active(this.config().hold_action)) return;
         this.holdTimer = setTimeout(() => {
@@ -136,18 +143,26 @@ class GestureListener {
         }, DOUBLE_TAP_MS);
     }
 
+    /** Enter or Space on the card, or on a cell that is a button of its own */
     private key(e: KeyboardEvent): void {
-        if (e.target !== this.el || (e.key !== 'Enter' && e.key !== ' ')) return;
-        if (!tapIsActive(this.config())) return;
+        const target = e.target as HTMLElement;
+        const own = target === this.el || (target.dataset?.cellTarget !== undefined && this.el.contains(target));
+        if (!own || (e.key !== 'Enter' && e.key !== ' ')) return;
+        const config = this.resolve(e.composedPath());
+        if (!tapIsActive(config)) return;
         e.preventDefault();
-        runGesture(this.host, this.config(), 'tap');
+        runGesture(this.host, config, 'tap');
     }
 }
 
 const listening = new WeakSet<HTMLElement>();
 
-/** Make an element the card's touch target (once per element) */
-export function listenForGestures(el: HTMLElement, host: HTMLElement, config: () => ActionsConfig): void {
+/**
+ * Make an element the card's touch target (once per element). `config`
+ * gets the gesture's event path, so a part of the card (a cell) can answer
+ * with its own actions.
+ */
+export function listenForGestures(el: HTMLElement, host: HTMLElement, config: (path: EventTarget[]) => ActionsConfig): void {
     if (listening.has(el)) return;
     listening.add(el);
     new GestureListener(el, host, config);

@@ -107,7 +107,7 @@ describe('sizing and stub', () => {
             'sensor.temp': entity('sensor.temp', 20, { unit_of_measurement: '°C' }),
             'sensor.pv': entity('sensor.pv', 1200, { device_class: 'power' }),
         });
-        expect(EnergySkyCard.getStubConfig(hass)).toEqual({ production_entity: 'sensor.pv', sun_entity: 'sun.sun' });
+        return expect(EnergySkyCard.getStubConfig(hass)).resolves.toEqual({ production_entity: 'sensor.pv', sun_entity: 'sun.sun' });
     });
 });
 

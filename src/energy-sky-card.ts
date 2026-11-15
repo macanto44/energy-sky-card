@@ -3,11 +3,12 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS } from './styles/card';
-import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, configuredCells, normalizeConfig, productionEntities, trackedEntities, type MetricKey } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, cellTapOpensEntity, configuredCells, normalizeConfig, productionEntities, trackedEntities, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { computeBackground, isHexColor } from './sky';
 import { coveredBy, motesMarkup, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
+import { energyPrefs, stubConfig } from './stub';
 import { listenForGestures, readActions, updateTargetSemantics, type ActionsConfig } from './actions';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
@@ -36,6 +37,9 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     }
     if (c.night_hero !== undefined && !(['production', 'consumption', 'battery'] as unknown[]).includes(c.night_hero)) {
         throw configError('night_hero : production, consumption ou battery', 'night_hero: production, consumption or battery');
+    }
+    if (c.cell_tap !== undefined && !(['auto', 'more-info', 'card'] as unknown[]).includes(c.cell_tap)) {
+        throw configError('cell_tap : auto, more-info ou card', 'cell_tap: auto, more-info or card');
     }
     if (c.cells !== undefined) {
         if (!Array.isArray(c.cells) || c.cells.length > MAX_CELLS) {
@@ -105,6 +109,8 @@ export class EnergySkyCard extends HTMLElement {
     private renderedKey = '';
     private motion = new MotionController(this);
     private actions: ActionsConfig = {};
+    /** Each cell's entity, when a tap on it opens that entity's dialog */
+    private cellTargets = new Map<string, string>();
     private resizeObserver?: ResizeObserver;
     private readyFrame?: number;
 
@@ -193,13 +199,32 @@ export class EnergySkyCard extends HTMLElement {
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
-        listenForGestures(this.refs.card, this, () => this.actions);
+        this.cellTargets = new Map(cellTapOpensEntity(config)
+            ? cells.flatMap(cell => { const entity = cellEntity(config, cell); return entity ? [[cell.key, entity] as const] : []; })
+            : []);
+        for (const [key] of this.cellTargets) {
+            const el = q(`[data-metric="${key}"]`);
+            el.dataset.cellTarget = '';
+            el.setAttribute('role', 'button');
+            el.tabIndex = 0;
+            el.style.cursor = 'pointer';
+        }
+        listenForGestures(this.refs.card, this, path => this.actionsFor(path));
         updateTargetSemantics(this.refs.card, this.actions);
         this.resizeObserver?.disconnect();
         if (typeof ResizeObserver !== 'undefined') {
             this.resizeObserver = new ResizeObserver(() => this.fit());
             this.resizeObserver.observe(this.refs.card);
         }
+    }
+
+    /** The card's actions, or, pressed on a cell, that cell's: a tap opens its entity's dialog */
+    private actionsFor(path: EventTarget[]): ActionsConfig {
+        const cell = path.find((t): t is HTMLElement => t instanceof HTMLElement && t.dataset.cellTarget !== undefined);
+        const entity = cell ? this.cellTargets.get(cell.dataset.metric ?? '') : undefined;
+        if (!entity) return this.actions;
+        const { tap_action: _cardTap, ...rest } = this.actions;
+        return { ...rest, entity };
     }
 
     /**
@@ -349,13 +374,13 @@ export class EnergySkyCard extends HTMLElement {
         return 4;
     }
 
-    /** Prefill with the first power sensor found, and sun.sun */
-    static getStubConfig(hass?: HomeAssistant): Partial<EnergySkyCardConfig> {
-        const states = hass?.states ?? {};
-        const power = Object.values(states).find(s =>
-            s.entity_id.startsWith('sensor.') &&
-            (s.attributes.device_class === 'power' || s.attributes.unit_of_measurement === 'W'));
-        return { production_entity: power?.entity_id ?? 'sensor.production_pv', sun_entity: 'sun.sun' };
+    /**
+     * Prefill from the Energy dashboard (solar, battery and grid sensors, and
+     * those on the same devices), today's Tempo colour and sun.sun; without
+     * an Energy dashboard, the first power sensor found
+     */
+    static async getStubConfig(hass?: HomeAssistant): Promise<Partial<EnergySkyCardConfig>> {
+        return stubConfig(hass, await energyPrefs(hass));
     }
 
     /** The editor lives in its own bundle, loaded the first time it's opened */

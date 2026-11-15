@@ -35,6 +35,7 @@ src/
 ├── constants.ts             # Name, version, URLs: the one place to rename the card
 ├── types.ts                 # Home Assistant types and the card's config
 ├── bundles.ts               # Loads the editor bundle from beside the main one
+├── stub.ts                  # getStubConfig: Energy dashboard prefs (energy/get_prefs) + same-device sensors, Tempo, sun
 ├── utils.ts                 # escapeHtml, numeric states, W / kWh unit conversion
 ├── localize.ts              # FR / EN strings, language, decimal separator
 ├── format.ts                # W / kW, kWh, V, % formatting; "—" for no reading
@@ -59,6 +60,7 @@ test/
 ├── editor.test.ts           # Schema blocks, labels, config-changed, YAML kept short, palettes kept
 ├── card.test.ts             # Registration, validation, render, in-place updates, background, sizing, stub
 ├── bundles.test.ts          # Sibling bundle URLs
+├── stub.test.ts             # Prefill from the Energy dashboard (both prefs shapes), Tempo, fallback
 └── build.test.ts            # Bundle size and no network
 ```
 
@@ -81,6 +83,8 @@ test/
 - Power entities in kW / MW and energy entities in Wh / MWh are converted from their `unit_of_measurement`.
 - `production_entity` is a string or a list (summed by `productionPower`, used by the hero and the halo). `grid.invert` / `battery.invert` flip the sensor's sign (`gridPower`, `batteryPower`).
 - Cells (`configuredCells` in model.ts): `cells` if set (≤ 4, built-in kinds deduplicated, free cells keyed `custom-<index>`), else the built-in ones whose entities are set. A free cell's name and icon are user text: written with textContent / setAttribute only. The editor shows them as four slots (`cell_1` … `cell_4`, plus `_entity` / `_name` / `_icon` for a free one) and writes `cells` only when they differ from the automatic choice.
+- Cell taps (`cell_tap`, `cellTapOpensEntity` / `cellEntity` in model.ts): `auto` opens the cell's entity unless the card has a `tap_action`; a cell that does gets `data-cell-target`, role button, tabindex. The gesture listener passes the event path to `actionsFor`, which answers with the cell's entity and no tap_action (hold / double tap stay the card's).
+- `getStubConfig` is async (HA awaits it): `stub.ts` reads `energy/get_prefs` in both shapes (grid `flow_from[]` / `power[]`, or `stat_rate` / `power_config`), takes sensors on the meters' devices from `hass.entities`, and sets `battery.invert` when the power is HA's `stat_rate` (positive discharging).
 - `night_hero` (consumption / battery) only applies below the horizon and when its entity is set; the context line then starts with the hero's name, shortened when too wide (`data-short-context`).
 
 ## Sizing

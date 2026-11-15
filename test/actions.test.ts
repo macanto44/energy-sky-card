@@ -95,3 +95,59 @@ describe('hold and double tap', () => {
         expect(events.length).toBe(1);
     });
 });
+
+describe('a tap on a cell (cell_tap)', () => {
+    const cell = (card: EnergySkyCard, key: string) => card.shadowRoot!.querySelector(`[data-metric="${key}"]`) as HTMLElement;
+
+    it('opens the cell\'s entity by default, and the production\'s elsewhere', () => {
+        const { card, target, events } = mount();
+        tap(cell(card, 'battery'));
+        tap(cell(card, 'grid'));
+        tap(cell(card, 'voltage'));
+        tap(target);
+        expect(events.map(e => e.detail.entityId)).toEqual([
+            'sensor.victron_system_battery_soc', 'sensor.victrongrid_ac_l1_power31', 'sensor.grid_voltage', 'sensor.production_pv',
+        ]);
+    });
+
+    it('keeps the card\'s own tap_action everywhere in auto, as before', () => {
+        const { card, events } = mount({ tap_action: POPUP });
+        tap(cell(card, 'battery'));
+        expect(events).toEqual([{ type: 'hass-action', detail: expect.objectContaining({ action: 'tap' }) }]);
+        expect(cell(card, 'battery').hasAttribute('role')).toBe(false);
+    });
+
+    it('opens the cell\'s entity over the card\'s tap_action with more-info, and never with card', () => {
+        const forced = mount({ tap_action: POPUP, cell_tap: 'more-info' });
+        tap(cell(forced.card, 'tomorrow'));
+        tap(forced.target);
+        expect(forced.events.map(e => e.type)).toEqual(['hass-more-info', 'hass-action']);
+        expect(forced.events[0].detail.entityId).toBe('sensor.energy_production_tomorrow_2');
+        document.body.innerHTML = '';
+        const off = mount({ cell_tap: 'card' });
+        tap(cell(off.card, 'battery'));
+        expect(off.events.map(e => e.detail.entityId)).toEqual(['sensor.production_pv']);
+    });
+
+    it('makes such a cell a keyboard button, and a free cell opens its own entity', () => {
+        const { card, events } = mount({ cells: ['grid', { entity: 'sensor.boiler', name: 'Eau' }] });
+        const free = cell(card, 'custom-1');
+        expect(free.getAttribute('role')).toBe('button');
+        expect(free.tabIndex).toBe(0);
+        free.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(events.map(e => e.detail.entityId)).toEqual(['sensor.boiler']);
+    });
+
+    it('keeps the card\'s hold on a cell, for that cell\'s entity', () => {
+        vi.useFakeTimers();
+        const { card, events } = mount({ hold_action: { action: 'more-info' } });
+        press(cell(card, 'grid'), 'pointerdown');
+        vi.advanceTimersByTime(HOLD_MS);
+        press(cell(card, 'grid'), 'pointerup');
+        expect(events).toEqual([{ type: 'hass-action', detail: { config: expect.objectContaining({ entity: 'sensor.victrongrid_ac_l1_power31' }), action: 'hold' } }]);
+    });
+
+    it('rejects an unknown cell_tap', () => {
+        expect(() => mount({ cell_tap: 'maybe' as never })).toThrow(/cell_tap/);
+    });
+});

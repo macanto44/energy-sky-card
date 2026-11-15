@@ -14,6 +14,10 @@ export interface HomeAssistant {
     formatEntityState?: (entity: HassEntity) => string;
     language?: string;
     locale?: { language?: string; number_format?: string; time_format?: string };
+    /** The entity registry's display entries (device, integration) */
+    entities?: Record<string, { entity_id: string; device_id?: string | null; platform?: string }>;
+    /** A websocket command (energy/get_prefs for the card picker's starting config) */
+    callWS?: <T>(msg: { type: string; [key: string]: unknown }) => Promise<T>;
 }
 
 /** A built-in cell of the grid */
@@ -27,6 +31,8 @@ export interface CustomCell {
 }
 
 export type CellConfig = CellKind | CustomCell;
+
+export type CellTap = 'auto' | 'more-info' | 'card';
 
 /** What the hero shows at night: production (0 W, the default), the home's consumption, or the battery */
 export type NightHero = 'production' | 'consumption' | 'battery';
@@ -71,6 +77,11 @@ export interface EnergySkyCardConfig {
     /** @deprecated 0.1.0–0.1.1 place of battery.power_threshold, still read */
     power_threshold?: number;
     animate?: boolean;
+    /**
+     * A tap on a cell: its entity's dialog (more-info), the card's tap action
+     * (card), or auto: the dialog unless the card has a tap_action of its own
+     */
+    cell_tap?: CellTap;
     tap_action?: Record<string, unknown>;
     hold_action?: Record<string, unknown>;
     double_tap_action?: Record<string, unknown>;
