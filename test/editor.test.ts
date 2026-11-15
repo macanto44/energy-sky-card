@@ -46,7 +46,7 @@ describe('schema', () => {
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './cell_1', './cell_2', './cell_3', './cell_4',
             './tariff_color_entity', './sun_entity', './animate',
-            './tap_action', './cell_tap', './hold_action', './double_tap_action',
+            './tap_action', './hold_action', './double_tap_action',
         ]);
     });
 
@@ -154,6 +154,20 @@ describe('the 0.2 options', () => {
         expect(changes.at(-1)).not.toHaveProperty('cells');
         change({ cell_3: 'consumption' });
         expect(changes.at(-1)?.cells).toEqual(['battery', 'grid', 'consumption', 'tomorrow']);
+    });
+
+    it('asks a tap action for each cell, and saves a built-in cell with one as { type, tap_action }', () => {
+        const { form, changes, change } = mount(FULL_CONFIG);
+        expect(fields(form.schema!)).toEqual(expect.arrayContaining(['./cell_1_tap_action', './cell_4_tap_action']));
+        expect(form.computeLabel!({ name: 'cell_2_tap_action' })).toBe('Appui sur la case');
+        expect(form.computeHelper!({ name: 'cell_2_tap_action' })).toMatch(/ouvre l'entité de la case/);
+        expect(form.schema!.flatMap(b => b.schema ?? []).find(f => f.name === 'cell_2_tap_action')?.selector).toEqual({ ui_action: {} });
+        const url = { action: 'url', url_path: 'https://example.org' };
+        change({ cell_2_tap_action: url });
+        expect(changes.at(-1)?.cells).toEqual(['battery', { type: 'grid', tap_action: url }, 'voltage', 'tomorrow']);
+        // And back: the slot shows it
+        expect(formData(changes.at(-1)!)).toMatchObject({ cell_2: 'grid', cell_2_tap_action: url });
+        expect(fields(editorSchema('fr'))).not.toContain('./cell_tap');
     });
 
     it('asks entity, name and icon for a free cell, and saves it once the entity is picked', () => {

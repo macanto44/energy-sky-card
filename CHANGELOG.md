@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Each cell takes its own tap action (more-info, navigate, url, perform-action, none…), chosen in the editor's Cells block (« Appui sur la case ») or with `tap_action` in YAML: a built-in cell is then written `{ type: grid, tap_action: … }`. Without one, a tap opens the cell's entity unless the card has a `tap_action`, as in 0.3.1. `cell_tap` (0.3.1) leaves the editor and the docs; it is still read.
+
 ## [0.3.1] — 2026-11-15
 
 - By day, cloud shadows drift slowly across the card instead of the motes of sunlight, which read as stars. They only darken the sky, so the text keeps its contrast; a cloud passing over the halo dims it.

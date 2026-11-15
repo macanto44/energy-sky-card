@@ -95,7 +95,6 @@ tap_action:
 | `sun_entity` | `sun.sun` | `below_horizon` : la nuit. |
 | `animate` | `true` | `false` coupe toutes les animations. |
 | `tap_action`, `hold_action`, `double_tap_action` | plus d'infos sur la production | Les actions natives de Home Assistant (`navigate`, `more-info`, `perform-action`, `url`, `none`…). |
-| `cell_tap` | `auto` | Un appui sur une case : `more-info` ouvre l'entité de la case (Batterie → la charge, Réseau → la puissance…), `card` fait l'action de la carte. `auto` : l'entité de la case, sauf si la carte a un `tap_action`, qui s'applique alors partout. |
 
 ### Le sens des puissances
 
@@ -117,6 +116,25 @@ cells:
 ```
 
 Une case libre affiche une puissance comme le reste de la carte (W / kW), et toute autre valeur comme Home Assistant la présente (unité, précision, états traduits). Sans nom, elle prend celui de l'entité ; sans icône, celle de l'entité.
+
+**Un appui sur une case.** Chaque case peut avoir sa propre action, choisie dans l'éditeur (bloc Cases, « Appui sur la case ») ou en YAML avec `tap_action` : plus d'infos, naviguer, ouvrir une URL, lancer une action, rien… Une case intégrée s'écrit alors `{ type: …, tap_action: … }`. Sans action, un appui ouvre l'entité de la case (Batterie → la charge, Réseau → la puissance…), sauf si la carte a son propre `tap_action`, qui s'applique alors.
+
+```yaml
+cells:
+  - type: battery
+    tap_action:
+      action: navigate
+      navigation_path: /energy
+  - type: grid
+    tap_action:
+      action: url
+      url_path: https://www.services-rte.com
+  - voltage
+  - entity: sensor.ev_battery_level
+    name: Voiture
+    tap_action:
+      action: more-info
+```
 
 ### « SOC atteint »
 
@@ -202,13 +220,12 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |
 | `consumption_entity` | — | The home's power use (W), for the Consumption cell and `night_hero`. |
 | `night_hero` | `production` | What the big number shows at night: `production`, `consumption` or `battery`; the line below names it ("Consumption · 7.2 kWh produced"). |
-| `cells` | automatic | Up to 4 bottom cells, in order: `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, or a free cell `{ entity, name, icon }` for any entity (powers read in W / kW, anything else as Home Assistant formats it). |
+| `cells` | automatic | Up to 4 bottom cells, in order: `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, or a free cell `{ entity, name, icon }` for any entity (powers read in W / kW, anything else as Home Assistant formats it). Each cell can take its own `tap_action` (a built-in one is then written `{ type: grid, tap_action: … }`), also set in the editor's Cells block; without one, a tap opens the cell's entity, unless the card has a `tap_action`. |
 | `tariff_color_entity` | — | Today's tariff colour (`Bleu`, `Blanc`, `Rouge`); unknown is Bleu. |
 | `tariff_palettes` | see above | Three colours per tariff, top to bottom (YAML only). |
 | `sun_entity` | `sun.sun` | `below_horizon` means night. |
 | `animate` | `true` | `false` turns every animation off. |
 | `tap_action`, `hold_action`, `double_tap_action` | more-info of production | Home Assistant's own actions. `navigate` to `'#my-popup'` opens a Bubble Card pop-up. |
-| `cell_tap` | `auto` | A tap on a cell: `more-info` opens the cell's entity (Battery → its charge, Grid → its power…), `card` runs the card's tap action. `auto`: the cell's entity, unless the card has a `tap_action`, which then applies everywhere. |
 
 The default palettes are slightly darker at the top than the original prototype's, so white text meets WCAG contrast where it sits (tested).
 

@@ -96,7 +96,7 @@ describe('hold and double tap', () => {
     });
 });
 
-describe('a tap on a cell (cell_tap)', () => {
+describe('a tap on a cell', () => {
     const cell = (card: EnergySkyCard, key: string) => card.shadowRoot!.querySelector(`[data-metric="${key}"]`) as HTMLElement;
 
     it('opens the cell\'s entity by default, and the production\'s elsewhere', () => {
@@ -145,6 +145,41 @@ describe('a tap on a cell (cell_tap)', () => {
         vi.advanceTimersByTime(HOLD_MS);
         press(cell(card, 'grid'), 'pointerup');
         expect(events).toEqual([{ type: 'hass-action', detail: { config: expect.objectContaining({ entity: 'sensor.victrongrid_ac_l1_power31' }), action: 'hold' } }]);
+    });
+
+    it('runs a cell\'s own tap action: a URL, a page, the entity\'s dialog, or nothing', () => {
+        const url = { action: 'url', url_path: 'https://example.org' };
+        const { card, target, events } = mount({
+            tap_action: POPUP,
+            cells: [{ type: 'battery', tap_action: url }, { type: 'grid', tap_action: { action: 'more-info' } }, { type: 'voltage', tap_action: { action: 'none' } }, 'tomorrow'],
+        });
+        tap(cell(card, 'battery'));
+        tap(cell(card, 'grid'));
+        tap(cell(card, 'voltage'));
+        tap(cell(card, 'tomorrow'));
+        tap(target);
+        expect(events.map(e => [e.detail.action, e.detail.config.tap_action, e.detail.config.entity])).toEqual([
+            ['tap', url, 'sensor.victron_system_battery_soc'],
+            ['tap', { action: 'more-info' }, 'sensor.victrongrid_ac_l1_power31'],
+            // voltage: none, nothing; tomorrow has no action of its own: the card's pop-up
+            ['tap', POPUP, 'sensor.production_pv'],
+            ['tap', POPUP, 'sensor.production_pv'],
+        ]);
+        expect(cell(card, 'battery').getAttribute('role')).toBe('button');
+        expect(cell(card, 'voltage').hasAttribute('role')).toBe(false);
+    });
+
+    it('takes a tap action on a free cell too', () => {
+        const nav = { action: 'navigate', navigation_path: '/energy' };
+        const { card, events } = mount({ cells: [{ entity: 'sensor.boiler', tap_action: nav }] });
+        tap(cell(card, 'custom-0'));
+        expect(events).toEqual([{ type: 'hass-action', detail: { config: expect.objectContaining({ tap_action: nav, entity: 'sensor.boiler' }), action: 'tap' } }]);
+    });
+
+    it('rejects a cell tap_action without an action, and an unknown cell type', () => {
+        document.documentElement.lang = 'en';
+        expect(() => mount({ cells: [{ type: 'grid', tap_action: { url_path: 'x' } } as never] })).toThrow(/tap_action needs an action/);
+        expect(() => mount({ cells: [{ type: 'solar' } as never] })).toThrow(/is neither/);
     });
 
     it('rejects an unknown cell_tap', () => {

@@ -9,7 +9,7 @@ import { CLOUDS, computeBackground, isHexColor } from './sky';
 import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { energyPrefs, stubConfig } from './stub';
-import { listenForGestures, readActions, updateTargetSemantics, type ActionsConfig } from './actions';
+import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The hero's sizes, largest first: it steps down until the card's lines fit */
@@ -46,12 +46,16 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             throw configError(`cells : une liste de ${MAX_CELLS} cases au plus`, `cells: a list of at most ${MAX_CELLS} cells`);
         }
         for (const cell of c.cells as unknown[]) {
+            const o = (cell && typeof cell === 'object' ? cell : {}) as { entity?: unknown; type?: unknown; tap_action?: unknown };
             const ok = typeof cell === 'string'
                 ? (CELL_KINDS as string[]).includes(cell)
-                : !!cell && typeof cell === 'object' && typeof (cell as { entity?: unknown }).entity === 'string' && !!(cell as { entity: string }).entity;
+                : (typeof o.entity === 'string' && !!o.entity) || (CELL_KINDS as unknown[]).includes(o.type);
+            if (ok && o.tap_action !== undefined && !(o.tap_action && typeof o.tap_action === 'object' && typeof (o.tap_action as { action?: unknown }).action === 'string')) {
+                throw configError('cells : tap_action doit avoir une action (more-info, navigate, url…)', 'cells: tap_action needs an action (more-info, navigate, url…)');
+            }
             if (!ok) {
-                throw configError(`cells : « ${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)} » n'est ni ${CELL_KINDS.join(', ')}, ni { entity: … }`,
-                    `cells: "${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)}" is neither ${CELL_KINDS.join(', ')} nor { entity: … }`);
+                throw configError(`cells : « ${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)} » n'est ni ${CELL_KINDS.join(', ')}, ni { type: … }, ni { entity: … }`,
+                    `cells: "${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)}" is neither ${CELL_KINDS.join(', ')}, { type: … } nor { entity: … }`);
             }
         }
     }
@@ -109,8 +113,8 @@ export class EnergySkyCard extends HTMLElement {
     private renderedKey = '';
     private motion = new MotionController(this);
     private actions: ActionsConfig = {};
-    /** Each cell's entity, when a tap on it opens that entity's dialog */
-    private cellTargets = new Map<string, string>();
+    /** The cells a tap answers on their own: their entity, and their own tap action if they have one */
+    private cellTargets = new Map<string, { entity?: string; tap?: ActionConfig }>();
     private resizeObserver?: ResizeObserver;
     private readyFrame?: number;
 
@@ -199,12 +203,17 @@ export class EnergySkyCard extends HTMLElement {
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
-        this.cellTargets = new Map(cellTapOpensEntity(config)
-            ? cells.flatMap(cell => { const entity = cellEntity(config, cell); return entity ? [[cell.key, entity] as const] : []; })
-            : []);
-        for (const [key] of this.cellTargets) {
+        const opensEntity = cellTapOpensEntity(config);
+        this.cellTargets = new Map(cells.flatMap((cell): [string, { entity?: string; tap?: ActionConfig }][] => {
+            const entity = cellEntity(config, cell);
+            const tap = isAction(cell.tapAction) ? cell.tapAction : undefined;
+            if (tap) return [[cell.key, { entity, tap }]];
+            return opensEntity && entity ? [[cell.key, { entity }]] : [];
+        }));
+        for (const [key, target] of this.cellTargets) {
             const el = q(`[data-metric="${key}"]`);
             el.dataset.cellTarget = '';
+            if (target.tap?.action === 'none') continue;
             el.setAttribute('role', 'button');
             el.tabIndex = 0;
             el.style.cursor = 'pointer';
@@ -218,13 +227,17 @@ export class EnergySkyCard extends HTMLElement {
         }
     }
 
-    /** The card's actions, or, pressed on a cell, that cell's: a tap opens its entity's dialog */
+    /**
+     * The card's actions, or, pressed on a cell, that cell's: its own tap
+     * action, else its entity's dialog. Hold and double tap stay the card's,
+     * on the cell's entity.
+     */
     private actionsFor(path: EventTarget[]): ActionsConfig {
         const cell = path.find((t): t is HTMLElement => t instanceof HTMLElement && t.dataset.cellTarget !== undefined);
-        const entity = cell ? this.cellTargets.get(cell.dataset.metric ?? '') : undefined;
-        if (!entity) return this.actions;
+        const target = cell ? this.cellTargets.get(cell.dataset.metric ?? '') : undefined;
+        if (!target) return this.actions;
         const { tap_action: _cardTap, ...rest } = this.actions;
-        return { ...rest, entity };
+        return { ...rest, entity: target.entity ?? this.actions.entity, ...(target.tap ? { tap_action: target.tap } : {}) };
     }
 
     /**

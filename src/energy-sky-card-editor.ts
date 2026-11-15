@@ -5,9 +5,10 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, defaultCells, normalizeConfig } from './model';
+import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, cellKind, defaultCells, isBuiltinObject, isCustom, normalizeConfig } from './model';
+import { isAction } from './actions';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
-import type { CellConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
+import type { CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The parts of ha-form's schema the editor uses */
 export interface SchemaItem {
@@ -28,7 +29,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production_entity: 'Puissance solaire (W, additionnées)',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
-        cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)',
+        cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)', cell_tap_action: 'Appui sur la case',
         kind_none: 'Aucune', kind_battery: 'Batterie', kind_grid: 'Réseau', kind_voltage: 'Tension', kind_tomorrow: 'Prévu demain',
         kind_consumption: 'Consommation', kind_custom: 'Libre (une entité au choix)',
         hero_production: 'Production solaire', hero_consumption: 'Consommation de la maison', hero_battery: 'Charge de la batterie', production_max: 'Puissance maximale (halo)',
@@ -38,7 +39,6 @@ const LABELS: Record<Lang, Record<string, string>> = {
         tariff_color_entity: 'Couleur tarifaire (Bleu / Blanc / Rouge)', sun_entity: 'Soleil',
         power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
-        cell_tap: 'Appui sur une case', cell_tap_auto: 'Automatique', cell_tap_more_info: 'Ouvre l\'entité de la case', cell_tap_card: 'Comme la carte',
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
@@ -46,7 +46,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production_entity: 'Solar power (W, summed)',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
-        cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)',
+        cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)', cell_tap_action: 'Tap on the cell',
         kind_none: 'None', kind_battery: 'Battery', kind_grid: 'Grid', kind_voltage: 'Voltage', kind_tomorrow: 'Tomorrow',
         kind_consumption: 'Consumption', kind_custom: 'Free (any entity)',
         hero_production: 'Solar production', hero_consumption: 'Home consumption', hero_battery: 'Battery charge', production_max: 'Maximum power (halo)',
@@ -56,13 +56,12 @@ const LABELS: Record<Lang, Record<string, string>> = {
         tariff_color_entity: 'Tariff colour (Bleu / Blanc / Rouge)', sun_entity: 'Sun',
         power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
-        cell_tap: 'Tap on a cell', cell_tap_auto: 'Automatic', cell_tap_more_info: 'Opens the cell\'s entity', cell_tap_card: 'Same as the card',
         loading: 'Loading the editor…',
     },
 };
 
 export function editorLabel(lang: Lang, key: string): string {
-    const slot = /^cell_(\d)(?:_(entity|name|icon))?$/.exec(key);
+    const slot = /^cell_(\d)(?:_(entity|name|icon|tap_action))?$/.exec(key);
     if (slot) return slot[2] ? LABELS[lang][`cell_${slot[2]}`] : LABELS[lang].cell.replace('{n}', slot[1]);
     return LABELS[lang][key] ?? key;
 }
@@ -78,7 +77,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
         cell_1: 'Les cases du bas, dans l\'ordre. « Libre » affiche n\'importe quelle entité.',
-        cell_tap: 'Automatique : un appui sur une case ouvre son entité, sauf si un « Appui » est choisi pour la carte, qui s\'applique alors partout.',
+        cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
@@ -89,12 +88,13 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
         cell_1: 'The bottom cells, in order. "Free" shows any entity.',
-        cell_tap: 'Automatic: a tap on a cell opens its entity, unless a Tap action is set for the card, which then applies everywhere.',
+        cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
     },
 };
 
 /** The helper under a field; in a block, the block's name tells the two invert fields apart */
 export function editorHelper(lang: Lang, key: string, block?: string): string | undefined {
+    if (/^cell_\d_tap_action$/.test(key)) return HELPERS[lang].cell_tap_action;
     return HELPERS[lang][block && key === 'invert' ? `${block}_invert` : key];
 }
 
@@ -112,6 +112,8 @@ function cellFields(lang: Lang, data: Record<string, unknown>): SchemaItem[] {
             { name: `cell_${n}_name`, selector: { text: {} } },
             { name: `cell_${n}_icon`, selector: { icon: {} } },
         ] : []),
+        // Home Assistant's action picker: more-info, navigate, url, perform-action, none…
+        ...(data[`cell_${n}`] && data[`cell_${n}`] !== 'none' ? [{ name: `cell_${n}_tap_action`, selector: { ui_action: {} } }] : []),
     ]);
 }
 
@@ -168,7 +170,6 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             name: '', type: 'expandable', flatten: true, title: t('actions'), icon: 'mdi:gesture-tap',
             schema: [
                 { name: 'tap_action', selector: { ui_action: {} } },
-                { name: 'cell_tap', selector: { select: { mode: 'dropdown', options: (['auto', 'more-info', 'card'] as const).map(value => ({ value, label: t(`cell_tap_${value.replace('-', '_')}`) })) } } },
                 { name: 'hold_action', selector: { ui_action: {} } },
                 { name: 'double_tap_action', selector: { ui_action: {} } },
             ],
@@ -176,7 +177,6 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
     ];
 }
 
-const isCustomCell = (cell: CellConfig): cell is CustomCell => typeof cell === 'object' && cell !== null;
 
 /** The cells as the form's slots: cell_1 … cell_4, and the free cells' entity, name and icon */
 function cellSlots(config: EnergySkyCardConfig): Record<string, unknown> {
@@ -186,9 +186,12 @@ function cellSlots(config: EnergySkyCardConfig): Record<string, unknown> {
         const cell = cells[i];
         const n = i + 1;
         if (cell === undefined) slots[`cell_${n}`] = 'none';
-        else if (isCustomCell(cell)) {
-            Object.assign(slots, { [`cell_${n}`]: 'custom', [`cell_${n}_entity`]: cell.entity, [`cell_${n}_name`]: cell.name, [`cell_${n}_icon`]: cell.icon });
-        } else slots[`cell_${n}`] = cell;
+        else if (isCustom(cell)) {
+            Object.assign(slots, { [`cell_${n}`]: 'custom', [`cell_${n}_entity`]: cell.entity, [`cell_${n}_name`]: cell.name, [`cell_${n}_icon`]: cell.icon, [`cell_${n}_tap_action`]: cell.tap_action });
+        } else {
+            slots[`cell_${n}`] = cellKind(cell);
+            if (isBuiltinObject(cell)) slots[`cell_${n}_tap_action`] = cell.tap_action;
+        }
     }
     return slots;
 }
@@ -198,6 +201,8 @@ function cellsFromSlots(value: Record<string, unknown>): CellConfig[] {
     const cells: CellConfig[] = [];
     for (let n = 1; n <= MAX_CELLS; n++) {
         const kind = value[`cell_${n}`];
+        const tap = value[`cell_${n}_tap_action`];
+        const tapAction = isAction(tap) ? { tap_action: tap } : {};
         if (kind === 'custom') {
             const entity = value[`cell_${n}_entity`];
             if (typeof entity !== 'string' || !entity) continue;
@@ -206,8 +211,11 @@ function cellsFromSlots(value: Record<string, unknown>): CellConfig[] {
                 const v = value[`cell_${n}_${field}`];
                 if (typeof v === 'string' && v) cell[field] = v;
             }
-            cells.push(cell);
-        } else if ((CELL_KINDS as unknown[]).includes(kind)) cells.push(kind as CellConfig);
+            cells.push({ ...cell, ...tapAction });
+        } else if ((CELL_KINDS as unknown[]).includes(kind)) {
+            // A built-in cell stays a plain name, unless it has a tap action of its own
+            cells.push(isAction(tap) ? { type: kind as CellKind, tap_action: tap } : kind as CellKind);
+        }
     }
     return cells;
 }
@@ -222,7 +230,6 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         sun_entity: 'sun.sun',
         animate: true,
         night_hero: 'production',
-        cell_tap: 'auto',
         ...config,
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
         ...cellSlots(config),
@@ -268,7 +275,7 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
         if (b?.invert === false) delete b.invert;
         if (b && !Object.keys(b).length) delete merged[block];
     }
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', cell_tap: 'auto' };
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production' };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }

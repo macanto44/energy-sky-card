@@ -1,7 +1,7 @@
 // From the config and Home Assistant's states to what the card shows.
 // Pure functions: everything here is unit-tested without a DOM.
 
-import type { CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
+import type { BuiltinCell, CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 import { energyKWh, numericState, powerW } from './utils';
 import { localize, numberLocale, type NumberLocale } from './localize';
 import { NO_VALUE, formatEnergy, joinParts, formatKWhValue, formatNumber, formatPercent, formatPower, formatTemperature, formatVoltage, powerParts, type ValueParts } from './format';
@@ -71,9 +71,17 @@ export interface CellSpec {
     key: MetricKey;
     kind: CellKind | 'custom';
     custom?: CustomCell;
+    /** The cell's own tap action, from its config */
+    tapAction?: Record<string, unknown>;
 }
 
-const isCustom = (cell: CellConfig): cell is CustomCell => typeof cell === 'object' && cell !== null;
+export const isCustom = (cell: CellConfig): cell is CustomCell =>
+    typeof cell === 'object' && cell !== null && typeof (cell as CustomCell).entity === 'string';
+export const isBuiltinObject = (cell: CellConfig): cell is BuiltinCell =>
+    typeof cell === 'object' && cell !== null && !isCustom(cell) && typeof (cell as BuiltinCell).type === 'string';
+/** A cell's kind, written as a string or as { type } */
+export const cellKind = (cell: CellConfig): CellKind | undefined =>
+    typeof cell === 'string' ? cell : isBuiltinObject(cell) ? cell.type : undefined;
 
 /** The built-in cells whose entities are set, in their usual order */
 export function defaultCells(config: EnergySkyCardConfig): CellKind[] {
@@ -94,10 +102,11 @@ export function configuredCells(config: EnergySkyCardConfig): CellSpec[] {
     if (!config.cells) return defaultCells(config).map(kind => ({ key: kind, kind }));
     const used = new Set<string>();
     return config.cells.slice(0, MAX_CELLS).flatMap((cell, i): CellSpec[] => {
-        if (isCustom(cell)) return [{ key: `custom-${i}`, kind: 'custom', custom: cell }];
-        if (used.has(cell)) return [];
-        used.add(cell);
-        return [{ key: cell, kind: cell }];
+        if (isCustom(cell)) return [{ key: `custom-${i}`, kind: 'custom', custom: cell, ...(cell.tap_action ? { tapAction: cell.tap_action } : {}) }];
+        const kind = cellKind(cell);
+        if (!kind || used.has(kind)) return [];
+        used.add(kind);
+        return [{ key: kind, kind, ...(isBuiltinObject(cell) && cell.tap_action ? { tapAction: cell.tap_action } : {}) }];
     });
 }
 
@@ -113,7 +122,11 @@ export function cellEntity(config: EnergySkyCardConfig, cell: CellSpec): string 
     }
 }
 
-/** Whether a tap on a cell opens its entity's dialog rather than running the card's tap action */
+/**
+ * For a cell without a tap action of its own: whether a tap opens its
+ * entity's dialog (yes, unless the card has a tap_action) rather than the
+ * card's action. cell_tap (0.3.1) still decides when set.
+ */
 export function cellTapOpensEntity(config: Pick<EnergySkyCardConfig, 'cell_tap' | 'tap_action'>): boolean {
     if (config.cell_tap === 'card') return false;
     return config.cell_tap === 'more-info' || config.tap_action === undefined;

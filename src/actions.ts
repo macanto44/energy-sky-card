@@ -23,7 +23,7 @@ export const DOUBLE_TAP_MS = 250;
 /** Moving farther than this while pressed means scrolling: no gesture */
 const SLOP_PX = 10;
 
-const isAction = (v: unknown): v is ActionConfig =>
+export const isAction = (v: unknown): v is ActionConfig =>
     typeof v === 'object' && v !== null && typeof (v as { action?: unknown }).action === 'string';
 
 const active = (a: ActionConfig | undefined): boolean => a !== undefined && a.action !== 'none';

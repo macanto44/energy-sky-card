@@ -10,7 +10,7 @@ Ideas to improve Energy Sky Card, by priority (written after 0.3.0, 2026-11-15).
 ## Easier setup (most value for other users)
 
 3. [x] **Prefill from the Energy dashboard** (0.3.1). Home Assistant's energy preferences already list the solar, battery and grid sensors. `getStubConfig` only picks the first W sensor; reading `energy/get_prefs` (and the sensors on the same devices) would give a nearly ready card when it is added.
-4. [x] **One action per cell** (0.3.1, `cell_tap`). Tapping « Réseau » opens the grid sensor's more-info rather than the card's single action: the natural reflex on a dashboard.
+4. [x] **One action per cell** (0.3.1; per cell, any action, in the Cells block: 0.3.2). Tapping « Réseau » opens the grid sensor's more-info rather than the card's single action: the natural reflex on a dashboard.
 5. [ ] **Accessibility.** A summary screen readers can read (« Production 3,2 kW, batterie 78 % en charge, vente 1,8 kW ») instead of fragments.
 
 ## A sky that carries more information (the card's identity)

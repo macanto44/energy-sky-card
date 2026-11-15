@@ -23,14 +23,21 @@ export interface HomeAssistant {
 /** A built-in cell of the grid */
 export type CellKind = 'battery' | 'grid' | 'voltage' | 'tomorrow' | 'consumption';
 
-/** A free cell: any entity, with its own name and icon */
+/** A built-in cell with its own tap action: { type: grid, tap_action: … } */
+export interface BuiltinCell {
+    type: CellKind;
+    tap_action?: Record<string, unknown>;
+}
+
+/** A free cell: any entity, with its own name, icon and tap action */
 export interface CustomCell {
     entity: string;
     name?: string;
     icon?: string;
+    tap_action?: Record<string, unknown>;
 }
 
-export type CellConfig = CellKind | CustomCell;
+export type CellConfig = CellKind | BuiltinCell | CustomCell;
 
 export type CellTap = 'auto' | 'more-info' | 'card';
 
@@ -78,8 +85,8 @@ export interface EnergySkyCardConfig {
     power_threshold?: number;
     animate?: boolean;
     /**
-     * A tap on a cell: its entity's dialog (more-info), the card's tap action
-     * (card), or auto: the dialog unless the card has a tap_action of its own
+     * @deprecated 0.3.1 only, still read: what a cell without a tap_action
+     * of its own does (auto, more-info, card). Each cell now takes its own.
      */
     cell_tap?: CellTap;
     tap_action?: Record<string, unknown>;
