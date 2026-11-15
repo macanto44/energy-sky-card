@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.2] — 2026-11-15
 
 - Each cell takes its own tap action (more-info, navigate, url, perform-action, none…), chosen in the editor's Cells block (« Appui sur la case ») or with `tap_action` in YAML: a built-in cell is then written `{ type: grid, tap_action: … }`. Without one, a tap opens the cell's entity unless the card has a `tap_action`, as in 0.3.1. `cell_tap` (0.3.1) leaves the editor and the docs; it is still read.
 
