@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] — 2026-11-15
 
 - The sky fills the whole card: stars across all of it at night (thinner and dimmer towards the bottom), where they were held in the top-right quarter; the card hides only the ones that would touch text, measured after each layout.
 - Three shooting stars at night instead of one, each on its own path (top right, top left, across the middle) and rhythm (11, 17, 23 s).
