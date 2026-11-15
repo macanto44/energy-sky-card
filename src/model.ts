@@ -22,8 +22,10 @@ export interface MetricView {
     key: MetricKey;
     label: string;
     value: string;
-    /** The smaller complement, " · figée" */
+    /** The smaller complement, " · SOC atteint" */
     extra: string;
+    /** The complement for a cell too narrow for it, " · SOC ✓" */
+    extraShort: string;
 }
 
 export interface CardView {
@@ -101,7 +103,8 @@ function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Nu
         key: 'battery',
         label: localize(loc.lang, 'battery'),
         value: formatPercent(soc, loc) + arrow,
-        extra: locked === undefined ? '' : ` · ${localize(loc.lang, locked ? 'locked' : 'free')}`,
+        extra: locked ? ` · ${localize(loc.lang, 'soc_reached')}` : '',
+        extraShort: locked ? ` · ${localize(loc.lang, 'soc_reached_short')}` : '',
     };
 }
 
@@ -111,7 +114,7 @@ function gridMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Numbe
         key: 'grid',
         label: localize(loc.lang, 'grid'),
         value: formatPower(powerW(hass.states[config.grid!.power_entity!]), loc),
-        extra: '',
+        extra: '', extraShort: '',
     };
 }
 
@@ -121,7 +124,7 @@ function voltageMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Nu
         key: 'voltage',
         label: localize(loc.lang, 'voltage'),
         value: gridOutage(config, hass) ? localize(loc.lang, 'outage') : formatVoltage(volts, loc),
-        extra: '',
+        extra: '', extraShort: '',
     };
 }
 
@@ -130,7 +133,7 @@ function tomorrowMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: N
         key: 'tomorrow',
         label: localize(loc.lang, 'tomorrow'),
         value: formatEnergy(energyKWh(hass.states[config.forecast_tomorrow_entity!]), loc),
-        extra: '',
+        extra: '', extraShort: '',
     };
 }
 

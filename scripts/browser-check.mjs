@@ -43,9 +43,11 @@ check(cards.some(c => c.motion === 'paused'), 'at least one card is off-screen')
 // Brief §5.3: no line overflows at 320 px (a 304 px card), in either language, extreme values included
 for (const lang of ['fr', 'en']) {
     for (const c of probe(`lang=${lang}`, [], 2400)) {
-        check(c.overflow === '0' && c.tall === '0', `${lang} ${c.name}: no overflow (hero ${c.hero} px)`);
+        check(c.overflow === '0' && c.tall === '0', `${lang} ${c.name}: no overflow (hero ${c.hero} px${c.short === '1' ? ', short SOC' : ''})`);
     }
 }
+// « SOC atteint » stays in full on a usual phone (360 px card)
+for (const c of probe('s=blanc&widths=360', [], 1200)) check(c.short === '0', `${c.name}: « SOC atteint » in full`);
 
 // Three rows (184 px): the compact spacing takes over, still nothing overflows
 for (const c of probe('h=184&s=bleu,extremes,coupure', [], 2400)) {

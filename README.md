@@ -15,7 +15,7 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
 - **Production solaire instantanée**, en grand : « 748 W », puis « 3,2 kW » à partir de 1 000 W.
 - **Énergie produite aujourd'hui** : la somme de plusieurs compteurs journaliers. Un compteur indisponible est simplement laissé de côté.
 - **Quatre mesures** (chacune facultative : une case sans entité disparaît) :
-  - **Batterie** : charge en %, ↑ en charge, ↓ en décharge, et « · figée » si l'un des verrous est actif, sinon « · libre ».
+  - **Batterie** : charge en %, ↑ en charge, ↓ en décharge, et « · SOC atteint » quand l'une des entités `lock_entities` est active (rien sinon) ; « SOC ✓ » sur un écran trop étroit.
   - **Réseau** : la puissance échangée avec le réseau, précédée d'un « - » en cas d'injection (« 748 W » acheté, « -1,8 kW » injecté).
   - **Tension** : en volts, ou « Coupure » quand l'alarme de perte réseau est déclenchée.
   - **Prévu demain** : la prévision de production en kWh.
@@ -37,7 +37,7 @@ Avant 2026.11, la même chose se fait dans HACS : **⋮ → Dépôts personnalis
 ### À la main
 
 1. Téléchargez `energy-sky-card.js` et `energy-sky-card-editor.js` depuis la [dernière release](https://github.com/macanto44/energy-sky-card/releases) et copiez-les **dans le même dossier**, par exemple `/config/www/energy-sky-card/`.
-2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.1.1`, type **Module JavaScript**.
+2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.1.2`, type **Module JavaScript**.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
@@ -75,7 +75,7 @@ tap_action:
 | `daily_production_entities` | — | Compteurs journaliers (kWh ; Wh converti), additionnés. Sans eux, pas de ligne « kWh produits ». |
 | `battery.soc_entity` | — | Charge de la batterie (%). Sans elle, pas de case Batterie. |
 | `battery.power_entity` | — | Puissance batterie (W), positive en charge : flèches ↑ / ↓. |
-| `battery.lock_entities` | — | Entités `on` / `off` : « figée » si l'une est `on`, sinon « libre ». Sans elles, pas de complément. |
+| `battery.lock_entities` | — | Entités `on` / `off` : « SOC atteint » si l'une est `on`, rien sinon. |
 | `grid.power_entity` | — | Puissance réseau (W), positive à l'achat. |
 | `grid.voltage_entity` | — | Tension réseau (V). |
 | `grid.outage_entity` | — | Entité d'alarme de coupure. |
@@ -125,7 +125,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 - **Solar power now**, large: "748 W", then "3.2 kW" from 1,000 W.
 - **Energy produced today**: the sum of several daily meters; an unavailable one is left out.
-- **Four metrics** (each optional: a cell without its entity disappears): **Battery** (SOC %, ↑ charging / ↓ discharging, "locked" / "free"), **Grid** (the power exchanged, with a "-" when exporting: "748 W" bought, "-1.8 kW" sent back), **Voltage** (or "Outage"), **Tomorrow** (forecast kWh).
+- **Four metrics** (each optional: a cell without its entity disappears): **Battery** (SOC %, ↑ charging / ↓ discharging, "SOC reached" when a lock entity is on), **Grid** (the power exchanged, with a "-" when exporting: "748 W" bought, "-1.8 kW" sent back), **Voltage** (or "Outage"), **Tomorrow** (forecast kWh).
 - **Background**: the tariff colour by day with a sun halo scaled to production; a starry sky after sunset.
 - **Quiet animations**: the halo breathes while the panels produce, a few stars twinkle. Paused off-screen and in hidden tabs; none with `prefers-reduced-motion` or `animate: false`.
 - No reading shows "—", never `unknown` or `NaN`. The card speaks French and English, and follows your profile's number format.
@@ -135,7 +135,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 **Marketplace (Home Assistant 2026.11+)**: Settings → Marketplace → ⋮ → Add from link, `https://github.com/macanto44/energy-sky-card`, category **Dashboard**. Before 2026.11, add it to HACS as a custom repository (category **Dashboard**).
 
-**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.1.1` as a JavaScript module resource.
+**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.1.2` as a JavaScript module resource.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
@@ -147,7 +147,7 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `production_entity` | **required** | Solar power now (W; kW converted). |
 | `production_max` | `6000` | Power (W) at which the halo is strongest. |
 | `daily_production_entities` | — | Daily energy meters (kWh), summed. |
-| `battery.soc_entity` / `power_entity` / `lock_entities` | — | SOC (%), power (W, positive when charging), lock switches. |
+| `battery.soc_entity` / `power_entity` / `lock_entities` | — | SOC (%), power (W, positive when charging), switches meaning "SOC reached" when any is on. |
 | `grid.power_entity` / `voltage_entity` / `outage_entity` | — | Power (W, positive when importing), voltage (V), outage alarm. |
 | `grid.outage_states` | `[warning, alarm]` | States of `outage_entity` that mean an outage. |
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |

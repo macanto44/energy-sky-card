@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.2] — 2026-11-15
+
+- Battery: « · SOC atteint » (EN « SOC reached ») when a lock entity is on, instead of « figée »; nothing instead of « libre ». On a card too narrow for it (320 px phone), it shortens to « · SOC ✓ ».
+
 ## [0.1.1] — 2026-11-15
 
 - The prototype's spacing: more air around the hero, the « kWh produits » line and the metrics, which stay anchored to the bottom. The card now takes 4 rows (248 px); at 3 rows it switches to a compact spacing.

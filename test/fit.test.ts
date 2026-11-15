@@ -87,6 +87,23 @@ describe('fit', () => {
         expect(card.hasAttribute('data-hero')).toBe(false);
     });
 
+    it('shortens « SOC atteint » only when a metric line is too wide', () => {
+        const lineWidth = (el: HTMLElement) => {
+            if (!el.classList.contains('value')) return 0;
+            const host = (el.getRootNode() as ShadowRoot).host as HTMLElement;
+            return host.hasAttribute('data-short-extra') ? 110 : (el.textContent ?? '').length > 15 ? 144 : 60;
+        };
+        Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get(this: HTMLElement) { return lineWidth(this); } });
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get(this: HTMLElement) { return this.classList.contains('value') ? 124 : 0; } });
+        const card = mount();
+        card.fit();
+        expect(card.hasAttribute('data-short-extra')).toBe(false);
+        card.hass = makeHass({ ...ANNEX_B, 'input_boolean.reserve_batterie_nuit': 'on' });
+        expect(card.hasAttribute('data-short-extra')).toBe(true);
+        card.hass = makeHass(ANNEX_B);
+        expect(card.hasAttribute('data-short-extra')).toBe(false);
+    });
+
     it('re-fits when the hero text changes', () => {
         fakeLayout({ 56: 300, 48: 250, 40: 210 }, 264);
         const card = mount();

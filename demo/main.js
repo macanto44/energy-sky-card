@@ -35,7 +35,7 @@ if (params.has('probe')) {
       const overflow = lines.filter(l => l.scrollWidth > l.clientWidth + 1).length;
       const content = card.shadowRoot.querySelector('.content');
       const tall = content.scrollHeight > content.clientHeight + 1 ? 1 : 0;
-      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? 56}`;
+      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? 56} short=${card.hasAttribute('data-short-extra') ? 1 : 0}`;
     });
     const pre = document.createElement('pre');
     pre.id = 'probe';

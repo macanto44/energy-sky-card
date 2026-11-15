@@ -67,7 +67,7 @@ interface Refs {
     heroValue: HTMLElement;
     heroUnit: HTMLElement;
     context: HTMLElement;
-    metrics: Map<MetricKey, { label: HTMLElement; value: HTMLElement; extra: HTMLElement }>;
+    metrics: Map<MetricKey, { label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement }>;
 }
 
 export class EnergySkyCard extends HTMLElement {
@@ -144,7 +144,7 @@ export class EnergySkyCard extends HTMLElement {
                     <div class="grid">${metrics.map(key => `
                         <div class="metric" data-metric="${key}">
                             <div class="label line"><ha-icon icon="${METRIC_ICONS[key]}"></ha-icon><span class="label-text"></span></div>
-                            <div class="value line"><span class="value-main"></span><span class="extra"></span></div>
+                            <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span></div>
                         </div>`).join('')}</div>
                 </div>
             </ha-card>`;
@@ -156,7 +156,7 @@ export class EnergySkyCard extends HTMLElement {
             context: q('.context'),
             metrics: new Map(metrics.map(key => {
                 const el = q(`[data-metric="${key}"]`);
-                return [key, { label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra', el) }];
+                return [key, { label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el) }];
             })),
         };
         this.actions = readActions(config, config.production_entity);
@@ -173,9 +173,16 @@ export class EnergySkyCard extends HTMLElement {
      * The roomiest layout at which nothing overflows (the hero's line across,
      * the content down): the prototype's spacing with the hero at 56, 48 or
      * 40 px, then the compact spacing (data-compact) at the same sizes.
-     * Measured, so it holds for any size, value or language.
+     * Measured, so it holds for any size, value or language. Then a metric
+     * line still too wide (« 100 % ↓ · SOC atteint » on a 320 px phone)
+     * switches the complements to their short form (data-short-extra).
      */
     fit(): void {
+        this.fitLayout();
+        this.fitExtras();
+    }
+
+    private fitLayout(): void {
         const refs = this.refs;
         if (!refs) return;
         const content = refs.card.querySelector('.content') as HTMLElement;
@@ -189,6 +196,13 @@ export class EnergySkyCard extends HTMLElement {
                 if (!overflows()) return;
             }
         }
+    }
+
+    private fitExtras(): void {
+        if (!this.refs) return;
+        this.removeAttribute('data-short-extra');
+        const lines = [...this.refs.metrics.values()].map(m => m.value.parentElement as HTMLElement);
+        if (lines.some(l => l.scrollWidth > l.clientWidth + 1)) this.setAttribute('data-short-extra', '');
     }
 
     /** What the render depends on: each tracked entity's last_updated, and the locale */
@@ -207,7 +221,7 @@ export class EnergySkyCard extends HTMLElement {
         const view = buildView(this.config, this._hass);
         const refs = this.refs;
         this.paintSky();
-        const heroBefore = refs.heroValue.textContent + refs.heroUnit.textContent;
+        const before = this.fitSensitiveText();
         setText(refs.heroValue, view.hero.value);
         setText(refs.heroUnit, view.hero.unit);
         if (view.context !== undefined) setText(refs.context, view.context);
@@ -217,9 +231,17 @@ export class EnergySkyCard extends HTMLElement {
             setText(el.label, metric.label);
             setText(el.value, metric.value);
             setText(el.extra, metric.extra);
+            setText(el.extraShort, metric.extraShort);
         }
-        // A longer hero ("12,3 kW" after "8 W") may not fit any more
-        if (heroBefore !== refs.heroValue.textContent! + refs.heroUnit.textContent) this.fit();
+        // A longer hero ("12,3 kW" after "8 W") or metric may not fit any more
+        if (before !== this.fitSensitiveText()) this.fit();
+    }
+
+    /** The text whose length decides the layout: the hero and the metric lines */
+    private fitSensitiveText(): string {
+        const refs = this.refs!;
+        return [refs.heroValue, refs.heroUnit, ...[...refs.metrics.values()].flatMap(m => [m.value, m.extra])]
+            .map(el => el.textContent).join('|');
     }
 
     /** The background: day or night, the tariff colours, the halo's strength */

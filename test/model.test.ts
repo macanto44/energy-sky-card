@@ -13,7 +13,7 @@ describe('the prototype readings (annex B)', () => {
         const v = view();
         expect(v.hero).toEqual({ value: '2', unit: 'W' });
         expect(v.context).toBe('0,0 kWh produits');
-        expect(metric(v, 'battery')).toMatchObject({ label: 'Batterie', value: `25${nb}%`, extra: ' · libre' });
+        expect(metric(v, 'battery')).toMatchObject({ label: 'Batterie', value: `25${nb}%`, extra: '' });
         expect(metric(v, 'grid')).toMatchObject({ label: 'Réseau', value: `748${nb}W` });
         expect(metric(v, 'voltage')).toMatchObject({ label: 'Tension', value: `234${nb}V` });
         expect(metric(v, 'tomorrow')).toMatchObject({ label: 'Prévu demain', value: `12,6${nb}kWh` });
@@ -24,7 +24,7 @@ describe('the prototype readings (annex B)', () => {
         expect(v.context).toBe('0.0 kWh produced');
         expect(metric(v, 'grid').label).toBe('Grid');
         expect(metric(v, 'voltage').label).toBe('Voltage');
-        expect(metric(v, 'battery').extra).toBe(' · free');
+        expect(metric(v, 'battery').extra).toBe('');
     });
 });
 
@@ -52,9 +52,9 @@ describe('battery', () => {
         expect(metric(view({ 'sensor.victron_system_battery_power': 15 }), 'battery').value).toBe(`25${nb}%`);
     });
 
-    it('is « figée » when any lock is on, « libre » otherwise', () => {
-        expect(metric(view({ 'input_boolean.reserve_batterie_nuit': 'on' }), 'battery').extra).toBe(' · figée');
-        expect(metric(view(), 'battery').extra).toBe(' · libre');
+    it('reads « SOC atteint » when any lock is on, nothing otherwise', () => {
+        expect(metric(view({ 'input_boolean.reserve_batterie_nuit': 'on' }), 'battery')).toMatchObject({ extra: ' · SOC atteint', extraShort: ' · SOC ✓' });
+        expect(metric(view(), 'battery')).toMatchObject({ extra: '', extraShort: '' });
     });
 
     it('has no complement without lock entities', () => {

@@ -74,12 +74,12 @@ test/
 ## Behaviour notes
 
 - An unavailable daily sensor is left out of the sum; with none available the line reads "— kWh produits".
-- The battery complement (« · figée » / « · libre ») only shows when lock entities are configured.
+- The battery complement « · SOC atteint » shows when any lock entity is on; nothing otherwise.
 - Power entities in kW / MW and energy entities in Wh / MWh are converted from their `unit_of_measurement`.
 
 ## Sizing
 
-`getGridOptions()` → 12 × 4 (248 px), min 6 × 3. Default spacing copies the prototype's (roomy, grid anchored to the bottom); `fit()` (on resize via ResizeObserver, and when the hero text changes) tries the roomy spacing with the hero at 56 / 48 / 40 px (`data-hero`), then the compact spacing (`data-compact`, for 3 rows / 184 px) at the same sizes, keeping the first where the hero line and the content don't overflow. Other lines end in an ellipsis. `npm run test:browser` checks that nothing overflows at 304 px (a 320 px phone) in French and English, extreme values included.
+`getGridOptions()` → 12 × 4 (248 px), min 6 × 3. Default spacing copies the prototype's (roomy, grid anchored to the bottom); `fit()` (on resize via ResizeObserver, and when the hero text changes) tries the roomy spacing with the hero at 56 / 48 / 40 px (`data-hero`), then the compact spacing (`data-compact`, for 3 rows / 184 px) at the same sizes, keeping the first where the hero line and the content don't overflow. A metric line still too wide switches the complements to their short form (`data-short-extra`: « SOC atteint » → « SOC ✓ »). Other lines end in an ellipsis. `npm run test:browser` checks that nothing overflows at 304 px (a 320 px phone) in French and English, extreme values included.
 
 ## Motion
 

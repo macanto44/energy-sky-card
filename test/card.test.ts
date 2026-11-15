@@ -44,8 +44,12 @@ describe('render', () => {
         expect($(card, '.hero-value').textContent).toBe('2');
         expect($(card, '.hero-unit').textContent).toBe('W');
         expect($(card, '.context').textContent).toBe('0,0 kWh produits');
-        expect(metricText(card, 'battery')).toBe(`Batterie 25${nb}% · libre`);
+        expect(metricText(card, 'battery')).toBe(`Batterie 25${nb}%`);
         expect(metricText(card, 'grid')).toBe(`Réseau 748${nb}W`);
+        card.hass = makeHass({ ...ANNEX_B, 'input_boolean.reserve_batterie_nuit': 'on' });
+        expect($(card, '[data-metric="battery"] .extra-full')?.textContent).toBe(' · SOC atteint');
+        expect($(card, '[data-metric="battery"] .extra-short')?.textContent).toBe(' · SOC ✓');
+        card.hass = makeHass(ANNEX_B);
         expect(metricText(card, 'voltage')).toBe(`Tension 234${nb}V`);
         expect(metricText(card, 'tomorrow')).toBe(`Prévu demain 12,6${nb}kWh`);
         expect(card.shadowRoot!.querySelectorAll('ha-icon').length).toBe(4);
