@@ -24,7 +24,7 @@ ha-card {
 .layer { position: absolute; inset: 0; opacity: 0; }
 :host([data-mode="day"]) .layer.day,
 :host([data-mode="night"]) .layer.night { opacity: 1; }
-.layer.day { background: linear-gradient(180deg, var(--esc-c0, #4c92d7) 0%, var(--esc-c1, #236ab2) 60%, var(--esc-c2, #1d4f87) 100%); }
+.layer.day { background: linear-gradient(180deg, var(--esc-c0, #4b90d5) 0%, var(--esc-c1, #2169b0) 60%, var(--esc-c2, #1d4f87) 100%); }
 .layer.night { background: linear-gradient(180deg, #1d2b4d 0%, #0b1026 100%); }
 .halo {
     position: absolute;
@@ -65,6 +65,11 @@ ha-card {
 @media (prefers-reduced-motion: reduce) {
     .halo, .star, .layer { animation: none !important; transition: none !important; }
 }
+/* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
+:host([data-compact]) .content { padding: 14px 20px 12px; }
+:host([data-compact]) .context { margin: 0 0 6px; }
+:host([data-compact]) .grid { padding-top: 7px; row-gap: 4px; }
+:host([data-compact]) .value { margin-top: 0; }
 ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .content {
     position: relative;
@@ -73,7 +78,8 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 14px 20px 12px;
+    /* The prototype's air: ~27 px above the hero, 22 px under the last value */
+    padding: 22px 20px 16px;
     font-family: var(--esc-font);
 }
 .content > * { flex-shrink: 0; }
@@ -95,23 +101,26 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
     font-weight: 400;
     letter-spacing: 0;
     opacity: 0.85;
-    margin-left: 0.12em;
+    /* A word space, as in the prototype's « 1,3 kW » */
+    margin-left: 0.45em;
 }
 .context {
-    margin-top: 0;
+    margin-top: 12px;
+    margin-bottom: 16px;
     font-size: 17px;
     font-weight: 600;
     line-height: 22px;
     letter-spacing: -0.012em;
 }
 .grid {
+    /* Anchored to the bottom; at least the prototype's gap above the hairline */
     margin-top: auto;
-    padding-top: 7px;
+    padding-top: 13px;
     border-top: 1px solid rgba(255, 255, 255, 0.22);
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 16px;
-    row-gap: 4px;
+    row-gap: 12px;
 }
 .grid:empty { display: none; }
 .metric { min-width: 0; }
@@ -133,6 +142,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
     font-weight: 500;
     line-height: 21px;
     font-variant-numeric: tabular-nums;
+    margin-top: 5px;
 }
 .extra { font-size: 13px; font-weight: 400; opacity: 0.8; }
 `;

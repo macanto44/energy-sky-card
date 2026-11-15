@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1] — 2026-11-15
+
+- The prototype's spacing: more air around the hero, the « kWh produits » line and the metrics, which stay anchored to the bottom. The card now takes 4 rows (248 px); at 3 rows it switches to a compact spacing.
+- A word space between the value and its unit (« 1,3 kW »).
+- Default palettes 1–2 % darker at the top, so the « kWh produits » line keeps 4.5:1 contrast in its new place.
+
 ## [0.1.0] — 2026-11-15
 
 First version, replacing the markdown + card-mod prototype.

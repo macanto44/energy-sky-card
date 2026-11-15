@@ -9,15 +9,15 @@ export type Palette = [string, string, string];
 
 /**
  * Default tariff palettes, top → bottom (0 % → 60 % → 100 %). The brief's
- * colours, with the top two stops darkened in OKLCH lightness (Bleu ×0.937,
- * Blanc ×0.913, Rouge ×0.987, hue and chroma kept) until white text passes
+ * colours, with the top two stops darkened in OKLCH lightness (Bleu ×0.928,
+ * Blanc ×0.907, Rouge ×0.980, hue and chroma kept) until white text passes
  * the contrast test where it actually sits, with a 0.04 margin: see
  * test/sky.test.ts.
  */
 export const DEFAULT_PALETTES: Record<string, Palette> = {
-    Bleu: ['#4c92d7', '#236ab2', '#1d4f87'],
-    Blanc: ['#7c8a9d', '#5d6c82', '#4f5d72'],
-    Rouge: ['#d4776b', '#ae453b', '#76261f'],
+    Bleu: ['#4b90d5', '#2169b0', '#1d4f87'],
+    Blanc: ['#7b899c', '#5c6b81', '#4f5d72'],
+    Rouge: ['#d2766a', '#ac443a', '#76261f'],
 };
 export const DEFAULT_TARIFF = 'Bleu';
 /** Night: fixed, whatever the tariff. #1d2b4d → #0b1026 (the middle stop sits on that straight line) */

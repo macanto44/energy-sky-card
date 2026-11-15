@@ -37,7 +37,7 @@ Avant 2026.11, la même chose se fait dans HACS : **⋮ → Dépôts personnalis
 ### À la main
 
 1. Téléchargez `energy-sky-card.js` et `energy-sky-card-editor.js` depuis la [dernière release](https://github.com/macanto44/energy-sky-card/releases) et copiez-les **dans le même dossier**, par exemple `/config/www/energy-sky-card/`.
-2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.1.0`, type **Module JavaScript**.
+2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.1.1`, type **Module JavaScript**.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
@@ -102,16 +102,16 @@ Chaque palette donne trois couleurs, du haut vers le bas du dégradé (0 %, 60 %
 
 ```yaml
 tariff_palettes:
-  Bleu: ['#4c92d7', '#236ab2', '#1d4f87']
-  Blanc: ['#7c8a9d', '#5d6c82', '#4f5d72']
-  Rouge: ['#d4776b', '#ae453b', '#76261f']
+  Bleu: ['#4b90d5', '#2169b0', '#1d4f87']
+  Blanc: ['#7b899c', '#5c6b81', '#4f5d72']
+  Rouge: ['#d2766a', '#ac443a', '#76261f']
 ```
 
 Les palettes par défaut sont légèrement plus sombres en haut que celles du prototype : avec celles d'origine, le texte blanc n'atteignait pas le contraste minimal (4,5:1 pour les valeurs, 3:1 pour les étiquettes et le grand chiffre). Un test vérifie chaque palette à l'endroit où se trouve le texte. Si vous fournissez vos propres couleurs, gardez-les assez sombres pour le texte blanc.
 
 ### Taille
 
-Dans une vue « sections », la carte prend toute la largeur et 3 rangées (environ 184 px sur un téléphone). Quand la place manque, le grand chiffre passe de 56 à 48 puis 40 px ; aucune ligne ne déborde à 320 px de large.
+Dans une vue « sections », la carte prend toute la largeur et 4 rangées (248 px), avec l'aération du prototype et les mesures ancrées en bas. Réduite à 3 rangées, elle passe à un espacement serré ; quand la largeur manque, le grand chiffre passe de 56 à 48 puis 40 px. Aucune ligne ne déborde à 320 px de large.
 
 ---
 
@@ -135,7 +135,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 **Marketplace (Home Assistant 2026.11+)**: Settings → Marketplace → ⋮ → Add from link, `https://github.com/macanto44/energy-sky-card`, category **Dashboard**. Before 2026.11, add it to HACS as a custom repository (category **Dashboard**).
 
-**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.1.0` as a JavaScript module resource.
+**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.1.1` as a JavaScript module resource.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration

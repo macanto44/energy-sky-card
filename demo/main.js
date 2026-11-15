@@ -10,7 +10,7 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
   const widths = (params.get('widths') || '360,304').split(',').map(Number);
   for (const width of widths) {
     const fig = document.createElement('figure');
-    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px"></div>`;
+    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${params.get('h') ? `;height:${params.get('h')}px` : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
     card.setConfig(CONFIG);
     const states = {};
@@ -42,4 +42,18 @@ if (params.has('probe')) {
     pre.textContent = lines.join('\n');
     document.body.prepend(pre);
   }, 1500);
+}
+
+// ?layout: where each text line sits, as fractions of the card's height (for the contrast test)
+if (params.has('layout')) {
+  setTimeout(() => {
+    const card = document.querySelector('energy-sky-card');
+    const box = card.shadowRoot.querySelector('ha-card').getBoundingClientRect();
+    const frac = el => { const r = el.getBoundingClientRect(); return [(r.top - box.top) / box.height, (r.bottom - box.top) / box.height].map(v => v.toFixed(3)).join('–'); };
+    const q = sel => [...card.shadowRoot.querySelectorAll(sel)].map(frac).join(' ');
+    const pre = document.createElement('pre');
+    pre.id = 'layout';
+    pre.textContent = `height=${box.height} compact=${card.hasAttribute('data-compact')} hero=${card.getAttribute('data-hero') ?? 56}\nhero ${q('.hero')}\ncontext ${q('.context')}\nlabels ${q('.label')}\nvalues ${q('.value')}\ngrid ${q('.grid')}`;
+    document.body.prepend(pre);
+  }, 1000);
 }

@@ -88,9 +88,9 @@ describe('render', () => {
 });
 
 describe('sizing and stub', () => {
-    it('asks the sections view for 12 × 3, never under 6 × 2', () => {
+    it('asks the sections view for 12 × 4, never under 6 × 3', () => {
         const card = document.createElement(CARD_NAME) as EnergySkyCard;
-        expect(card.getGridOptions()).toEqual({ columns: 12, rows: 3, min_columns: 6, min_rows: 2 });
+        expect(card.getGridOptions()).toEqual({ columns: 12, rows: 4, min_columns: 6, min_rows: 3 });
     });
 
     it('prefills the first power sensor and sun.sun', () => {
@@ -108,7 +108,7 @@ describe('background', () => {
         const haCard = $(card, 'ha-card');
         expect(card.dataset.mode).toBe('day');
         expect(card.hasAttribute('data-producing')).toBe(true);
-        expect(haCard.style.getPropertyValue('--esc-c0')).toBe('#d4776b');
+        expect(haCard.style.getPropertyValue('--esc-c0')).toBe('#d2766a');
         expect(haCard.style.getPropertyValue('--esc-halo-alpha')).toBe('0.275');
     });
 

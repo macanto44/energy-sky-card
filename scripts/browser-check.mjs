@@ -47,6 +47,11 @@ for (const lang of ['fr', 'en']) {
     }
 }
 
+// Three rows (184 px): the compact spacing takes over, still nothing overflows
+for (const c of probe('h=184&s=bleu,extremes,coupure', [], 2400)) {
+    check(c.overflow === '0' && c.tall === '0', `184 px ${c.name}: no overflow (hero ${c.hero} px)`);
+}
+
 for (const c of probe('s=nuit,bleu', ['--force-prefers-reduced-motion'], 1150)) {
     check(c.motion === 'off' && c.running === '0' && c.paused === '0', `${c.name}: reduced motion, no animation at all`);
 }

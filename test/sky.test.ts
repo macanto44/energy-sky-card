@@ -61,9 +61,11 @@ describe('halo', () => {
 });
 
 /*
- * Contrast of white text where it sits on the card (3 rows, 184 px high):
- * the hero over 8–38 % of the height, the context line 38–51 %, labels at
- * 59–66 % and 80–87 %, values 66–77 % and 87–98 %. Thresholds: values and
+ * Contrast of white text where it sits on the card, measured in Chrome
+ * (demo ?layout) for both spacings: 4 rows (248 px, roomy) and 3 rows
+ * (184 px, compact). Across both: the hero over 7.6–37.7 % of the height,
+ * the context line 36–50 %, labels 57–64 % and 78–86 %, values 64–76 % and
+ * 85–98 %. Thresholds: values and
  * the context line 4.5:1; labels (drawn at 75 % opacity) 3:1; the hero,
  * 56 px large text, 3:1 (WCAG 1.4.3), with the halo at full strength
  * reaching it at a fifth of its alpha (it is centred at 88 % 12 %, beyond
@@ -75,10 +77,10 @@ const minAt = (ys: number[], f: (y: number) => number) => Math.min(...ys.map(f))
 function contrasts(palette: Palette) {
     const at = (y: number) => gradientAt(palette, y);
     return {
-        hero: minAt([0.08, 0.2, 0.38], y => contrastRatio(WHITE, composite(at(y), HALO_RGB, HALO_MAX_ALPHA * 0.2))),
-        context: minAt([0.38, 0.45, 0.51], y => contrastRatio(WHITE, at(y))),
-        label: minAt([0.59, 0.66, 0.8, 0.87], y => contrastRatio(composite(at(y), WHITE, 0.75), at(y))),
-        value: minAt([0.66, 0.77, 0.87, 0.98], y => contrastRatio(WHITE, at(y))),
+        hero: minAt([0.076, 0.2, 0.377], y => contrastRatio(WHITE, composite(at(y), HALO_RGB, HALO_MAX_ALPHA * 0.2))),
+        context: minAt([0.36, 0.43, 0.497], y => contrastRatio(WHITE, at(y))),
+        label: minAt([0.57, 0.643, 0.78, 0.855], y => contrastRatio(composite(at(y), WHITE, 0.75), at(y))),
+        value: minAt([0.643, 0.763, 0.852, 0.975], y => contrastRatio(WHITE, at(y))),
     };
 }
 

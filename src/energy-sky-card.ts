@@ -170,9 +170,10 @@ export class EnergySkyCard extends HTMLElement {
     }
 
     /**
-     * The largest hero size (56, 48, 40 px) at which nothing overflows: the
-     * hero's line across, the content down. Measured, so it holds for any
-     * width, value or language.
+     * The roomiest layout at which nothing overflows (the hero's line across,
+     * the content down): the prototype's spacing with the hero at 56, 48 or
+     * 40 px, then the compact spacing (data-compact) at the same sizes.
+     * Measured, so it holds for any size, value or language.
      */
     fit(): void {
         const refs = this.refs;
@@ -180,10 +181,13 @@ export class EnergySkyCard extends HTMLElement {
         const content = refs.card.querySelector('.content') as HTMLElement;
         const hero = refs.heroValue.parentElement as HTMLElement;
         const overflows = () => hero.scrollWidth > hero.clientWidth + 1 || content.scrollHeight > content.clientHeight + 1;
-        for (const size of HERO_SIZES) {
-            if (size === HERO_SIZES[0]) this.removeAttribute('data-hero');
-            else this.setAttribute('data-hero', String(size));
-            if (!overflows()) return;
+        for (const compact of [false, true]) {
+            this.toggleAttribute('data-compact', compact);
+            for (const size of HERO_SIZES) {
+                if (size === HERO_SIZES[0]) this.removeAttribute('data-hero');
+                else this.setAttribute('data-hero', String(size));
+                if (!overflows()) return;
+            }
         }
     }
 
@@ -235,13 +239,13 @@ export class EnergySkyCard extends HTMLElement {
         }
     }
 
-    /** Sections view: full width, three rows (~190 px on a phone), never under two */
+    /** Sections view: full width, four rows (248 px), never under three */
     getGridOptions() {
-        return { columns: 12, rows: 3, min_columns: 6, min_rows: 2 };
+        return { columns: 12, rows: 4, min_columns: 6, min_rows: 3 };
     }
 
     getCardSize(): number {
-        return 3;
+        return 4;
     }
 
     /** Prefill with the first power sensor found, and sun.sun */

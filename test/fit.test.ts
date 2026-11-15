@@ -33,6 +33,33 @@ function mount(): EnergySkyCard {
 }
 
 describe('fit', () => {
+    it('falls back to the compact spacing when no hero size fits the roomy one', () => {
+        // Too tall in the roomy spacing at every size; fits once compact
+        Object.defineProperty(HTMLElement.prototype, 'scrollHeight', { configurable: true, get(this: HTMLElement) {
+            const host = (this.getRootNode() as ShadowRoot).host as HTMLElement | undefined;
+            return this.classList.contains('content') && !host?.hasAttribute('data-compact') ? 260 : 0;
+        } });
+        Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get(this: HTMLElement) {
+            return this.classList.contains('content') ? 184 : 0;
+        } });
+        try {
+            const card = mount();
+            card.fit();
+            expect(card.hasAttribute('data-compact')).toBe(true);
+            expect(card.hasAttribute('data-hero')).toBe(false);
+        } finally {
+            delete (HTMLElement.prototype as any).scrollHeight;
+            delete (HTMLElement.prototype as any).clientHeight;
+        }
+    });
+
+    it('stays roomy when it fits', () => {
+        fakeLayout({ 56: 200, 48: 170, 40: 140 }, 264);
+        const card = mount();
+        card.fit();
+        expect(card.hasAttribute('data-compact')).toBe(false);
+    });
+
     it('keeps 56 px when the hero fits', () => {
         fakeLayout({ 56: 200, 48: 170, 40: 140 }, 264);
         const card = mount();
