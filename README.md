@@ -37,7 +37,7 @@ Avant 2026.11, la même chose se fait dans HACS : **⋮ → Dépôts personnalis
 ### À la main
 
 1. Téléchargez `energy-sky-card.js` et `energy-sky-card-editor.js` depuis la [dernière release](https://github.com/macanto44/energy-sky-card/releases) et copiez-les **dans le même dossier**, par exemple `/config/www/energy-sky-card/`.
-2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.2.0`, type **Module JavaScript**.
+2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.2.1`, type **Module JavaScript**.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
@@ -175,7 +175,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 **Marketplace (Home Assistant 2026.11+)**: Settings → Marketplace → ⋮ → Add from link, `https://github.com/macanto44/energy-sky-card`, category **Dashboard**. Before 2026.11, add it to HACS as a custom repository (category **Dashboard**).
 
-**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.2.0` as a JavaScript module resource.
+**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.2.1` as a JavaScript module resource.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
