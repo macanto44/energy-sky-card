@@ -20,5 +20,10 @@ jobs:
       - name: Committed bundles match the sources
         run: git diff --exit-code -- energy-sky-card.js energy-sky-card-editor.js
       - run: npm test
+      - name: Roboto as the default font, as on Android
+        run: |
+          sudo apt-get install -y --no-install-recommends fonts-roboto
+          mkdir -p ~/.config/fontconfig && cp .github/fontconfig/fonts.conf ~/.config/fontconfig/
+          fc-match system-ui
       - name: Browser checks (motion, overflow, sky)
         run: npm run test:browser
