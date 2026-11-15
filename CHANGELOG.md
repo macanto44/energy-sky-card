@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.0] — unreleased
+## [0.2.0] — 2026-11-15
 
 - `battery.invert` and `grid.invert`, for sensors that are positive when discharging or exporting.
 - `production_entity` takes a list: several production sensors summed (hero and halo), an unavailable one left out.
