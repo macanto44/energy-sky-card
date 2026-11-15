@@ -37,19 +37,28 @@ ha-card {
     border-radius: 50%;
     background: #fff;
     transform: translate(-50%, -50%);
+    opacity: var(--esc-o, 1);
 }
-.star.twinkle { opacity: 0.6; }
-/* A shooting star, high in the empty sky right of the hero; hidden unless animated */
+.star.twinkle { opacity: calc(var(--esc-o, 1) * 0.6); }
+/* Particles the card hid because they would touch text */
+.sky [hidden] { display: none; }
+/* Shooting stars, each on its own path and rhythm (set inline); hidden unless animated */
 .shooting {
     position: absolute;
-    left: 52%;
-    top: 7%;
     width: 64px;
     height: 1.5px;
     border-radius: 1px;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff);
     opacity: 0;
     transform-origin: 100% 50%;
+}
+/* By day, motes of sunlight: soft warm dots, brighter with production */
+.mote {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(255, 244, 214) 0, rgba(255, 244, 214, 0.35) 30%, rgba(255, 244, 214, 0) 70%);
+    transform: translate(-50%, -50%);
+    opacity: calc(0.3 + var(--esc-halo-alpha, 0) * 0.8);
 }
 /*
  * Motion. data-motion on the host: "on" runs, "paused" holds (tab hidden,
@@ -62,15 +71,20 @@ ha-card {
     to { opacity: calc(var(--esc-halo-alpha, 0) * 1); transform: scale(1.12); }
 }
 @keyframes esc-twinkle {
-    from { opacity: 0.15; transform: translate(-50%, -50%) scale(0.6); }
-    to { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+    from { opacity: calc(var(--esc-o, 1) * 0.15); transform: translate(-50%, -50%) scale(0.6); }
+    to { opacity: var(--esc-o, 1); transform: translate(-50%, -50%) scale(1.4); }
 }
-/* One pass in the first 0.9 s of each 11 s, quiet the rest of the time */
+/* One pass in the first 8 % of each period (0.9 s of 11 s), quiet the rest of the time */
 @keyframes esc-shoot {
-    0% { opacity: 0; transform: rotate(20deg) translateX(0) scaleX(0.3); }
+    0% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(0) scaleX(0.3); }
     2% { opacity: 1; }
-    8% { opacity: 0; transform: rotate(20deg) translateX(110px) scaleX(1); }
-    100% { opacity: 0; transform: rotate(20deg) translateX(110px) scaleX(1); }
+    8% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
+    100% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
+}
+/* A mote drifts 3 px up and down while it glows and fades */
+@keyframes esc-float {
+    from { opacity: calc((0.3 + var(--esc-halo-alpha, 0) * 0.8) * 0.25); transform: translate(-50%, -50%) translateY(3px); }
+    to { opacity: calc(0.3 + var(--esc-halo-alpha, 0) * 0.8); transform: translate(-50%, -50%) translateY(-3px); }
 }
 /* The play state comes through a variable: the animation shorthand would reset a separate rule's */
 :host { --esc-play: running; }
@@ -80,11 +94,13 @@ ha-card {
 :host([data-motion="on"][data-mode="night"]) .star.twinkle,
 :host([data-motion="paused"][data-mode="night"]) .star.twinkle { animation: esc-twinkle 2s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
 :host([data-motion="on"][data-mode="night"]) .shooting,
-:host([data-motion="paused"][data-mode="night"]) .shooting { animation: esc-shoot 11s ease-out 4s infinite; animation-play-state: var(--esc-play); }
+:host([data-motion="paused"][data-mode="night"]) .shooting { animation: esc-shoot var(--esc-shoot-period, 11s) ease-out var(--esc-shoot-delay, 4s) infinite; animation-play-state: var(--esc-play); }
+:host([data-motion="on"][data-mode="day"]) .mote,
+:host([data-motion="paused"][data-mode="day"]) .mote { animation: esc-float 5s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
 /* Day ⇄ night: a 3 s cross-fade, once the first state is painted */
 :host([data-ready]:not([data-motion="off"])) .layer { transition: opacity 3s ease-in-out; }
 @media (prefers-reduced-motion: reduce) {
-    .halo, .star, .shooting, .layer { animation: none !important; transition: none !important; }
+    .halo, .star, .shooting, .mote, .layer { animation: none !important; transition: none !important; }
 }
 /* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
 :host([data-compact]) .content { padding: 14px 20px 12px; }

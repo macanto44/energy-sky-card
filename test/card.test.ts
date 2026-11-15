@@ -3,6 +3,7 @@ import { EnergySkyCard, validateConfig } from '../src/energy-sky-card';
 import { CARD_NAME } from '../src/constants';
 import type { EnergySkyCardConfig, HomeAssistant } from '../src/types';
 import { ANNEX_B, FULL_CONFIG, entity, makeHass } from './helpers';
+import { generateStars } from '../src/stars';
 
 const nb = ' ';
 
@@ -120,12 +121,38 @@ describe('background', () => {
         expect(haCard.style.getPropertyValue('--esc-halo-alpha')).toBe('0.275');
     });
 
-    it('turns to night, with 38 stars and a shooting star', () => {
+    it('turns to night, with its stars and three shooting stars; motes of sunlight by day', () => {
         const card = mount();
         expect(card.dataset.mode).toBe('night');
-        expect(card.shadowRoot!.querySelectorAll('.layer.night .star').length).toBe(38);
-        expect(card.shadowRoot!.querySelectorAll('.layer.night .shooting').length).toBe(1);
-        expect(card.shadowRoot!.querySelectorAll('.star.twinkle').length).toBe(14);
+        expect(card.shadowRoot!.querySelectorAll('.layer.night .star').length).toBe(generateStars().length);
+        expect(card.shadowRoot!.querySelectorAll('.star.twinkle').length).toBe(generateStars().filter(s => s.twinkle).length);
+        expect(card.shadowRoot!.querySelectorAll('.layer.night .shooting').length).toBe(3);
+        expect(card.shadowRoot!.querySelectorAll('.layer.day .mote').length).toBe(40);
+    });
+
+    it('hides the particles that would touch text, and only those', () => {
+        const card = mount();
+        const root = card.shadowRoot!;
+        const rect = (left: number, top: number, width: number, height: number) =>
+            ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect;
+        const empty = rect(0, 0, 0, 0);
+        const fakes = new Map<Element, DOMRect>([
+            [root.querySelector('ha-card')!, rect(0, 0, 400, 250)],
+            // The hero's number over the top-left 200 × 60 px
+            [root.querySelector('.hero-value')!, rect(0, 0, 200, 60)],
+        ]);
+        const original = Element.prototype.getBoundingClientRect;
+        Element.prototype.getBoundingClientRect = function (this: Element) { return fakes.get(this) ?? empty; };
+        try {
+            card.fit();
+            for (const el of root.querySelectorAll<HTMLElement>('.star, .mote')) {
+                const x = parseFloat(el.style.left) * 4, y = parseFloat(el.style.top) * 2.5, reach = Number(el.dataset.reach);
+                expect(el.hidden).toBe(x < 200 + reach && y < 60 + reach);
+            }
+            expect(root.querySelectorAll('.star[hidden]').length).toBeGreaterThan(0);
+        } finally {
+            Element.prototype.getBoundingClientRect = original;
+        }
     });
 
     it('rejects a palette that is not three hex colours', () => {

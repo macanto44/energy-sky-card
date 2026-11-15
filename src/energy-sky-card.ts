@@ -6,7 +6,7 @@ import { CARD_CSS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, configuredCells, normalizeConfig, productionEntities, trackedEntities, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { computeBackground, isHexColor } from './sky';
-import { starsMarkup } from './stars';
+import { coveredBy, motesMarkup, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { listenForGestures, readActions, updateTargetSemantics, type ActionsConfig } from './actions';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
@@ -126,6 +126,8 @@ export class EnergySkyCard extends HTMLElement {
         this.motion.start();
         if (this.refs && this.resizeObserver) this.resizeObserver.observe(this.refs.card);
         this.fit();
+        // Text measured before the fonts load is narrower or wider than it will be
+        document.fonts?.ready?.then(() => this.fit());
     }
 
     disconnectedCallback(): void {
@@ -161,7 +163,7 @@ export class EnergySkyCard extends HTMLElement {
             <style>${CARD_CSS}</style>
             <ha-card>
                 <div class="sky" aria-hidden="true">
-                    <div class="layer day"><div class="halo"></div></div>
+                    <div class="layer day"><div class="halo"></div>${motesMarkup()}</div>
                     <div class="layer night">${starsMarkup()}</div>
                 </div>
                 <div class="content">
@@ -215,6 +217,36 @@ export class EnergySkyCard extends HTMLElement {
     fit(): void {
         this.fitLayout();
         this.fitExtras();
+        this.clearText();
+    }
+
+    /** Where text sits: the visible words and icons, and the hairline above the grid */
+    private textBoxes(): Box[] {
+        const root = this.root;
+        const boxes: Box[] = [...root.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight')]
+            .map(el => el.getBoundingClientRect());
+        const grid = root.querySelector('.grid')?.getBoundingClientRect();
+        if (grid) boxes.push({ left: grid.left, right: grid.right, top: grid.top - 1, bottom: grid.top + 1 });
+        return boxes.filter(b => b.right > b.left && b.bottom > b.top);
+    }
+
+    /**
+     * Hide the stars and motes that would touch text (with their twinkle,
+     * drift and a gap): the sky covers the whole card, but never sits behind
+     * a letter. Measured, so it holds for any size, value or language.
+     */
+    private clearText(): void {
+        const card = this.refs?.card;
+        if (!card) return;
+        const box = card.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+        const boxes = this.textBoxes();
+        for (const el of card.querySelectorAll<HTMLElement>('.star, .mote')) {
+            const x = box.left + parseFloat(el.style.left) / 100 * box.width;
+            const y = box.top + parseFloat(el.style.top) / 100 * box.height;
+            const hide = coveredBy(x, y, Number(el.dataset.reach), boxes);
+            if (el.hidden !== hide) el.hidden = hide;
+        }
     }
 
     private fitLayout(): void {

@@ -1,5 +1,6 @@
 // Runs the built card in headless Chrome and checks what jsdom can't:
-// real CSS animations stop off-screen and never start under reduced motion.
+// real CSS animations stop off-screen and never start under reduced motion,
+// nothing overflows, and the sky's particles cover the card without touching text.
 // Usage: npm run build && npm run test:browser   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -62,6 +63,13 @@ for (const c of probe('s=blanc&widths=360', [], 1200)) check(c.short === '0', `$
 // Three rows (184 px): the compact spacing takes over, still nothing overflows
 for (const c of probe('h=184&s=bleu,extremes,coupure', [], 2400)) {
     check(c.overflow === '0' && c.tall === '0', `184 px ${c.name}: no overflow (hero ${c.hero} px)`);
+}
+
+// The sky covers the whole card (a visible star or mote in each quarter) and none touches text
+for (const query of ['lang=fr', 'lang=en', 'h=184']) {
+    for (const c of probe(query, [], 2400)) {
+        check(c.hits === '0' && c.quarters === '4', `${query} ${c.name}: ${c.dots} ${c.mode === 'night' ? 'stars' : 'motes'} in ${c.quarters} quarters, ${c.hits} on text`);
+    }
 }
 
 for (const c of probe('s=nuit,bleu', ['--force-prefers-reduced-motion'], 1150)) {

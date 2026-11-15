@@ -141,7 +141,7 @@ describe('the stylesheet', () => {
 
     it('declares animations only when motion is on or paused (never off-screen-and-running, never off)', () => {
         const animated = all.filter(([sel, body]) => /(^|;|\s)animation\s*:\s*esc-/.test(body) && !sel.startsWith('@'));
-        expect(animated.length).toBe(3);
+        expect(animated.length).toBe(4);
         for (const [selector] of animated) {
             for (const part of selector.split(',')) {
                 expect(part).toMatch(/data-motion="(on|paused)"/);
@@ -156,13 +156,14 @@ describe('the stylesheet', () => {
         }
     });
 
-    it('breathes the halo over 6 s (×0.55 ↔ ×1, up to 12 % larger), twinkles the stars over 4 s, a shooting star every 11 s', () => {
+    it('breathes the halo over 6 s (×0.55 ↔ ×1, up to 12 % larger), twinkles the stars over 4 s, shooting stars on their own periods, motes drifting by day', () => {
         expect(CARD_CSS).toMatch(/esc-breathe 3s ease-in-out infinite alternate/);
         expect(CARD_CSS).toMatch(/calc\(var\(--esc-halo-alpha, 0\) \* 0\.55\)/);
         expect(CARD_CSS).toContain(`calc(var(--esc-halo-alpha, 0) * ${HALO_BREATHE_PEAK})`);
         expect(CARD_CSS).toMatch(/esc-twinkle 2s ease-in-out infinite alternate/);
-        expect(CARD_CSS).toMatch(/from \{ opacity: 0\.15;/);
-        expect(CARD_CSS).toMatch(/esc-shoot 11s ease-out 4s infinite/);
+        expect(CARD_CSS).toMatch(/from \{ opacity: calc\(var\(--esc-o, 1\) \* 0\.15\);/);
+        expect(CARD_CSS).toMatch(/esc-shoot var\(--esc-shoot-period, 11s\) ease-out var\(--esc-shoot-delay, 4s\) infinite/);
+        expect(CARD_CSS).toMatch(/:host\(\[data-motion="on"\]\[data-mode="day"\]\) \.mote,[^{]*\{ animation: esc-float 5s ease-in-out infinite alternate;/);
     });
 
     it('never shows the shooting star without motion', () => {
@@ -171,7 +172,7 @@ describe('the stylesheet', () => {
 
     it('animates only opacity and transform', () => {
         const keyframes = CARD_CSS.match(/@keyframes[^{]+\{([\s\S]*?\}\s*)\}/g) ?? [];
-        expect(keyframes.length).toBe(3);
+        expect(keyframes.length).toBe(4);
         for (const block of keyframes) {
             const props = [...block.matchAll(/([a-z-]+)\s*:/g)].map(m => m[1]);
             for (const prop of props) expect(['opacity', 'transform']).toContain(prop);
@@ -179,7 +180,7 @@ describe('the stylesheet', () => {
     });
 
     it('turns everything off under prefers-reduced-motion, as a second guard', () => {
-        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.layer \{ animation: none !important; transition: none !important; \}/);
+        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.mote, \.layer \{ animation: none !important; transition: none !important; \}/);
     });
 
     it('cross-fades day and night over 3 s, except when motion is off', () => {

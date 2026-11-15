@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- The sky fills the whole card: stars across all of it at night (thinner and dimmer towards the bottom), where they were held in the top-right quarter; the card hides only the ones that would touch text, measured after each layout.
+- Three shooting stars at night instead of one, each on its own path (top right, top left, across the middle) and rhythm (11, 17, 23 s).
+- By day, motes of sunlight across the card drift and glow slowly, brighter with production. Like the stars, none sits behind text, so the contrast is unchanged.
+
 ## [0.2.1] — 2026-11-15
 
 - `battery.temperature_entity`: the battery's temperature after its charge, « 78 % ↑ · 24 °C » (also in the editor's Battery block). On a cell too narrow, « 100 % ↓ · -13° ✓ ».

@@ -20,7 +20,7 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
   - **Tension** : en volts, ou « Coupure » quand l'alarme de perte réseau est déclenchée.
   - **Prévu demain** : la prévision de production en kWh.
 - **Le fond** : un dégradé dans la couleur Tempo du jour, avec un halo solaire d'autant plus intense que la production est forte ; après le coucher du soleil, un ciel étoilé.
-- **Des animations sobres** : le halo solaire respire (il pâlit et grandit) quand les panneaux produisent ; la nuit, les étoiles scintillent et une étoile filante passe de temps en temps. Elles s'arrêtent quand la carte est hors écran ou l'onglet caché, et ne démarrent pas si l'appareil demande moins d'animations (`prefers-reduced-motion`).
+- **Des animations sobres** : le halo solaire respire (il pâlit et grandit) quand les panneaux produisent et des poussières de lumière flottent sur toute la carte ; la nuit, les étoiles scintillent sur tout le ciel et des étoiles filantes passent de temps en temps, sans jamais passer sous le texte. Elles s'arrêtent quand la carte est hors écran ou l'onglet caché, et ne démarrent pas si l'appareil demande moins d'animations (`prefers-reduced-motion`).
 - Une valeur indisponible s'affiche « — », jamais `unknown` ni `NaN`.
 
 <!-- ha-marketplace:exclude-start -->
@@ -167,7 +167,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 - **Energy produced today**: the sum of several daily meters; an unavailable one is left out.
 - **Four metrics** (each optional: a cell without its entity disappears): **Battery** (SOC %, ↑ charging / ↓ discharging, "SOC reached" when the battery has reached your target, see `soc_reached_entities`), **Grid** (the power exchanged, with a "-" when exporting: "748 W" bought, "-1.8 kW" sent back), **Voltage** (or "Outage"), **Tomorrow** (forecast kWh).
 - **Background**: the tariff colour by day with a sun halo scaled to production; a starry sky after sunset.
-- **Quiet animations**: the sun halo breathes (fading and growing) while the panels produce; at night stars twinkle and a shooting star passes now and then. Paused off-screen and in hidden tabs; none with `prefers-reduced-motion` or `animate: false`.
+- **Quiet animations**: the sun halo breathes (fading and growing) while the panels produce and motes of sunlight drift across the card; at night stars twinkle across the whole sky and shooting stars pass now and then, never under the text. Paused off-screen and in hidden tabs; none with `prefers-reduced-motion` or `animate: false`.
 - No reading shows "—", never `unknown` or `NaN`. The card speaks French and English, and follows your profile's number format.
 
 <!-- ha-marketplace:exclude-start -->

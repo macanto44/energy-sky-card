@@ -3,7 +3,7 @@ import {
     DEFAULT_PALETTES, HALO_BREATHE_PEAK, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, composite, computeBackground, contrastRatio,
     gradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
 } from '../src/sky';
-import { generateStars, inTextZone, starsMarkup, FIXED_STARS, TWINKLING_STARS } from '../src/stars';
+import { SHOOTING_STARS, coveredBy, generateMotes, generateStars, motesMarkup, moteReach, starReach, starsMarkup } from '../src/stars';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 
 const bg = (overrides: Record<string, string | number> = {}, config = FULL_CONFIG) =>
@@ -112,18 +112,59 @@ describe('stars', () => {
         expect(starsMarkup()).toBe(starsMarkup());
     });
 
-    it('count 24 fixed and 14 twinkling, 1.4 to 2.2 px, inside the card', () => {
+    it('cover the whole card, thinning and dimming towards the bottom', () => {
         const stars = generateStars();
-        expect(stars.filter(s => !s.twinkle).length).toBe(FIXED_STARS);
-        expect(stars.filter(s => s.twinkle).length).toBe(TWINKLING_STARS);
+        expect(stars.length).toBeGreaterThanOrEqual(40);
+        expect(stars.filter(s => s.twinkle).length).toBeGreaterThanOrEqual(12);
+        const quarter = (s: { x: number; y: number }) => `${s.x < 50 ? 'l' : 'r'}${s.y < 50 ? 't' : 'b'}`;
+        for (const q of ['lt', 'rt', 'lb', 'rb']) expect(stars.filter(s => quarter(s) === q).length).toBeGreaterThanOrEqual(5);
+        const top = stars.filter(s => s.y < 50), bottom = stars.filter(s => s.y >= 50);
+        expect(top.length).toBeGreaterThan(bottom.length);
         for (const s of stars) {
-            expect(s.size).toBeGreaterThanOrEqual(1.4);
-            expect(s.size).toBeLessThanOrEqual(2.2);
             expect(s.x).toBeGreaterThan(0);
             expect(s.x).toBeLessThan(100);
             expect(s.y).toBeGreaterThan(0);
             expect(s.y).toBeLessThan(100);
-            expect(inTextZone(s.x, s.y)).toBe(false);
+            expect(s.size).toBeGreaterThanOrEqual(0.98);
+            expect(s.size).toBeLessThanOrEqual(2.2);
+            expect(s.opacity).toBeGreaterThanOrEqual(0.55);
+            expect(s.opacity).toBeLessThanOrEqual(1);
         }
+    });
+
+    it('come with three shooting stars on their own paths and rhythms', () => {
+        expect(new Set(SHOOTING_STARS.map(s => s.period)).size).toBe(3);
+        expect(starsMarkup().match(/class="shooting"/g)?.length).toBe(3);
+    });
+});
+
+describe('motes of sunlight', () => {
+    it('are the same on every load, one per cell of an 8 × 5 grid', () => {
+        const motes = generateMotes();
+        expect(motes).toEqual(generateMotes());
+        expect(motes.length).toBe(40);
+        expect(motesMarkup()).toBe(motesMarkup());
+        for (const m of motes) {
+            expect(m.size).toBeGreaterThanOrEqual(7);
+            expect(m.size).toBeLessThanOrEqual(12);
+        }
+    });
+});
+
+describe('keeping particles off the text', () => {
+    const box = { left: 100, top: 100, right: 200, bottom: 120 };
+
+    it('counts the reach around the text box', () => {
+        expect(coveredBy(150, 110, 3, [box])).toBe(true);
+        expect(coveredBy(96, 110, 5, [box])).toBe(true);
+        expect(coveredBy(96, 110, 3, [box])).toBe(false);
+        expect(coveredBy(150, 125, 3, [box])).toBe(false);
+        expect(coveredBy(150, 110, 3, [])).toBe(false);
+    });
+
+    it('reaches as far as a particle grows or drifts, plus a gap', () => {
+        expect(starReach({ x: 0, y: 0, size: 2, opacity: 1, twinkle: false, delay: 0 })).toBe(4);
+        expect(starReach({ x: 0, y: 0, size: 2, opacity: 1, twinkle: true, delay: 0 })).toBe(4.4);
+        expect(moteReach({ x: 0, y: 0, size: 8, delay: 0, duration: 5 })).toBe(10);
     });
 });
