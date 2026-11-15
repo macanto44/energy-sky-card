@@ -20,3 +20,5 @@ jobs:
       - name: Committed bundles match the sources
         run: git diff --exit-code -- energy-sky-card.js energy-sky-card-editor.js
       - run: npm test
+      - name: Browser checks (motion, overflow, sky)
+        run: npm run test:browser

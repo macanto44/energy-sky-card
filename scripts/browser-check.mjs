@@ -9,14 +9,15 @@ import { resolve } from 'node:path';
 const chrome = process.env.CHROME
     ?? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(existsSync);
 if (!chrome) {
-    console.log('browser-check: no Chrome found, skipped (set CHROME=…)');
-    process.exit(0);
+    // Locally a missing Chrome skips the check; in CI it fails, so it can't pass by not running
+    console.log(`browser-check: no Chrome found, ${process.env.CI ? 'failed' : 'skipped'} (set CHROME=…)`);
+    process.exit(process.env.CI ? 1 : 0);
 }
 const page = `file://${resolve('demo/index.html')}`;
 
 function probeOnce(query, extra, height) {
     const html = execFileSync(chrome, [
-        '--headless=new', '--disable-gpu', '--allow-file-access-from-files', `--window-size=720,${height}`,
+        '--headless=new', '--disable-gpu', '--allow-file-access-from-files', ...(process.env.CI ? ['--no-sandbox'] : []), `--window-size=720,${height}`,
         '--virtual-time-budget=3000', ...extra, '--dump-dom', `${page}?probe=1&${query}`,
     ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     const text = /<pre id="probe">([\s\S]*?)<\/pre>/.exec(html)?.[1] ?? '';

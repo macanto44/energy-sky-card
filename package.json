@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:browser": "node scripts/browser-check.mjs",
-    "demo:icons": "node scripts/demo-icons.mjs"
+    "demo:icons": "node scripts/demo-icons.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "keywords": [
     "home-assistant",

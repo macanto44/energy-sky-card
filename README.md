@@ -10,6 +10,8 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
 | **Jour Rouge** | **Nuit** |
 | ![Jour Rouge](docs/images/rouge.png) | ![Nuit](docs/images/nuit.png) |
 
+<img src="docs/images/nuit-anim.png" width="360" alt="La nuit, animée : les étoiles scintillent sur tout le ciel, une étoile filante passe">
+
 ## Ce que montre la carte
 
 - **Production solaire instantanée**, en grand : « 748 W », puis « 3,2 kW » à partir de 1 000 W.
@@ -214,6 +216,7 @@ npm run build          # energy-sky-card.js and energy-sky-card-editor.js
 npm run type-check
 npm test               # Vitest
 npm run test:browser   # headless Chrome: animations pause off-screen, nothing overflows at 320 px
+npm run screenshots    # the pictures above, from the demo
 ```
 
 `demo/index.html` runs the built card on sample readings; `demo/shot.sh` screenshots it. See [CLAUDE.md](CLAUDE.md) for a map of the code.
