@@ -3,7 +3,7 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS } from './styles/card';
-import { METRIC_ICONS, buildView, configuredMetrics, normalizeConfig, trackedEntities, type MetricKey } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, configuredCells, normalizeConfig, productionEntities, trackedEntities, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { computeBackground, isHexColor } from './sky';
 import { starsMarkup } from './stars';
@@ -27,8 +27,32 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
         throw configError('Configuration invalide', 'Invalid configuration');
     }
     const c = normalizeConfig(config as Partial<EnergySkyCardConfig>);
-    if (typeof c.production_entity !== 'string' || !c.production_entity) {
-        throw configError('production_entity est obligatoire', 'production_entity is required');
+    const production = c.production_entity;
+    const productionOk = typeof production === 'string'
+        ? production.length > 0
+        : Array.isArray(production) && production.length > 0 && production.every(id => typeof id === 'string' && id.length > 0);
+    if (!productionOk) {
+        throw configError('production_entity est obligatoire (une entité ou une liste)', 'production_entity is required (one entity or a list)');
+    }
+    if (c.night_hero !== undefined && !(['production', 'consumption', 'battery'] as unknown[]).includes(c.night_hero)) {
+        throw configError('night_hero : production, consumption ou battery', 'night_hero: production, consumption or battery');
+    }
+    if (c.cells !== undefined) {
+        if (!Array.isArray(c.cells) || c.cells.length > MAX_CELLS) {
+            throw configError(`cells : une liste de ${MAX_CELLS} cases au plus`, `cells: a list of at most ${MAX_CELLS} cells`);
+        }
+        for (const cell of c.cells as unknown[]) {
+            const ok = typeof cell === 'string'
+                ? (CELL_KINDS as string[]).includes(cell)
+                : !!cell && typeof cell === 'object' && typeof (cell as { entity?: unknown }).entity === 'string' && !!(cell as { entity: string }).entity;
+            if (!ok) {
+                throw configError(`cells : « ${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)} » n'est ni ${CELL_KINDS.join(', ')}, ni { entity: … }`,
+                    `cells: "${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)}" is neither ${CELL_KINDS.join(', ')} nor { entity: … }`);
+            }
+        }
+    }
+    for (const [name, value] of [['battery.invert', c.battery?.invert], ['grid.invert', c.grid?.invert]] as const) {
+        if (value !== undefined && typeof value !== 'boolean') throw configError(`${name} doit valoir true ou false`, `${name} must be true or false`);
     }
     const lists: [string, unknown][] = [
         ['daily_production_entities', c.daily_production_entities],
@@ -67,7 +91,9 @@ interface Refs {
     heroValue: HTMLElement;
     heroUnit: HTMLElement;
     context: HTMLElement;
-    metrics: Map<MetricKey, { label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement }>;
+    contextFull: HTMLElement;
+    contextShort: HTMLElement;
+    metrics: Map<MetricKey, { icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement }>;
 }
 
 export class EnergySkyCard extends HTMLElement {
@@ -130,7 +156,7 @@ export class EnergySkyCard extends HTMLElement {
      */
     private build(): void {
         const config = this.config!;
-        const metrics = configuredMetrics(config);
+        const cells = configuredCells(config);
         this.root.innerHTML = `
             <style>${CARD_CSS}</style>
             <ha-card>
@@ -140,10 +166,10 @@ export class EnergySkyCard extends HTMLElement {
                 </div>
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
-                    <div class="context line"${config.daily_production_entities?.length ? '' : ' hidden'}></div>
-                    <div class="grid">${metrics.map(key => `
-                        <div class="metric" data-metric="${key}">
-                            <div class="label line"><ha-icon icon="${METRIC_ICONS[key]}"></ha-icon><span class="label-text"></span></div>
+                    <div class="context line" hidden><span class="context-full"></span><span class="context-short"></span></div>
+                    <div class="grid">${cells.map(cell => `
+                        <div class="metric" data-metric="${cell.key}">
+                            <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
                             <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span></div>
                         </div>`).join('')}</div>
                 </div>
@@ -154,12 +180,17 @@ export class EnergySkyCard extends HTMLElement {
             heroValue: q('.hero-value'),
             heroUnit: q('.hero-unit'),
             context: q('.context'),
-            metrics: new Map(metrics.map(key => {
-                const el = q(`[data-metric="${key}"]`);
-                return [key, { label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el) }];
+            contextFull: q('.context-full'),
+            contextShort: q('.context-short'),
+            metrics: new Map(cells.map(cell => {
+                const el = q(`[data-metric="${cell.key}"]`);
+                const icon = q('ha-icon', el);
+                // Set as an attribute, never in markup: a free cell's icon comes from the config
+                icon.setAttribute('icon', cell.kind === 'custom' ? cell.custom!.icon || CUSTOM_CELL_ICON : METRIC_ICONS[cell.kind]);
+                return [cell.key, { icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el) }];
             })),
         };
-        this.actions = readActions(config, config.production_entity);
+        this.actions = readActions(config, productionEntities(config)[0]);
         listenForGestures(this.refs.card, this, () => this.actions);
         updateTargetSemantics(this.refs.card, this.actions);
         this.resizeObserver?.disconnect();
@@ -175,7 +206,9 @@ export class EnergySkyCard extends HTMLElement {
      * 40 px, then the compact spacing (data-compact) at the same sizes.
      * Measured, so it holds for any size, value or language. Then a metric
      * line still too wide (« 100 % ↓ · SOC atteint » on a 320 px phone)
-     * switches the complements to their short form (data-short-extra).
+     * switches the complements to their short form (data-short-extra), and
+     * a context line too wide at night « Consommation » → « Conso. »
+     * (data-short-context).
      */
     fit(): void {
         this.fitLayout();
@@ -200,9 +233,12 @@ export class EnergySkyCard extends HTMLElement {
 
     private fitExtras(): void {
         if (!this.refs) return;
+        const tooWide = (l: HTMLElement) => l.scrollWidth > l.clientWidth + 1;
         this.removeAttribute('data-short-extra');
+        this.removeAttribute('data-short-context');
         const lines = [...this.refs.metrics.values()].map(m => m.value.parentElement as HTMLElement);
-        if (lines.some(l => l.scrollWidth > l.clientWidth + 1)) this.setAttribute('data-short-extra', '');
+        if (lines.some(tooWide)) this.setAttribute('data-short-extra', '');
+        if (!this.refs.context.hidden && tooWide(this.refs.context)) this.setAttribute('data-short-context', '');
     }
 
     /** What the render depends on: each tracked entity's last_updated, and the locale */
@@ -224,7 +260,9 @@ export class EnergySkyCard extends HTMLElement {
         const before = this.fitSensitiveText();
         setText(refs.heroValue, view.hero.value);
         setText(refs.heroUnit, view.hero.unit);
-        if (view.context !== undefined) setText(refs.context, view.context);
+        refs.context.hidden = view.context === undefined;
+        setText(refs.contextFull, view.context ?? '');
+        setText(refs.contextShort, view.contextShort ?? '');
         for (const metric of view.metrics) {
             const el = refs.metrics.get(metric.key);
             if (!el) continue;
@@ -232,6 +270,7 @@ export class EnergySkyCard extends HTMLElement {
             setText(el.value, metric.value);
             setText(el.extra, metric.extra);
             setText(el.extraShort, metric.extraShort);
+            if (metric.icon && el.icon.getAttribute('icon') !== metric.icon) el.icon.setAttribute('icon', metric.icon);
         }
         // A longer hero ("12,3 kW" after "8 W") or metric may not fit any more
         if (before !== this.fitSensitiveText()) this.fit();
@@ -240,7 +279,7 @@ export class EnergySkyCard extends HTMLElement {
     /** The text whose length decides the layout: the hero and the metric lines */
     private fitSensitiveText(): string {
         const refs = this.refs!;
-        return [refs.heroValue, refs.heroUnit, ...[...refs.metrics.values()].flatMap(m => [m.value, m.extra])]
+        return [refs.heroValue, refs.heroUnit, refs.contextFull, ...[...refs.metrics.values()].flatMap(m => [m.value, m.extra])]
             .map(el => el.textContent).join('|');
     }
 

@@ -1,10 +1,10 @@
 // From the config and Home Assistant's states to what the card shows.
 // Pure functions: everything here is unit-tested without a DOM.
 
-import type { EnergySkyCardConfig, HomeAssistant } from './types';
+import type { CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 import { energyKWh, numericState, powerW } from './utils';
 import { localize, numberLocale, type NumberLocale } from './localize';
-import { formatEnergy, formatKWhValue, formatPercent, formatPower, formatVoltage, powerParts, type ValueParts } from './format';
+import { NO_VALUE, formatEnergy, joinParts, formatKWhValue, formatNumber, formatPercent, formatPower, formatVoltage, powerParts, type ValueParts } from './format';
 
 export const DEFAULT_POWER_THRESHOLD = 20;
 export const DEFAULT_OUTAGE_STATES = ['warning', 'alarm'];
@@ -26,14 +26,19 @@ export function normalizeConfig<T extends Partial<EnergySkyCardConfig>>(config: 
     return { ...top, battery } as T;
 }
 
-export type MetricKey = 'battery' | 'grid' | 'voltage' | 'tomorrow';
+/** A cell's id: its kind for a built-in one, "custom-<n>" for a free one (its place in cells) */
+export type MetricKey = string;
 
-export const METRIC_ICONS: Record<MetricKey, string> = {
+export const METRIC_ICONS: Record<CellKind, string> = {
     battery: 'mdi:home-battery-outline',
     grid: 'mdi:transmission-tower',
     voltage: 'mdi:sine-wave',
     tomorrow: 'mdi:solar-power-variant-outline',
+    consumption: 'mdi:home-lightning-bolt-outline',
 };
+export const CUSTOM_CELL_ICON = 'mdi:gauge';
+export const CELL_KINDS = Object.keys(METRIC_ICONS) as CellKind[];
+export const MAX_CELLS = 4;
 
 export interface MetricView {
     key: MetricKey;
@@ -43,29 +48,93 @@ export interface MetricView {
     extra: string;
     /** The complement for a cell too narrow for it, " · SOC ✓" */
     extraShort: string;
+    /** The icon, for a free cell (its config's, else its entity's) */
+    icon?: string;
 }
 
 export interface CardView {
     hero: ValueParts;
-    /** "7,2 kWh produits", or undefined when no daily entity is configured */
+    /** "7,2 kWh produits" (at night, with what the hero shows in front), or undefined: no line */
     context?: string;
+    /** The same, shorter, for a narrow card: "Conso. · 7,2 kWh produits" */
+    contextShort?: string;
     metrics: MetricView[];
 }
 
-/** The metrics this config shows, in grid order. A metric without its entity disappears. */
+/** One cell of the grid, resolved from the config */
+export interface CellSpec {
+    key: MetricKey;
+    kind: CellKind | 'custom';
+    custom?: CustomCell;
+}
+
+const isCustom = (cell: CellConfig): cell is CustomCell => typeof cell === 'object' && cell !== null;
+
+/** The built-in cells whose entities are set, in their usual order */
+export function defaultCells(config: EnergySkyCardConfig): CellKind[] {
+    const kinds: CellKind[] = [];
+    if (config.battery?.soc_entity) kinds.push('battery');
+    if (config.grid?.power_entity) kinds.push('grid');
+    if (config.grid?.voltage_entity || config.grid?.outage_entity) kinds.push('voltage');
+    if (config.forecast_tomorrow_entity) kinds.push('tomorrow');
+    return kinds;
+}
+
+/**
+ * The cells this config shows, in grid order: the config's cells (at most
+ * four), else the built-in ones whose entities are set (a cell without its
+ * entity disappears).
+ */
+export function configuredCells(config: EnergySkyCardConfig): CellSpec[] {
+    if (!config.cells) return defaultCells(config).map(kind => ({ key: kind, kind }));
+    const used = new Set<string>();
+    return config.cells.slice(0, MAX_CELLS).flatMap((cell, i): CellSpec[] => {
+        if (isCustom(cell)) return [{ key: `custom-${i}`, kind: 'custom', custom: cell }];
+        if (used.has(cell)) return [];
+        used.add(cell);
+        return [{ key: cell, kind: cell }];
+    });
+}
+
+/** The cells' keys, in grid order */
 export function configuredMetrics(config: EnergySkyCardConfig): MetricKey[] {
-    const keys: MetricKey[] = [];
-    if (config.battery?.soc_entity) keys.push('battery');
-    if (config.grid?.power_entity) keys.push('grid');
-    if (config.grid?.voltage_entity || config.grid?.outage_entity) keys.push('voltage');
-    if (config.forecast_tomorrow_entity) keys.push('tomorrow');
-    return keys;
+    return configuredCells(config).map(c => c.key);
+}
+
+/** The production entities, one or several */
+export function productionEntities(config: Pick<EnergySkyCardConfig, 'production_entity'>): string[] {
+    const p = config.production_entity;
+    return (Array.isArray(p) ? p : [p]).filter((id): id is string => typeof id === 'string' && id.length > 0);
+}
+
+/**
+ * The solar power now, in W: the sum of the production entities. An
+ * unavailable one is left out; with none available, undefined.
+ */
+export function productionPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
+    const values = productionEntities(config).map(id => powerW(hass.states[id])).filter((v): v is number => v !== undefined);
+    return values.length ? values.reduce((a, b) => a + b, 0) : undefined;
+}
+
+const signed = (value: number | undefined, invert: boolean | undefined) =>
+    value === undefined || !invert ? value : -value;
+
+/** Grid power in W, positive when importing (the sensor's sign flipped with grid.invert) */
+export function gridPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
+    return signed(powerW(hass.states[config.grid?.power_entity ?? '']), config.grid?.invert);
+}
+
+/** Battery power in W, positive when charging (flipped with battery.invert) */
+export function batteryPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
+    return signed(powerW(hass.states[config.battery?.power_entity ?? '']), config.battery?.invert);
 }
 
 /** Every entity whose change can change what the card shows */
 export function trackedEntities(config: EnergySkyCardConfig): string[] {
     const ids = [
-        config.production_entity,
+        ...productionEntities(config),
+        config.consumption_entity,
+        ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
         ...(config.daily_production_entities ?? []),
         config.battery?.soc_entity, config.battery?.power_entity, ...(config.battery?.soc_reached_entities ?? []),
         config.grid?.power_entity, config.grid?.voltage_entity, config.grid?.outage_entity,
@@ -112,8 +181,8 @@ export function gridOutage(config: EnergySkyCardConfig, hass: HomeAssistant): bo
 }
 
 function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, threshold: number): MetricView {
-    const soc = numericState(hass.states[config.battery!.soc_entity!]);
-    const dir = config.battery?.power_entity ? direction(powerW(hass.states[config.battery.power_entity]), threshold) : 'none';
+    const soc = numericState(hass.states[config.battery?.soc_entity ?? '']);
+    const dir = direction(batteryPower(config, hass), threshold);
     const arrow = soc === undefined ? '' : dir === 'up' ? ' ↑' : dir === 'down' ? ' ↓' : '';
     const reached = socReached(config, hass);
     return {
@@ -130,7 +199,7 @@ function gridMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Numbe
     return {
         key: 'grid',
         label: localize(loc.lang, 'grid'),
-        value: formatPower(powerW(hass.states[config.grid!.power_entity!]), loc),
+        value: formatPower(gridPower(config, hass), loc),
         extra: '', extraShort: '',
     };
 }
@@ -149,24 +218,86 @@ function tomorrowMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: N
     return {
         key: 'tomorrow',
         label: localize(loc.lang, 'tomorrow'),
-        value: formatEnergy(energyKWh(hass.states[config.forecast_tomorrow_entity!]), loc),
+        value: formatEnergy(energyKWh(hass.states[config.forecast_tomorrow_entity ?? '']), loc),
         extra: '', extraShort: '',
     };
+}
+
+function consumptionMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale): MetricView {
+    return {
+        key: 'consumption',
+        label: localize(loc.lang, 'consumption'),
+        value: formatPower(powerW(hass.states[config.consumption_entity ?? '']), loc),
+        extra: '', extraShort: '',
+    };
+}
+
+/**
+ * A free cell. Powers read like the card's own (W / kW); anything else as
+ * Home Assistant formats it (unit, precision, translated states), or the
+ * raw state and unit on older versions. Name: the cell's, else the entity's.
+ */
+export function customMetric(spec: CellSpec, hass: HomeAssistant, loc: NumberLocale): MetricView {
+    const cell = spec.custom!;
+    const entity = hass.states[cell.entity];
+    const unit = String(entity?.attributes.unit_of_measurement ?? '');
+    let value: string;
+    if (!entity || numericState(entity) === undefined && ['unavailable', 'unknown', ''].includes(entity.state)) value = NO_VALUE;
+    else if (/^[mk]?w$/i.test(unit)) value = formatPower(powerW(entity), loc);
+    else if (hass.formatEntityState) value = hass.formatEntityState(entity);
+    else {
+        const n = numericState(entity);
+        value = n === undefined ? entity.state : joinParts({ value: formatNumber(n, Number.isInteger(n) ? 0 : 1, loc), unit });
+    }
+    const icon = cell.icon || (typeof entity?.attributes.icon === 'string' ? entity.attributes.icon : '') || CUSTOM_CELL_ICON;
+    return {
+        key: spec.key,
+        label: cell.name || String(entity?.attributes.friendly_name ?? cell.entity),
+        value, extra: '', extraShort: '', icon,
+    };
+}
+
+/** True when the sun entity says the sun is down */
+export function isNight(config: EnergySkyCardConfig, hass: HomeAssistant): boolean {
+    return hass.states[config.sun_entity ?? 'sun.sun']?.state === 'below_horizon';
+}
+
+/**
+ * The hero and the word put before the context line: the solar power, or
+ * at night (night_hero) the home's consumption or the battery's charge.
+ */
+function heroView(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale): { hero: ValueParts; label?: string; labelShort?: string } {
+    const mode = isNight(config, hass) ? config.night_hero ?? 'production' : 'production';
+    if (mode === 'consumption' && config.consumption_entity) {
+        return { hero: powerParts(powerW(hass.states[config.consumption_entity]), loc), label: localize(loc.lang, 'consumption'), labelShort: localize(loc.lang, 'consumption_short') };
+    }
+    if (mode === 'battery' && config.battery?.soc_entity) {
+        const soc = numericState(hass.states[config.battery.soc_entity]);
+        return {
+            hero: soc === undefined ? { value: NO_VALUE, unit: '' } : { value: formatNumber(Math.round(soc), 0, loc), unit: '%' },
+            label: localize(loc.lang, 'battery'),
+        };
+    }
+    return { hero: powerParts(productionPower(config, hass), loc) };
 }
 
 export function buildView(config: EnergySkyCardConfig, hass: HomeAssistant): CardView {
     const loc = numberLocale(hass);
     const threshold = config.battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
-    const context = config.daily_production_entities?.length
+    const produced = config.daily_production_entities?.length
         ? localize(loc.lang, 'produced', { value: formatKWhValue(dailyProduction(config, hass), loc) })
         : undefined;
-    const metrics = configuredMetrics(config).map(key => {
-        switch (key) {
+    const metrics = configuredCells(config).map(spec => {
+        switch (spec.kind) {
             case 'battery': return batteryMetric(config, hass, loc, threshold);
             case 'grid': return gridMetric(config, hass, loc);
             case 'voltage': return voltageMetric(config, hass, loc);
             case 'tomorrow': return tomorrowMetric(config, hass, loc);
+            case 'consumption': return consumptionMetric(config, hass, loc);
+            case 'custom': return customMetric(spec, hass, loc);
         }
     });
-    return { hero: powerParts(powerW(hass.states[config.production_entity]), loc), context, metrics };
+    const { hero, label, labelShort = label } = heroView(config, hass, loc);
+    const withLabel = (word: string | undefined) => word ? [word, produced].filter(Boolean).join(' · ') : produced;
+    return { hero, context: withLabel(label), contextShort: withLabel(labelShort), metrics };
 }

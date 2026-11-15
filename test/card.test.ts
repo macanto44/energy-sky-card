@@ -43,7 +43,7 @@ describe('render', () => {
         const card = mount();
         expect($(card, '.hero-value').textContent).toBe('2');
         expect($(card, '.hero-unit').textContent).toBe('W');
-        expect($(card, '.context').textContent).toBe('0,0 kWh produits');
+        expect($(card, '.context-full').textContent).toBe('0,0 kWh produits');
         expect(metricText(card, 'battery')).toBe(`Batterie 25${nb}%`);
         expect(metricText(card, 'grid')).toBe(`Réseau 748${nb}W`);
         card.hass = makeHass({ ...ANNEX_B, 'input_boolean.reserve_batterie_nuit': 'on' });

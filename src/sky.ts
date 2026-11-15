@@ -2,7 +2,7 @@
 // and the WCAG colour maths the contrast test relies on.
 
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
-import { powerW } from './utils';
+import { productionPower } from './model';
 
 export type Rgb = [number, number, number];
 export type Palette = [string, string, string];
@@ -88,7 +88,7 @@ export function tariffPalette(config: EnergySkyCardConfig, state: string | undef
 
 export function computeBackground(config: EnergySkyCardConfig, hass: HomeAssistant): Background {
     const sun = hass.states[config.sun_entity ?? 'sun.sun']?.state;
-    const production = powerW(hass.states[config.production_entity]) ?? 0;
+    const production = productionPower(config, hass) ?? 0;
     const max = config.production_max && config.production_max > 0 ? config.production_max : DEFAULT_PRODUCTION_MAX;
     const ratio = Math.min(Math.max(production, 0) / max, 1);
     return {

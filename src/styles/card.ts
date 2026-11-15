@@ -167,5 +167,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 }
 .extra { font-size: 13px; font-weight: 400; opacity: 0.8; }
 .extra-short, :host([data-short-extra]) .extra-full { display: none; }
+.context-short, :host([data-short-context]) .context-full { display: none; }
+:host([data-short-context]) .context-short { display: inline; }
 :host([data-short-extra]) .extra-short { display: inline; }
 `;

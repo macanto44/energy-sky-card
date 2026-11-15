@@ -53,6 +53,7 @@ test/
 ├── sky.test.ts              # Background choice, halo, palette contrast where text sits, stars
 ├── motion.test.ts           # Pausing rules, the card's data-motion, the stylesheet's animation rules
 ├── actions.test.ts          # Gestures and the events they fire
+├── options.test.ts          # 0.2 options: invert, several production sensors, night hero, cells, validation
 ├── fit.test.ts              # Hero 56 → 48 → 40 px stepping (layout faked)
 ├── editor.test.ts           # Schema blocks, labels, config-changed, YAML kept short, palettes kept
 ├── card.test.ts             # Registration, validation, render, in-place updates, background, sizing, stub
@@ -76,6 +77,9 @@ test/
 - An unavailable daily sensor is left out of the sum; with none available the line reads "— kWh produits".
 - The battery complement « · SOC atteint » shows when any `battery.soc_reached_entities` entity is on; nothing otherwise. The 0.1.0 names (`battery.lock_entities`, top-level `power_threshold`, now `battery.power_threshold`) are moved by `normalizeConfig` (model.ts), in the card and in the editor (which saves the new name).
 - Power entities in kW / MW and energy entities in Wh / MWh are converted from their `unit_of_measurement`.
+- `production_entity` is a string or a list (summed by `productionPower`, used by the hero and the halo). `grid.invert` / `battery.invert` flip the sensor's sign (`gridPower`, `batteryPower`).
+- Cells (`configuredCells` in model.ts): `cells` if set (≤ 4, built-in kinds deduplicated, free cells keyed `custom-<index>`), else the built-in ones whose entities are set. A free cell's name and icon are user text: written with textContent / setAttribute only. The editor shows them as four slots (`cell_1` … `cell_4`, plus `_entity` / `_name` / `_icon` for a free one) and writes `cells` only when they differ from the automatic choice.
+- `night_hero` (consumption / battery) only applies below the horizon and when its entity is set; the context line then starts with the hero's name, shortened when too wide (`data-short-context`).
 
 ## Sizing
 

@@ -37,7 +37,7 @@ Avant 2026.11, la même chose se fait dans HACS : **⋮ → Dépôts personnalis
 ### À la main
 
 1. Téléchargez `energy-sky-card.js` et `energy-sky-card-editor.js` depuis la [dernière release](https://github.com/macanto44/energy-sky-card/releases) et copiez-les **dans le même dossier**, par exemple `/config/www/energy-sky-card/`.
-2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.1.2`, type **Module JavaScript**.
+2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.2.0`, type **Module JavaScript**.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
@@ -70,23 +70,49 @@ tap_action:
 
 | Option | Défaut | Description |
 |---|---|---|
-| `production_entity` | **obligatoire** | Puissance solaire instantanée (W ; kW converti). |
+| `production_entity` | **obligatoire** | Puissance solaire instantanée (W ; kW converti). Une entité, ou une liste additionnée (micro-onduleurs + onduleur de chaîne…) ; une entité indisponible est laissée de côté. |
 | `production_max` | `6000` | Puissance (W) à laquelle le halo est au maximum. |
 | `daily_production_entities` | — | Compteurs journaliers (kWh ; Wh converti), additionnés. Sans eux, pas de ligne « kWh produits ». |
 | `battery.soc_entity` | — | Charge de la batterie (%). Sans elle, pas de case Batterie. |
 | `battery.power_entity` | — | Puissance batterie (W), positive en charge : flèches ↑ / ↓. |
+| `battery.invert` | `false` | `true` si votre capteur est positif en **décharge** (Huawei, SolarEdge… selon l'intégration). |
 | `battery.power_threshold` | `20` | En dessous de cette puissance (W), la batterie est au repos : pas de flèche. (Avant 0.1.2 : `power_threshold` au premier niveau, toujours accepté.) |
 | `battery.soc_reached_entities` | — | Une ou plusieurs entités `on` / `off` (`input_boolean`, `binary_sensor`, `switch`) qui disent que la batterie a atteint sa charge cible. Si l'une est `on`, la case affiche « · SOC atteint » ; sinon rien. Sans elles, jamais de mention. (Avant 0.1.2 : `lock_entities`, toujours accepté.) |
 | `grid.power_entity` | — | Puissance réseau (W), positive à l'achat. |
+| `grid.invert` | `false` | `true` si votre capteur est positif à la **vente** (injection). |
 | `grid.voltage_entity` | — | Tension réseau (V). |
 | `grid.outage_entity` | — | Entité d'alarme de coupure. |
 | `grid.outage_states` | `[warning, alarm]` | États de `outage_entity` qui signifient « Coupure ». |
 | `forecast_tomorrow_entity` | — | Prévision de production pour demain (kWh). |
+| `consumption_entity` | — | Consommation de la maison (W). Pour la case « Consommation » et `night_hero`. |
+| `night_hero` | `production` | Ce que montre le grand chiffre la nuit : `production`, `consumption` (il faut `consumption_entity`) ou `battery` (il faut `battery.soc_entity`). La ligne du dessous dit alors ce que c'est : « Consommation · 7,2 kWh produits ». |
+| `cells` | automatique | Les cases du bas, 4 au plus, dans l'ordre (voir plus bas). Sans elle : Batterie, Réseau, Tension, Prévu demain, selon les entités renseignées. |
 | `tariff_color_entity` | — | Couleur tarifaire du jour (`Bleu`, `Blanc`, `Rouge`). Inconnue : Bleu. |
 | `tariff_palettes` | voir plus bas | Remplace ou ajoute des palettes (YAML seulement). |
 | `sun_entity` | `sun.sun` | `below_horizon` : la nuit. |
 | `animate` | `true` | `false` coupe toutes les animations. |
 | `tap_action`, `hold_action`, `double_tap_action` | plus d'infos sur la production | Les actions natives de Home Assistant (`navigate`, `more-info`, `perform-action`, `url`, `none`…). |
+
+### Le sens des puissances
+
+La carte attend une puissance réseau **positive à l'achat** et une puissance batterie **positive en charge**. Toutes les intégrations ne font pas ainsi : si la case Réseau affiche « -748 W » alors que vous achetez, ou ↓ alors que la batterie charge, ajoutez `invert: true` dans le bloc concerné (ou cochez « Inverser le signe du capteur » dans l'éditeur).
+
+### Les cases
+
+Par défaut, la carte montre les cases dont les entités sont renseignées. `cells` les choisit et les ordonne (4 au plus) : `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, ou une case libre pour n'importe quelle entité, avec un nom et une icône facultatifs :
+
+```yaml
+consumption_entity: sensor.home_power
+cells:
+  - battery
+  - grid
+  - consumption
+  - entity: sensor.ev_battery_level
+    name: Voiture
+    icon: mdi:car-electric
+```
+
+Une case libre affiche une puissance comme le reste de la carte (W / kW), et toute autre valeur comme Home Assistant la présente (unité, précision, états traduits). Sans nom, elle prend celui de l'entité ; sans icône, celle de l'entité.
 
 ### « SOC atteint »
 
@@ -148,7 +174,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 **Marketplace (Home Assistant 2026.11+)**: Settings → Marketplace → ⋮ → Add from link, `https://github.com/macanto44/energy-sky-card`, category **Dashboard**. Before 2026.11, add it to HACS as a custom repository (category **Dashboard**).
 
-**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.1.2` as a JavaScript module resource.
+**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.2.0` as a JavaScript module resource.
 <!-- ha-marketplace:exclude-end -->
 
 ## Configuration
@@ -157,15 +183,19 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 
 | Option | Default | Description |
 |---|---|---|
-| `production_entity` | **required** | Solar power now (W; kW converted). |
+| `production_entity` | **required** | Solar power now (W; kW converted). One entity, or a list that is summed (micro-inverters + string inverter…); an unavailable one is left out. |
 | `production_max` | `6000` | Power (W) at which the halo is strongest. |
 | `daily_production_entities` | — | Daily energy meters (kWh), summed. |
 | `battery.soc_entity` / `power_entity` | — | SOC (%), power (W, positive when charging). |
+| `battery.invert` / `grid.invert` | `false` | `true` when your sensor is positive when discharging / exporting (the card expects positive when charging / importing). |
 | `battery.power_threshold` | `20` | Below this power (W) the battery is idle: no ↑ / ↓ arrow. Before 0.1.2: top-level `power_threshold`, still accepted. |
 | `battery.soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) saying the battery has reached its target charge: when any is on, the cell reads "· SOC reached". E.g. a template `binary_sensor` with `{{ states('sensor.battery_soc') \| float(0) >= 95 }}`. Before 0.1.2: `lock_entities`, still accepted. |
 | `grid.power_entity` / `voltage_entity` / `outage_entity` | — | Power (W, positive when importing), voltage (V), outage alarm. |
 | `grid.outage_states` | `[warning, alarm]` | States of `outage_entity` that mean an outage. |
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |
+| `consumption_entity` | — | The home's power use (W), for the Consumption cell and `night_hero`. |
+| `night_hero` | `production` | What the big number shows at night: `production`, `consumption` or `battery`; the line below names it ("Consumption · 7.2 kWh produced"). |
+| `cells` | automatic | Up to 4 bottom cells, in order: `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, or a free cell `{ entity, name, icon }` for any entity (powers read in W / kW, anything else as Home Assistant formats it). |
 | `tariff_color_entity` | — | Today's tariff colour (`Bleu`, `Blanc`, `Rouge`); unknown is Bleu. |
 | `tariff_palettes` | see above | Three colours per tariff, top to bottom (YAML only). |
 | `sun_entity` | `sun.sun` | `below_horizon` means night. |

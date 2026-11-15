@@ -18,11 +18,27 @@ const base = {
   'sensor.tomorrow': 12.56, 'sensor.tempo': 'Bleu', 'sun.sun': 'below_horizon',
 };
 
+/** Entity attributes, where a reading needs its unit */
+export const ATTRIBUTES = { 'sensor.heat_pump_temp': { unit_of_measurement: '°C' } };
+
+/** Config changes per scenario, over CONFIG */
+export const SCENARIO_CONFIGS = {
+  options: {
+    production_entity: ['sensor.production_pv', 'sensor.cabanon_pv'],
+    consumption_entity: 'sensor.home',
+    night_hero: 'consumption',
+    grid: { power_entity: 'sensor.grid', invert: true },
+    cells: ['consumption', 'battery', 'grid', { entity: 'sensor.heat_pump_temp', name: 'Pompe à chaleur — ballon', icon: 'mdi:water-boiler' }],
+  },
+};
+
 export const SCENARIOS = {
   nuit: base,
   bleu: { ...base, 'sun.sun': 'above_horizon', 'sensor.production_pv': 3249, 'sensor.sofar_jour': 5.1, 'sensor.cabanon_jour': 2.14, 'sensor.soc': 78, 'sensor.bat_power': 1450, 'sensor.grid': -1830 },
   blanc: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Blanc', 'sensor.production_pv': 860, 'sensor.sofar_jour': 1.4, 'sensor.cabanon_jour': 0.3, 'sensor.soc': 100, 'input_boolean.soc_reached': 'on', 'sensor.grid': 5 },
   rouge: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 5980, 'sensor.sofar_jour': 18.7, 'sensor.cabanon_jour': 3.2, 'sensor.soc': 64, 'sensor.bat_power': -2300, 'sensor.grid': -3450 },
   extremes: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 12345, 'sensor.sofar_jour': 98.7, 'sensor.cabanon_jour': 24.6, 'sensor.soc': 100, 'sensor.bat_power': -4321, 'input_boolean.soc_reached': 'on', 'sensor.grid': -12345, 'sensor.voltage': 252.4, 'sensor.tomorrow': 123.45 },
+  // 0.2 options (config below): night, consumption as the hero, a free cell with a long name
+  options: { ...base, 'sensor.home': 1870, 'sensor.sofar_jour': 18.7, 'sensor.cabanon_jour': 3.2, 'sensor.heat_pump_temp': 48.6 },
   coupure: { ...base, 'sensor.gridlost': 'alarm', 'sensor.voltage': 'unavailable', 'sensor.grid': 'unavailable', 'sensor.tomorrow': 'unknown' },
 };

@@ -4,7 +4,8 @@
 import { writeFileSync } from 'node:fs';
 import * as mdi from '@mdi/js';
 
-const names = ['mdi:home-battery-outline', 'mdi:transmission-tower', 'mdi:sine-wave', 'mdi:solar-power-variant-outline'];
+const names = ['mdi:home-battery-outline', 'mdi:transmission-tower', 'mdi:sine-wave', 'mdi:solar-power-variant-outline',
+    'mdi:home-lightning-bolt-outline', 'mdi:gauge', 'mdi:water-boiler'];
 const camel = n => 'mdi' + n.slice(4).split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('');
 const paths = Object.fromEntries(names.map(n => {
     const path = mdi[camel(n)];

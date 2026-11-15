@@ -1,5 +1,5 @@
 // The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, bare, probe, seek)
-import { SCENARIOS, CONFIG } from './scenarios.js';
+import { ATTRIBUTES, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
 const lang = params.get('lang') || 'fr';
@@ -12,12 +12,12 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     const fig = document.createElement('figure');
     fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${params.get('h') ? `;height:${params.get('h')}px` : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig(CONFIG);
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}) });
     const states = {};
     let t = 0;
     for (const [id, state] of Object.entries(overrides)) {
       const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
-      states[id] = { entity_id: id, state: String(state), attributes: {}, last_changed: stamp, last_updated: stamp };
+      states[id] = { entity_id: id, state: String(state), attributes: ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
     }
     card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' } };
     fig.querySelector('.cell').appendChild(card);

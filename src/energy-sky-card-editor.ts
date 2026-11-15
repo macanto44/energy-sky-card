@@ -5,9 +5,9 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { DEFAULT_OUTAGE_STATES, normalizeConfig } from './model';
+import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, defaultCells, normalizeConfig } from './model';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
-import type { EnergySkyCardConfig, HomeAssistant } from './types';
+import type { CellConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The parts of ha-form's schema the editor uses */
 export interface SchemaItem {
@@ -24,8 +24,14 @@ export interface SchemaItem {
 
 const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
-        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions',
-        production_entity: 'Puissance solaire (W)', production_max: 'Puissance maximale (halo)',
+        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases',
+        production_entity: 'Puissance solaire (W, additionnées)',
+        consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
+        invert: 'Inverser le signe du capteur',
+        cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)',
+        kind_none: 'Aucune', kind_battery: 'Batterie', kind_grid: 'Réseau', kind_voltage: 'Tension', kind_tomorrow: 'Prévu demain',
+        kind_consumption: 'Consommation', kind_custom: 'Libre (une entité au choix)',
+        hero_production: 'Production solaire', hero_consumption: 'Consommation de la maison', hero_battery: 'Charge de la batterie', production_max: 'Puissance maximale (halo)',
         daily_production_entities: 'Production du jour (kWh, additionnés)', forecast_tomorrow_entity: 'Prévision pour demain (kWh)',
         soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', soc_reached_entities: 'SOC atteint',
         voltage_entity: 'Tension (V)', outage_entity: 'Alarme de coupure', outage_states: 'États de coupure',
@@ -35,8 +41,14 @@ const LABELS: Record<Lang, Record<string, string>> = {
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
-        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions',
-        production_entity: 'Solar power (W)', production_max: 'Maximum power (halo)',
+        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells',
+        production_entity: 'Solar power (W, summed)',
+        consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
+        invert: 'Flip the sensor\'s sign',
+        cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)',
+        kind_none: 'None', kind_battery: 'Battery', kind_grid: 'Grid', kind_voltage: 'Voltage', kind_tomorrow: 'Tomorrow',
+        kind_consumption: 'Consumption', kind_custom: 'Free (any entity)',
+        hero_production: 'Solar production', hero_consumption: 'Home consumption', hero_battery: 'Battery charge', production_max: 'Maximum power (halo)',
         daily_production_entities: 'Energy today (kWh, summed)', forecast_tomorrow_entity: 'Forecast for tomorrow (kWh)',
         soc_entity: 'Charge (%)', power_entity: 'Power (W)', soc_reached_entities: 'SOC reached',
         voltage_entity: 'Voltage (V)', outage_entity: 'Outage alarm', outage_states: 'Outage states',
@@ -48,6 +60,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
 };
 
 export function editorLabel(lang: Lang, key: string): string {
+    const slot = /^cell_(\d)(?:_(entity|name|icon))?$/.exec(key);
+    if (slot) return slot[2] ? LABELS[lang][`cell_${slot[2]}`] : LABELS[lang].cell.replace('{n}', slot[1]);
     return LABELS[lang][key] ?? key;
 }
 
@@ -56,29 +70,59 @@ const HELPERS: Record<Lang, Record<string, string>> = {
     fr: {
         soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
         power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓. 20 W si vide.',
+        production_entity: 'Plusieurs capteurs (micro-onduleurs, onduleur de chaîne…) sont additionnés.',
+        night_hero: 'Après le coucher du soleil, la production est nulle : le grand chiffre peut montrer autre chose. Il faut la consommation de la maison ou la charge de la batterie renseignée.',
+        battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
+        grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
+        cell_1: 'Les cases du bas, dans l\'ordre. « Libre » affiche n\'importe quelle entité.',
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
         power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow. 20 W when empty.',
+        production_entity: 'Several sensors (micro-inverters, string inverter…) are summed.',
+        night_hero: 'After sunset production is zero: the big number can show something else. Needs the home consumption or the battery charge set.',
+        battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
+        grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
+        cell_1: 'The bottom cells, in order. "Free" shows any entity.',
     },
 };
 
-export function editorHelper(lang: Lang, key: string): string | undefined {
-    return HELPERS[lang][key];
+/** The helper under a field; in a block, the block's name tells the two invert fields apart */
+export function editorHelper(lang: Lang, key: string, block?: string): string | undefined {
+    return HELPERS[lang][block && key === 'invert' ? `${block}_invert` : key];
 }
 
 const sensor = (extra: Record<string, unknown> = {}) => ({ entity: { domain: 'sensor', ...extra } });
 
-export function editorSchema(lang: Lang): SchemaItem[] {
+const CELL_CHOICES = ['none', ...CELL_KINDS, 'custom'] as const;
+
+/** The slots' fields: a choice per cell, and entity, name and icon under a free one */
+function cellFields(lang: Lang, data: Record<string, unknown>): SchemaItem[] {
+    const options = CELL_CHOICES.map(value => ({ value, label: editorLabel(lang, `kind_${value}`) }));
+    return Array.from({ length: MAX_CELLS }, (_, i) => i + 1).flatMap(n => [
+        { name: `cell_${n}`, selector: { select: { mode: 'dropdown', options } } },
+        ...(data[`cell_${n}`] === 'custom' ? [
+            { name: `cell_${n}_entity`, selector: { entity: {} } },
+            { name: `cell_${n}_name`, selector: { text: {} } },
+            { name: `cell_${n}_icon`, selector: { icon: {} } },
+        ] : []),
+    ]);
+}
+
+/** The form; data (the form's current values) decides which free-cell fields show */
+export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): SchemaItem[] {
     const t = (key: string) => editorLabel(lang, key);
+    const heroOptions = (['production', 'consumption', 'battery'] as const).map(value => ({ value, label: t(`hero_${value}`) }));
     return [
         {
             name: '', type: 'expandable', flatten: true, expanded: true, title: t('production'), icon: 'mdi:solar-power-variant-outline',
             schema: [
-                { name: 'production_entity', required: true, selector: sensor({ device_class: 'power' }) },
+                { name: 'production_entity', required: true, selector: sensor({ device_class: 'power', multiple: true }) },
                 { name: 'production_max', selector: { number: { min: 100, max: 100000, step: 100, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'daily_production_entities', selector: sensor({ multiple: true }) },
                 { name: 'forecast_tomorrow_entity', selector: sensor() },
+                { name: 'consumption_entity', selector: sensor({ device_class: 'power' }) },
+                { name: 'night_hero', selector: { select: { mode: 'dropdown', options: heroOptions } } },
             ],
         },
         {
@@ -86,6 +130,7 @@ export function editorSchema(lang: Lang): SchemaItem[] {
             schema: [
                 { name: 'soc_entity', selector: sensor() },
                 { name: 'power_entity', selector: sensor() },
+                { name: 'invert', selector: { boolean: {} } },
                 { name: 'power_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'soc_reached_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
             ],
@@ -94,10 +139,15 @@ export function editorSchema(lang: Lang): SchemaItem[] {
             name: 'grid', type: 'expandable', title: t('grid'), icon: 'mdi:transmission-tower',
             schema: [
                 { name: 'power_entity', selector: sensor() },
+                { name: 'invert', selector: { boolean: {} } },
                 { name: 'voltage_entity', selector: sensor() },
                 { name: 'outage_entity', selector: { entity: {} } },
                 { name: 'outage_states', selector: { select: { multiple: true, custom_value: true, options: DEFAULT_OUTAGE_STATES } } },
             ],
+        },
+        {
+            name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
+            schema: cellFields(lang, data),
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('tariff'), icon: 'mdi:palette-outline',
@@ -118,13 +168,55 @@ export function editorSchema(lang: Lang): SchemaItem[] {
     ];
 }
 
-/** What the form shows for the config: defaults filled in where YAML left them out */
+const isCustomCell = (cell: CellConfig): cell is CustomCell => typeof cell === 'object' && cell !== null;
+
+/** The cells as the form's slots: cell_1 … cell_4, and the free cells' entity, name and icon */
+function cellSlots(config: EnergySkyCardConfig): Record<string, unknown> {
+    const cells: CellConfig[] = config.cells ?? defaultCells(config);
+    const slots: Record<string, unknown> = {};
+    for (let i = 0; i < MAX_CELLS; i++) {
+        const cell = cells[i];
+        const n = i + 1;
+        if (cell === undefined) slots[`cell_${n}`] = 'none';
+        else if (isCustomCell(cell)) {
+            Object.assign(slots, { [`cell_${n}`]: 'custom', [`cell_${n}_entity`]: cell.entity, [`cell_${n}_name`]: cell.name, [`cell_${n}_icon`]: cell.icon });
+        } else slots[`cell_${n}`] = cell;
+    }
+    return slots;
+}
+
+/** Back from the slots to a cells list (a free cell needs its entity) */
+function cellsFromSlots(value: Record<string, unknown>): CellConfig[] {
+    const cells: CellConfig[] = [];
+    for (let n = 1; n <= MAX_CELLS; n++) {
+        const kind = value[`cell_${n}`];
+        if (kind === 'custom') {
+            const entity = value[`cell_${n}_entity`];
+            if (typeof entity !== 'string' || !entity) continue;
+            const cell: CustomCell = { entity };
+            for (const field of ['name', 'icon'] as const) {
+                const v = value[`cell_${n}_${field}`];
+                if (typeof v === 'string' && v) cell[field] = v;
+            }
+            cells.push(cell);
+        } else if ((CELL_KINDS as unknown[]).includes(kind)) cells.push(kind as CellConfig);
+    }
+    return cells;
+}
+
+const SLOT_KEY = /^cell_\d(_|$)/;
+
+/** What the form shows for the config: defaults filled in where YAML left them out, the cells as slots */
 export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
+    const production = config.production_entity;
     return {
         production_max: DEFAULT_PRODUCTION_MAX,
         sun_entity: 'sun.sun',
         animate: true,
+        night_hero: 'production',
         ...config,
+        production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
+        ...cellSlots(config),
     };
 }
 
@@ -150,8 +242,24 @@ function prune(obj: Record<string, unknown>): Record<string, unknown> {
  * had them.
  */
 export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, unknown>): EnergySkyCardConfig {
-    const merged = prune({ ...previous, ...value }) as Record<string, unknown>;
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true };
+    const fields = Object.fromEntries(Object.entries(value).filter(([key]) => !SLOT_KEY.test(key)));
+    const merged = prune({ ...previous, ...fields }) as Record<string, unknown>;
+    // One production sensor stays a plain string in YAML
+    if (Array.isArray(merged.production_entity) && merged.production_entity.length === 1) merged.production_entity = merged.production_entity[0];
+    // Cells: written only when they differ from what the card would pick by itself
+    if (Object.keys(value).some(key => SLOT_KEY.test(key))) {
+        const cells = cellsFromSlots(value);
+        const auto = previous.cells === undefined && JSON.stringify(cells) === JSON.stringify(defaultCells(previous));
+        if (auto) delete merged.cells;
+        else merged.cells = cells;
+    }
+    for (const block of ['battery', 'grid'] as const) {
+        const b = merged[block] as Record<string, unknown> | undefined;
+        // false is the default: no need to write it
+        if (b?.invert === false) delete b.invert;
+        if (b && !Object.keys(b).length) delete merged[block];
+    }
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production' };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }
@@ -219,17 +327,29 @@ export class EnergySkyCardEditor extends HTMLElement {
             this.replaceChildren(this.form);
         }
         this.form.hass = this._hass;
-        this.form.schema = editorSchema(lang);
+        const data = formData(this.config);
+        this.form.schema = editorSchema(lang, data);
         this.form.computeLabel = item => editorLabel(lang, item.name);
-        this.form.computeHelper = item => editorHelper(lang, item.name);
-        this.form.data = formData(this.config);
+        this.form.computeHelper = item => editorHelper(lang, item.name, this.blockOf(item));
+        this.form.data = data;
+    }
+
+    /** The nested block (battery, grid) a field belongs to, from the schema */
+    private blockOf(item: SchemaItem): string | undefined {
+        return this.form?.schema?.find(block => block.name && block.schema?.includes(item))?.name;
     }
 
     private onValue(e: CustomEvent): void {
         e.stopPropagation();
         if (!this.config) return;
-        this.config = nextConfig(this.config, (e.detail?.value ?? {}) as Record<string, unknown>);
-        if (this.form) this.form.data = formData(this.config);
+        const value = (e.detail?.value ?? {}) as Record<string, unknown>;
+        this.config = nextConfig(this.config, value);
+        if (this.form) {
+            // The free-cell fields follow the slots' choices, even before an entity is picked
+            const data = { ...formData(this.config), ...Object.fromEntries(Object.entries(value).filter(([key]) => SLOT_KEY.test(key))) };
+            this.form.schema = editorSchema(cardLanguage(this._hass), data);
+            this.form.data = data;
+        }
         this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this.config }, bubbles: true, composed: true }));
     }
 }

@@ -1,7 +1,11 @@
 # Changelog
 
-## [0.1.2] — 2026-11-15
+## [0.2.0] — unreleased
 
+- `battery.invert` and `grid.invert`, for sensors that are positive when discharging or exporting.
+- `production_entity` takes a list: several production sensors summed (hero and halo), an unavailable one left out.
+- `night_hero`: at night the big number can show the home's consumption (`consumption_entity`) or the battery's charge, named on the line below (« Consommation · 7,2 kWh produits », « Conso. » on a narrow card).
+- `cells`: choose and order up to 4 bottom cells, among the built-in ones (a new `consumption` one included) and free cells for any entity, with a name and icon. In the editor: a « Cases » block with four slots.
 - Battery: `power_threshold` (the ↑ / ↓ arrows' threshold) moves into `battery`, and into the editor's Battery block. The top-level option still works.
 - Battery: the option `battery.lock_entities` is now `battery.soc_reached_entities` (the old name still works; the visual editor saves the new one), with a help line in the editor and an example in the README.
 - Battery: « · SOC atteint » (EN « SOC reached ») when one of those entities is on, instead of « figée »; nothing instead of « libre ». On a card too narrow for it (320 px phone), it shortens to « · SOC ✓ ».
