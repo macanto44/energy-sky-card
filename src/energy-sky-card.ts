@@ -3,7 +3,7 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS } from './styles/card';
-import { METRIC_ICONS, buildView, configuredMetrics, trackedEntities, type MetricKey } from './model';
+import { METRIC_ICONS, buildView, configuredMetrics, normalizeConfig, trackedEntities, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { computeBackground, isHexColor } from './sky';
 import { starsMarkup } from './stars';
@@ -26,13 +26,13 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     if (!config || typeof config !== 'object') {
         throw configError('Configuration invalide', 'Invalid configuration');
     }
-    const c = config as Partial<EnergySkyCardConfig>;
+    const c = normalizeConfig(config as Partial<EnergySkyCardConfig>);
     if (typeof c.production_entity !== 'string' || !c.production_entity) {
         throw configError('production_entity est obligatoire', 'production_entity is required');
     }
     const lists: [string, unknown][] = [
         ['daily_production_entities', c.daily_production_entities],
-        ['battery.lock_entities', c.battery?.lock_entities],
+        ['battery.soc_reached_entities', c.battery?.soc_reached_entities],
         ['grid.outage_states', c.grid?.outage_states],
     ];
     for (const [name, value] of lists) {

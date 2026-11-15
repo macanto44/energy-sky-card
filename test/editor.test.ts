@@ -10,6 +10,7 @@ class FakeForm extends HTMLElement {
     data?: Record<string, unknown>;
     schema?: SchemaItem[];
     computeLabel?: (item: SchemaItem) => string;
+    computeHelper?: (item: SchemaItem) => string | undefined;
 }
 customElements.define('ha-form', FakeForm);
 
@@ -40,7 +41,7 @@ describe('schema', () => {
     it('covers every option except the palettes, with nested battery and grid', () => {
         expect(fields(editorSchema('fr'))).toEqual([
             './production_entity', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
-            'battery/soc_entity', 'battery/power_entity', 'battery/lock_entities',
+            'battery/soc_entity', 'battery/power_entity', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './tariff_color_entity', './sun_entity', './power_threshold', './animate',
             './tap_action', './hold_action', './double_tap_action',
@@ -51,7 +52,7 @@ describe('schema', () => {
         const all = editorSchema('fr').flatMap(b => b.schema ?? []);
         const byName = (block: string, name: string) => editorSchema('fr').find(b => (b.name || b.title) === block)?.schema?.find(f => f.name === name);
         expect(all.find(f => f.name === 'daily_production_entities')?.selector).toEqual({ entity: { domain: 'sensor', multiple: true } });
-        expect((byName('battery', 'lock_entities')?.selector as any).entity.multiple).toBe(true);
+        expect((byName('battery', 'soc_reached_entities')?.selector as any).entity.multiple).toBe(true);
         expect(all.find(f => f.name === 'tap_action')?.selector).toEqual({ ui_action: {} });
         expect(all.find(f => f.name === 'production_entity')?.required).toBe(true);
     });
@@ -94,6 +95,23 @@ describe('the editor', () => {
         change({ grid: { ...FULL_CONFIG.grid, voltage_entity: undefined } });
         expect(changes.at(-1)?.grid?.voltage_entity).toBeUndefined();
         expect(changes.at(-1)?.grid?.power_entity).toBe(FULL_CONFIG.grid!.power_entity);
+    });
+});
+
+describe('the « SOC atteint » option', () => {
+    it('is labelled and explained', () => {
+        const { form } = mount();
+        expect(form.computeLabel!({ name: 'soc_reached_entities' })).toBe('SOC atteint');
+        expect(form.computeHelper!({ name: 'soc_reached_entities' })).toMatch(/affiche « · SOC atteint »/);
+        expect(form.computeHelper!({ name: 'production_entity' })).toBeUndefined();
+    });
+
+    it('moves the old battery.lock_entities to soc_reached_entities on the next save', () => {
+        const old = { ...MINIMAL, battery: { soc_entity: 'sensor.soc', lock_entities: ['input_boolean.x'] } } as EnergySkyCardConfig;
+        const { form, change, changes } = mount(old);
+        expect(form.data?.battery).toEqual({ soc_entity: 'sensor.soc', soc_reached_entities: ['input_boolean.x'] });
+        change({ animate: false });
+        expect(changes.at(-1)?.battery).toEqual({ soc_entity: 'sensor.soc', soc_reached_entities: ['input_boolean.x'] });
     });
 });
 

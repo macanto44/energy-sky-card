@@ -2,7 +2,8 @@
 
 ## [0.1.2] — 2026-11-15
 
-- Battery: « · SOC atteint » (EN « SOC reached ») when a lock entity is on, instead of « figée »; nothing instead of « libre ». On a card too narrow for it (320 px phone), it shortens to « · SOC ✓ ».
+- Battery: the option `battery.lock_entities` is now `battery.soc_reached_entities` (the old name still works; the visual editor saves the new one), with a help line in the editor and an example in the README.
+- Battery: « · SOC atteint » (EN « SOC reached ») when one of those entities is on, instead of « figée »; nothing instead of « libre ». On a card too narrow for it (320 px phone), it shortens to « · SOC ✓ ».
 - Livelier animations: the halo breathes deeper and faster (6 s, fading to 55 % and growing 12 %, never brighter than before), stars twinkle wider (opacity and size) and 14 of them instead of 10, and a shooting star crosses the night sky every 11 s.
 
 ## [0.1.1] — 2026-11-15

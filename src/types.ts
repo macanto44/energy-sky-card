@@ -22,6 +22,9 @@ export interface EnergySkyCardConfig {
     battery?: {
         soc_entity?: string;
         power_entity?: string;
+        /** Entities on when the battery has reached its target charge: « SOC atteint » */
+        soc_reached_entities?: string[];
+        /** @deprecated 0.1.0–0.1.1 name of soc_reached_entities, still read */
         lock_entities?: string[];
     };
     grid?: {

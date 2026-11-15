@@ -50,6 +50,10 @@ describe('render', () => {
         expect($(card, '[data-metric="battery"] .extra-full')?.textContent).toBe(' · SOC atteint');
         expect($(card, '[data-metric="battery"] .extra-short')?.textContent).toBe(' · SOC ✓');
         card.hass = makeHass(ANNEX_B);
+        // The 0.1.0 option name still works
+        const { soc_reached_entities, ...battery } = FULL_CONFIG.battery!;
+        const old = mount({ ...FULL_CONFIG, battery: { ...battery, lock_entities: soc_reached_entities } }, makeHass({ ...ANNEX_B, 'input_boolean.reserve_batterie_nuit': 'on' }));
+        expect($(old, '[data-metric="battery"] .extra-full')?.textContent).toBe(' · SOC atteint');
         expect(metricText(card, 'voltage')).toBe(`Tension 234${nb}V`);
         expect(metricText(card, 'tomorrow')).toBe(`Prévu demain 12,6${nb}kWh`);
         expect(card.shadowRoot!.querySelectorAll('ha-icon').length).toBe(4);

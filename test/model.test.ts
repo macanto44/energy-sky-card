@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildView, configuredMetrics, dailyProduction, direction, trackedEntities } from '../src/model';
+import { buildView, configuredMetrics, dailyProduction, direction, normalizeConfig, trackedEntities } from '../src/model';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -52,12 +52,18 @@ describe('battery', () => {
         expect(metric(view({ 'sensor.victron_system_battery_power': 15 }), 'battery').value).toBe(`25${nb}%`);
     });
 
-    it('reads « SOC atteint » when any lock is on, nothing otherwise', () => {
+    it('reads « SOC atteint » when any of its entities is on, nothing otherwise', () => {
         expect(metric(view({ 'input_boolean.reserve_batterie_nuit': 'on' }), 'battery')).toMatchObject({ extra: ' · SOC atteint', extraShort: ' · SOC ✓' });
         expect(metric(view(), 'battery')).toMatchObject({ extra: '', extraShort: '' });
     });
 
-    it('has no complement without lock entities', () => {
+    it('still reads the 0.1.0 name, battery.lock_entities', () => {
+        const { soc_reached_entities, ...battery } = FULL_CONFIG.battery!;
+        const config = normalizeConfig({ ...FULL_CONFIG, battery: { ...battery, lock_entities: soc_reached_entities } });
+        expect(metric(view({ 'input_boolean.reserve_batterie_nuit': 'on' }, config), 'battery').extra).toBe(' · SOC atteint');
+    });
+
+    it('has no complement without « SOC atteint » entities', () => {
         const config = { ...FULL_CONFIG, battery: { soc_entity: 'sensor.victron_system_battery_soc' } };
         expect(metric(view({}, config), 'battery').extra).toBe('');
     });

@@ -9,6 +9,18 @@ import { formatEnergy, formatKWhValue, formatPercent, formatPower, formatVoltage
 export const DEFAULT_POWER_THRESHOLD = 20;
 export const DEFAULT_OUTAGE_STATES = ['warning', 'alarm'];
 
+/**
+ * The config under today's option names: battery.lock_entities (0.1.0–0.1.1)
+ * becomes battery.soc_reached_entities. A config already using the new name
+ * keeps it and drops the old one.
+ */
+export function normalizeConfig<T extends Partial<EnergySkyCardConfig>>(config: T): T {
+    const battery = config.battery;
+    if (!battery || !('lock_entities' in battery)) return config;
+    const { lock_entities, ...rest } = battery;
+    return { ...config, battery: { ...rest, soc_reached_entities: rest.soc_reached_entities ?? lock_entities } };
+}
+
 export type MetricKey = 'battery' | 'grid' | 'voltage' | 'tomorrow';
 
 export const METRIC_ICONS: Record<MetricKey, string> = {
@@ -50,7 +62,7 @@ export function trackedEntities(config: EnergySkyCardConfig): string[] {
     const ids = [
         config.production_entity,
         ...(config.daily_production_entities ?? []),
-        config.battery?.soc_entity, config.battery?.power_entity, ...(config.battery?.lock_entities ?? []),
+        config.battery?.soc_entity, config.battery?.power_entity, ...(config.battery?.soc_reached_entities ?? []),
         config.grid?.power_entity, config.grid?.voltage_entity, config.grid?.outage_entity,
         config.forecast_tomorrow_entity, config.tariff_color_entity,
         config.sun_entity ?? 'sun.sun',
@@ -80,11 +92,11 @@ export function direction(power: number | undefined, threshold: number): Directi
     return 'none';
 }
 
-/** True when any lock entity is on; undefined when none is configured */
-export function batteryLocked(config: EnergySkyCardConfig, hass: HomeAssistant): boolean | undefined {
-    const locks = config.battery?.lock_entities ?? [];
-    if (!locks.length) return undefined;
-    return locks.some(id => hass.states[id]?.state === 'on');
+/** True when any « SOC atteint » entity is on; undefined when none is configured */
+export function socReached(config: EnergySkyCardConfig, hass: HomeAssistant): boolean | undefined {
+    const ids = config.battery?.soc_reached_entities ?? [];
+    if (!ids.length) return undefined;
+    return ids.some(id => hass.states[id]?.state === 'on');
 }
 
 export function gridOutage(config: EnergySkyCardConfig, hass: HomeAssistant): boolean {
@@ -98,13 +110,13 @@ function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Nu
     const soc = numericState(hass.states[config.battery!.soc_entity!]);
     const dir = config.battery?.power_entity ? direction(powerW(hass.states[config.battery.power_entity]), threshold) : 'none';
     const arrow = soc === undefined ? '' : dir === 'up' ? ' ↑' : dir === 'down' ? ' ↓' : '';
-    const locked = batteryLocked(config, hass);
+    const reached = socReached(config, hass);
     return {
         key: 'battery',
         label: localize(loc.lang, 'battery'),
         value: formatPercent(soc, loc) + arrow,
-        extra: locked ? ` · ${localize(loc.lang, 'soc_reached')}` : '',
-        extraShort: locked ? ` · ${localize(loc.lang, 'soc_reached_short')}` : '',
+        extra: reached ? ` · ${localize(loc.lang, 'soc_reached')}` : '',
+        extraShort: reached ? ` · ${localize(loc.lang, 'soc_reached_short')}` : '',
     };
 }
 

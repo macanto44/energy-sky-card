@@ -15,7 +15,7 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
 - **Production solaire instantanée**, en grand : « 748 W », puis « 3,2 kW » à partir de 1 000 W.
 - **Énergie produite aujourd'hui** : la somme de plusieurs compteurs journaliers. Un compteur indisponible est simplement laissé de côté.
 - **Quatre mesures** (chacune facultative : une case sans entité disparaît) :
-  - **Batterie** : charge en %, ↑ en charge, ↓ en décharge, et « · SOC atteint » quand l'une des entités `lock_entities` est active (rien sinon) ; « SOC ✓ » sur un écran trop étroit.
+  - **Batterie** : charge en %, ↑ en charge, ↓ en décharge, et « · SOC atteint » quand la batterie a atteint la charge que vous visez (voir `soc_reached_entities` plus bas) ; rien sinon. Sur un écran trop étroit : « · SOC ✓ ».
   - **Réseau** : la puissance échangée avec le réseau, précédée d'un « - » en cas d'injection (« 748 W » acheté, « -1,8 kW » injecté).
   - **Tension** : en volts, ou « Coupure » quand l'alarme de perte réseau est déclenchée.
   - **Prévu demain** : la prévision de production en kWh.
@@ -54,8 +54,8 @@ daily_production_entities:
 battery:
   soc_entity: sensor.battery_soc
   power_entity: sensor.battery_power
-  lock_entities:
-    - input_boolean.battery_lock
+  soc_reached_entities:
+    - input_boolean.battery_target_reached
 grid:
   power_entity: sensor.grid_power
   voltage_entity: sensor.grid_voltage
@@ -75,7 +75,7 @@ tap_action:
 | `daily_production_entities` | — | Compteurs journaliers (kWh ; Wh converti), additionnés. Sans eux, pas de ligne « kWh produits ». |
 | `battery.soc_entity` | — | Charge de la batterie (%). Sans elle, pas de case Batterie. |
 | `battery.power_entity` | — | Puissance batterie (W), positive en charge : flèches ↑ / ↓. |
-| `battery.lock_entities` | — | Entités `on` / `off` : « SOC atteint » si l'une est `on`, rien sinon. |
+| `battery.soc_reached_entities` | — | Une ou plusieurs entités `on` / `off` (`input_boolean`, `binary_sensor`, `switch`) qui disent que la batterie a atteint sa charge cible. Si l'une est `on`, la case affiche « · SOC atteint » ; sinon rien. Sans elles, jamais de mention. (Avant 0.1.2 : `lock_entities`, toujours accepté.) |
 | `grid.power_entity` | — | Puissance réseau (W), positive à l'achat. |
 | `grid.voltage_entity` | — | Tension réseau (V). |
 | `grid.outage_entity` | — | Entité d'alarme de coupure. |
@@ -87,6 +87,19 @@ tap_action:
 | `power_threshold` | `20` | Seuil (W) des flèches ↑ / ↓ de la batterie. |
 | `animate` | `true` | `false` coupe toutes les animations. |
 | `tap_action`, `hold_action`, `double_tap_action` | plus d'infos sur la production | Les actions natives de Home Assistant (`navigate`, `more-info`, `perform-action`, `url`, `none`…). |
+
+### « SOC atteint »
+
+La carte n'a pas d'avis sur ce qu'est une batterie « pleine » : c'est à vous de le dire avec une entité qui passe à `on`. Par exemple, un `binary_sensor` modèle allumé à partir de 95 % :
+
+```yaml
+template:
+  - binary_sensor:
+      - name: Battery target reached
+        state: "{{ states('sensor.battery_soc') | float(0) >= 95 }}"
+```
+
+puis `soc_reached_entities: [binary_sensor.battery_target_reached]`. Si votre installation a déjà un interrupteur qui bloque la charge à un certain niveau, mettez-le directement.
 
 ### Ouvrir un pop-up Bubble Card
 
@@ -125,7 +138,7 @@ A Home Assistant dashboard card showing solar production, battery and grid on a 
 
 - **Solar power now**, large: "748 W", then "3.2 kW" from 1,000 W.
 - **Energy produced today**: the sum of several daily meters; an unavailable one is left out.
-- **Four metrics** (each optional: a cell without its entity disappears): **Battery** (SOC %, ↑ charging / ↓ discharging, "SOC reached" when a lock entity is on), **Grid** (the power exchanged, with a "-" when exporting: "748 W" bought, "-1.8 kW" sent back), **Voltage** (or "Outage"), **Tomorrow** (forecast kWh).
+- **Four metrics** (each optional: a cell without its entity disappears): **Battery** (SOC %, ↑ charging / ↓ discharging, "SOC reached" when the battery has reached your target, see `soc_reached_entities`), **Grid** (the power exchanged, with a "-" when exporting: "748 W" bought, "-1.8 kW" sent back), **Voltage** (or "Outage"), **Tomorrow** (forecast kWh).
 - **Background**: the tariff colour by day with a sun halo scaled to production; a starry sky after sunset.
 - **Quiet animations**: the sun halo breathes (fading and growing) while the panels produce; at night stars twinkle and a shooting star passes now and then. Paused off-screen and in hidden tabs; none with `prefers-reduced-motion` or `animate: false`.
 - No reading shows "—", never `unknown` or `NaN`. The card speaks French and English, and follows your profile's number format.
@@ -147,7 +160,8 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `production_entity` | **required** | Solar power now (W; kW converted). |
 | `production_max` | `6000` | Power (W) at which the halo is strongest. |
 | `daily_production_entities` | — | Daily energy meters (kWh), summed. |
-| `battery.soc_entity` / `power_entity` / `lock_entities` | — | SOC (%), power (W, positive when charging), switches meaning "SOC reached" when any is on. |
+| `battery.soc_entity` / `power_entity` | — | SOC (%), power (W, positive when charging). |
+| `battery.soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) saying the battery has reached its target charge: when any is on, the cell reads "· SOC reached". E.g. a template `binary_sensor` with `{{ states('sensor.battery_soc') \| float(0) >= 95 }}`. Before 0.1.2: `lock_entities`, still accepted. |
 | `grid.power_entity` / `voltage_entity` / `outage_entity` | — | Power (W, positive when importing), voltage (V), outage alarm. |
 | `grid.outage_states` | `[warning, alarm]` | States of `outage_entity` that mean an outage. |
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |

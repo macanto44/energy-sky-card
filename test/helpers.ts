@@ -24,7 +24,7 @@ export const FULL_CONFIG: EnergySkyCardConfig = {
     battery: {
         soc_entity: 'sensor.victron_system_battery_soc',
         power_entity: 'sensor.victron_system_battery_power',
-        lock_entities: ['input_boolean.verrou_batterie_manuel', 'input_boolean.ve_verrou_soc_actif', 'input_boolean.reserve_batterie_nuit', 'input_boolean.verrou_batterie_four'],
+        soc_reached_entities: ['input_boolean.verrou_batterie_manuel', 'input_boolean.ve_verrou_soc_actif', 'input_boolean.reserve_batterie_nuit', 'input_boolean.verrou_batterie_four'],
     },
     grid: {
         power_entity: 'sensor.victrongrid_ac_l1_power31',

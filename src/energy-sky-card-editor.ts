@@ -5,7 +5,7 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { DEFAULT_OUTAGE_STATES, DEFAULT_POWER_THRESHOLD } from './model';
+import { DEFAULT_OUTAGE_STATES, DEFAULT_POWER_THRESHOLD, normalizeConfig } from './model';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
@@ -27,7 +27,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions',
         production_entity: 'Puissance solaire (W)', production_max: 'Puissance maximale (halo)',
         daily_production_entities: 'Production du jour (kWh, additionnés)', forecast_tomorrow_entity: 'Prévision pour demain (kWh)',
-        soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', lock_entities: 'SOC atteint (si l\'une est active)',
+        soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', soc_reached_entities: 'SOC atteint',
         voltage_entity: 'Tension (V)', outage_entity: 'Alarme de coupure', outage_states: 'États de coupure',
         tariff_color_entity: 'Couleur tarifaire (Bleu / Blanc / Rouge)', sun_entity: 'Soleil',
         power_threshold: 'Seuil des flèches de la batterie', animate: 'Animations',
@@ -38,7 +38,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions',
         production_entity: 'Solar power (W)', production_max: 'Maximum power (halo)',
         daily_production_entities: 'Energy today (kWh, summed)', forecast_tomorrow_entity: 'Forecast for tomorrow (kWh)',
-        soc_entity: 'Charge (%)', power_entity: 'Power (W)', lock_entities: 'SOC reached (when any is on)',
+        soc_entity: 'Charge (%)', power_entity: 'Power (W)', soc_reached_entities: 'SOC reached',
         voltage_entity: 'Voltage (V)', outage_entity: 'Outage alarm', outage_states: 'Outage states',
         tariff_color_entity: 'Tariff colour (Bleu / Blanc / Rouge)', sun_entity: 'Sun',
         power_threshold: 'Threshold for the battery arrows', animate: 'Animations',
@@ -49,6 +49,22 @@ const LABELS: Record<Lang, Record<string, string>> = {
 
 export function editorLabel(lang: Lang, key: string): string {
     return LABELS[lang][key] ?? key;
+}
+
+/** The line under a field, where its label can't say it all */
+const HELPERS: Record<Lang, Record<string, string>> = {
+    fr: {
+        soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
+        power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓.',
+    },
+    en: {
+        soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
+        power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow.',
+    },
+};
+
+export function editorHelper(lang: Lang, key: string): string | undefined {
+    return HELPERS[lang][key];
 }
 
 const sensor = (extra: Record<string, unknown> = {}) => ({ entity: { domain: 'sensor', ...extra } });
@@ -70,7 +86,7 @@ export function editorSchema(lang: Lang): SchemaItem[] {
             schema: [
                 { name: 'soc_entity', selector: sensor() },
                 { name: 'power_entity', selector: sensor() },
-                { name: 'lock_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
+                { name: 'soc_reached_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
             ],
         },
         {
@@ -148,6 +164,7 @@ interface HaForm extends HTMLElement {
     data?: Record<string, unknown>;
     schema?: SchemaItem[];
     computeLabel?: (item: SchemaItem) => string;
+    computeHelper?: (item: SchemaItem) => string | undefined;
 }
 
 declare global {
@@ -176,7 +193,8 @@ export class EnergySkyCardEditor extends HTMLElement {
     private form?: HaForm;
 
     setConfig(config: EnergySkyCardConfig): void {
-        this.config = config;
+        // An old option name (battery.lock_entities) is shown, and saved, under today's
+        this.config = normalizeConfig(config);
         this.render();
     }
 
@@ -204,6 +222,7 @@ export class EnergySkyCardEditor extends HTMLElement {
         this.form.hass = this._hass;
         this.form.schema = editorSchema(lang);
         this.form.computeLabel = item => editorLabel(lang, item.name);
+        this.form.computeHelper = item => editorHelper(lang, item.name);
         this.form.data = formData(this.config);
     }
 
