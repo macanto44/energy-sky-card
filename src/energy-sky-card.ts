@@ -5,8 +5,8 @@ import { loadEditorBundle } from './bundles';
 import { CARD_CSS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, cellTapOpensEntity, configuredCells, normalizeConfig, productionEntities, trackedEntities, type MetricKey } from './model';
 import { cardLanguage } from './localize';
-import { computeBackground, isHexColor } from './sky';
-import { coveredBy, motesMarkup, starsMarkup, type Box } from './stars';
+import { CLOUDS, computeBackground, isHexColor } from './sky';
+import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { energyPrefs, stubConfig } from './stub';
 import { listenForGestures, readActions, updateTargetSemantics, type ActionsConfig } from './actions';
@@ -169,7 +169,7 @@ export class EnergySkyCard extends HTMLElement {
             <style>${CARD_CSS}</style>
             <ha-card>
                 <div class="sky" aria-hidden="true">
-                    <div class="layer day"><div class="halo"></div>${motesMarkup()}</div>
+                    <div class="layer day"><div class="halo"></div>${cloudsMarkup()}</div>
                     <div class="layer night">${starsMarkup()}</div>
                 </div>
                 <div class="content">
@@ -256,9 +256,9 @@ export class EnergySkyCard extends HTMLElement {
     }
 
     /**
-     * Hide the stars and motes that would touch text (with their twinkle,
-     * drift and a gap): the sky covers the whole card, but never sits behind
-     * a letter. Measured, so it holds for any size, value or language.
+     * Hide the stars that would touch text (with their twinkle and a gap):
+     * the night sky covers the whole card, but never sits behind a letter.
+     * Measured, so it holds for any size, value or language.
      */
     private clearText(): void {
         const card = this.refs?.card;
@@ -266,7 +266,7 @@ export class EnergySkyCard extends HTMLElement {
         const box = card.getBoundingClientRect();
         if (!box.width || !box.height) return;
         const boxes = this.textBoxes();
-        for (const el of card.querySelectorAll<HTMLElement>('.star, .mote')) {
+        for (const el of card.querySelectorAll<HTMLElement>('.star')) {
             const x = box.left + parseFloat(el.style.left) / 100 * box.width;
             const y = box.top + parseFloat(el.style.top) / 100 * box.height;
             const hide = coveredBy(x, y, Number(el.dataset.reach), boxes);
@@ -388,6 +388,13 @@ export class EnergySkyCard extends HTMLElement {
         if (!customElements.get(CARD_EDITOR_NAME)) await loadEditorBundle();
         return document.createElement(CARD_EDITOR_NAME);
     }
+}
+
+/** The cloud shadows: each drifts in a card-wide band, from fully off the left edge to fully off the right */
+function cloudsMarkup(): string {
+    return CLOUDS.map(c =>
+        `<div class="drift" style="animation-duration:${c.period}s;animation-delay:-${c.delay}s"><i class="cloud" style="width:${c.width}%;height:${c.height}%;top:${c.top}%;left:${(100 - c.width) / 2}%"></i></div>`,
+    ).join('');
 }
 
 /** Write text only when it changed, so an unchanged node isn't touched */

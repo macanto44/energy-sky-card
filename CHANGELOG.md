@@ -1,10 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.1] — 2026-11-15
 
+- By day, cloud shadows drift slowly across the card instead of the motes of sunlight, which read as stars. They only darken the sky, so the text keeps its contrast; a cloud passing over the halo dims it.
 - Added from the card picker, the card fills itself in from the Energy dashboard: production, battery and grid power, and the sensors on the same devices (charge, temperature, voltage, energy today, tomorrow's forecast), with the battery's sign flipped when the power comes from Home Assistant's own convention; and today's Tempo colour.
 - `cell_tap`: a tap on a cell opens its entity (Battery → its charge, Grid → its power…). `auto` (the default) does so unless the card has a `tap_action`, which then applies everywhere, as before; `more-info` always, `card` never. Cells that open their entity are buttons for the keyboard too.
-- README: pictures of 0.3.0 and an animation of the night sky. The browser checks run in CI and before each release.
+- README: up-to-date pictures, the night as an animation. The browser checks run in CI and before each release.
 
 ## [0.3.0] — 2026-11-15
 

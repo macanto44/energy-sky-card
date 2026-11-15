@@ -1,5 +1,9 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
+import { CLOUD_MAX_ALPHA, CLOUD_RGB } from '../sky';
+
+const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
+
 export const CARD_CSS = `
 :host {
     display: block;
@@ -52,13 +56,16 @@ ha-card {
     opacity: 0;
     transform-origin: 100% 50%;
 }
-/* By day, motes of sunlight: soft warm dots, brighter with production */
-.mote {
+/*
+ * By day, cloud shadows: soft dark bands, each in a card-wide .drift that
+ * crosses from -110 % to 110 % (the cloud fully off both edges). They only
+ * darken the sky; without motion they rest where they are.
+ */
+.drift { position: absolute; inset: 0; }
+.cloud {
     position: absolute;
     border-radius: 50%;
-    background: radial-gradient(circle, rgb(255, 244, 214) 0, rgba(255, 244, 214, 0.35) 30%, rgba(255, 244, 214, 0) 70%);
-    transform: translate(-50%, -50%);
-    opacity: calc(0.3 + var(--esc-halo-alpha, 0) * 0.8);
+    background: radial-gradient(closest-side, ${cloud(CLOUD_MAX_ALPHA)}, ${cloud(CLOUD_MAX_ALPHA / 2)} 50%, ${cloud(0)} 100%);
 }
 /*
  * Motion. data-motion on the host: "on" runs, "paused" holds (tab hidden,
@@ -81,10 +88,10 @@ ha-card {
     8% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
     100% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
 }
-/* A mote drifts 3 px up and down while it glows and fades */
-@keyframes esc-float {
-    from { opacity: calc((0.3 + var(--esc-halo-alpha, 0) * 0.8) * 0.25); transform: translate(-50%, -50%) translateY(3px); }
-    to { opacity: calc(0.3 + var(--esc-halo-alpha, 0) * 0.8); transform: translate(-50%, -50%) translateY(-3px); }
+/* A cloud's band crossing the card, left to right */
+@keyframes esc-drift {
+    from { transform: translateX(-110%); }
+    to { transform: translateX(110%); }
 }
 /* The play state comes through a variable: the animation shorthand would reset a separate rule's */
 :host { --esc-play: running; }
@@ -95,12 +102,12 @@ ha-card {
 :host([data-motion="paused"][data-mode="night"]) .star.twinkle { animation: esc-twinkle 2s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
 :host([data-motion="on"][data-mode="night"]) .shooting,
 :host([data-motion="paused"][data-mode="night"]) .shooting { animation: esc-shoot var(--esc-shoot-period, 11s) ease-out var(--esc-shoot-delay, 4s) infinite; animation-play-state: var(--esc-play); }
-:host([data-motion="on"][data-mode="day"]) .mote,
-:host([data-motion="paused"][data-mode="day"]) .mote { animation: esc-float 5s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
+:host([data-motion="on"][data-mode="day"]) .drift,
+:host([data-motion="paused"][data-mode="day"]) .drift { animation: esc-drift 60s linear infinite; animation-play-state: var(--esc-play); }
 /* Day ⇄ night: a 3 s cross-fade, once the first state is painted */
 :host([data-ready]:not([data-motion="off"])) .layer { transition: opacity 3s ease-in-out; }
 @media (prefers-reduced-motion: reduce) {
-    .halo, .star, .shooting, .mote, .layer { animation: none !important; transition: none !important; }
+    .halo, .star, .shooting, .drift, .layer { animation: none !important; transition: none !important; }
 }
 /* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
 :host([data-compact]) .content { padding: 14px 20px 12px; }

@@ -1,6 +1,6 @@
 {
   "name": "energy-sky-card",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A Home Assistant dashboard card showing solar production, battery and grid on a sky that carries the tariff colour and the time of day",
   "main": "energy-sky-card.js",
   "scripts": {

@@ -30,6 +30,19 @@ export const HALO_MAX_ALPHA = 0.55;
  */
 export const HALO_BREATHE_PEAK = 1;
 export const DEFAULT_PRODUCTION_MAX = 6000;
+/**
+ * By day, cloud shadows drift across the card: a dark navy at most this
+ * opaque. They only ever darken the sky, so white text keeps (or gains) its
+ * contrast wherever they pass
+ */
+export const CLOUD_RGB = [8, 18, 40] as const;
+export const CLOUD_MAX_ALPHA = 0.2;
+/** Three clouds: width and height (% of the card), top (%), one crossing in s, phase offset in s */
+export const CLOUDS = [
+    { width: 110, height: 38, top: 2, period: 47, delay: 9 },
+    { width: 95, height: 32, top: 38, period: 61, delay: 41 },
+    { width: 120, height: 36, top: 70, period: 73, delay: 22 },
+] as const;
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 export const isHexColor = (v: unknown): v is string => typeof v === 'string' && HEX.test(v);

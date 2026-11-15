@@ -1,7 +1,7 @@
-// The sky's particles, the same on every load (fixed seeds): stars by night,
-// motes of sunlight by day, over the whole card. The card hides the ones
-// that would touch text (coveredBy, after each layout): none sits behind a
-// letter, so the text's contrast is the background's alone.
+// The night sky's stars, the same on every load (fixed seed), over the whole
+// card. The card hides the ones that would touch text (coveredBy, after each
+// layout): none sits behind a letter, so the text's contrast is the
+// background's alone.
 
 export interface Star {
     /** Position in % of the card */
@@ -16,26 +16,11 @@ export interface Star {
     delay: number;
 }
 
-export interface Mote {
-    x: number;
-    y: number;
-    /** Diameter in px, 7 … 12 (a soft dot: the edge fades out) */
-    size: number;
-    /** Phase offset and length of one drift, in s */
-    delay: number;
-    duration: number;
-}
-
 export const STAR_SEED = 0x5eed;
-export const MOTE_SEED = 0x50e1;
 /** Stars: one try per cell of a 10 × 6 grid, kept less often lower down */
 export const STAR_GRID = { cols: 10, rows: 6 };
 export const STAR_KEEP = [1, 0.9, 0.8, 0.7, 0.6, 0.5];
 export const TWINKLE_SHARE = 0.4;
-/** Motes: one per cell of an 8 × 5 grid */
-export const MOTE_GRID = { cols: 8, rows: 5 };
-/** How far a mote drifts up and down, in px (its keep-out margin counts it) */
-export const MOTE_DRIFT = 3;
 /** Clear space kept between a particle's edge and text, in px */
 export const TEXT_GAP = 3;
 /** A twinkling star grows to this scale at its peak */
@@ -82,18 +67,6 @@ export function generateStars(seed = STAR_SEED): Star[] {
     return stars;
 }
 
-export function generateMotes(seed = MOTE_SEED): Mote[] {
-    const rand = seededRandom(seed);
-    const motes: Mote[] = [];
-    for (let row = 0; row < MOTE_GRID.rows; row++) {
-        for (let col = 0; col < MOTE_GRID.cols; col++) {
-            const { x, y } = inCell(rand, col, row, MOTE_GRID);
-            motes.push({ x, y, size: round(7 + rand() * 5), delay: round(rand() * 8, 2), duration: round(4 + rand() * 3, 1) });
-        }
-    }
-    return motes;
-}
-
 /**
  * The shooting stars: three paths, across the top right, the top left and
  * across the middle, each with its own rhythm (one pass in the first 8 % of its
@@ -105,14 +78,10 @@ export const SHOOTING_STARS = [
     { left: 44, top: 36, angle: 9, run: 150, period: 23, delay: 15 },
 ] as const;
 
-/**
- * How far from its centre a particle must stay clear of text, in px: its
- * radius at its largest, its drift, and the gap
- */
+/** How far from its centre a star must stay clear of text, in px: its radius at its largest, and the gap */
 export const starReach = (s: Star) => round(s.size / 2 * (s.twinkle ? TWINKLE_PEAK_SCALE : 1) + TEXT_GAP, 2);
-export const moteReach = (m: Mote) => round(m.size / 2 + MOTE_DRIFT + TEXT_GAP, 2);
 
-/** The particles as markup: numbers only, built from the seeds (no outside data) */
+/** The stars as markup: numbers only, built from the seed (no outside data) */
 export function starsMarkup(stars: Star[] = generateStars()): string {
     return stars.map(s =>
         `<i class="star${s.twinkle ? ' twinkle' : ''}" data-reach="${starReach(s)}" style="left:${s.x}%;top:${s.y}%;width:${s.size}px;height:${s.size}px;--esc-o:${s.opacity};animation-delay:-${s.delay}s"></i>`,
@@ -121,14 +90,8 @@ export function starsMarkup(stars: Star[] = generateStars()): string {
     ).join('');
 }
 
-export function motesMarkup(motes: Mote[] = generateMotes()): string {
-    return motes.map(m =>
-        `<i class="mote" data-reach="${moteReach(m)}" style="left:${m.x}%;top:${m.y}%;width:${m.size}px;height:${m.size}px;animation-delay:-${m.delay}s;animation-duration:${m.duration}s"></i>`,
-    ).join('');
-}
-
 export interface Box { left: number; top: number; right: number; bottom: number }
 
-/** Whether a particle at (x, y) with this reach would touch any of the boxes */
+/** Whether a star at (x, y) with this reach would touch any of the boxes */
 export const coveredBy = (x: number, y: number, reach: number, boxes: Box[]): boolean =>
     boxes.some(b => x > b.left - reach && x < b.right + reach && y > b.top - reach && y < b.bottom + reach);

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-    DEFAULT_PALETTES, HALO_BREATHE_PEAK, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, composite, computeBackground, contrastRatio,
+    CLOUD_MAX_ALPHA, CLOUD_RGB, DEFAULT_PALETTES, HALO_BREATHE_PEAK, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, composite, computeBackground, contrastRatio,
     gradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
 } from '../src/sky';
-import { SHOOTING_STARS, coveredBy, generateMotes, generateStars, motesMarkup, moteReach, starReach, starsMarkup } from '../src/stars';
+import { SHOOTING_STARS, coveredBy, generateStars, starReach, starsMarkup } from '../src/stars';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 
 const bg = (overrides: Record<string, string | number> = {}, config = FULL_CONFIG) =>
@@ -138,15 +138,17 @@ describe('stars', () => {
     });
 });
 
-describe('motes of sunlight', () => {
-    it('are the same on every load, one per cell of an 8 × 5 grid', () => {
-        const motes = generateMotes();
-        expect(motes).toEqual(generateMotes());
-        expect(motes.length).toBe(40);
-        expect(motesMarkup()).toBe(motesMarkup());
-        for (const m of motes) {
-            expect(m.size).toBeGreaterThanOrEqual(7);
-            expect(m.size).toBeLessThanOrEqual(12);
+describe('cloud shadows', () => {
+    const cloudRgb = CLOUD_RGB.map(c => c / 255) as Rgb;
+    const shaded = (palette: Palette): Palette => {
+        const hex = (rgb: Rgb) => '#' + rgb.map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
+        return palette.map(c => hex(composite(hexToRgb(c), cloudRgb, CLOUD_MAX_ALPHA))) as Palette;
+    };
+
+    it('only darken: white text keeps its contrast under the thickest cloud', () => {
+        for (const palette of Object.values(DEFAULT_PALETTES)) {
+            const clear = contrasts(palette), cloudy = contrasts(shaded(palette));
+            for (const key of ['hero', 'context', 'label', 'value'] as const) expect(cloudy[key]).toBeGreaterThanOrEqual(clear[key]);
         }
     });
 });
@@ -162,9 +164,8 @@ describe('keeping particles off the text', () => {
         expect(coveredBy(150, 110, 3, [])).toBe(false);
     });
 
-    it('reaches as far as a particle grows or drifts, plus a gap', () => {
+    it('reaches as far as a star grows, plus a gap', () => {
         expect(starReach({ x: 0, y: 0, size: 2, opacity: 1, twinkle: false, delay: 0 })).toBe(4);
         expect(starReach({ x: 0, y: 0, size: 2, opacity: 1, twinkle: true, delay: 0 })).toBe(4.4);
-        expect(moteReach({ x: 0, y: 0, size: 8, delay: 0, duration: 5 })).toBe(10);
     });
 });

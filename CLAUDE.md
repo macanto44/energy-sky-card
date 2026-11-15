@@ -40,10 +40,10 @@ src/
 ├── localize.ts              # FR / EN strings, language, decimal separator
 ├── format.ts                # W / kW, kWh, V, % formatting; "—" for no reading
 ├── model.ts                 # Pure: config + hass → view (hero, context, metrics), tracked entities
-├── sky.ts                   # Background: day / night, tariff palette, halo alpha; contrast utilities
+├── sky.ts                   # Background: day / night, tariff palette, halo alpha, cloud shadows (CLOUDS); contrast utilities
 ├── actions.ts               # GestureListener: tap / hold / double_tap → hass-action; default tap = more-info
 ├── motion.ts                # data-motion on / paused / off: tab, IntersectionObserver, reduced motion, animate
-├── stars.ts                 # Seeded particles over the whole card: stars (10 × 6 jittered grid, 3 shooting stars), day motes (8 × 5); coveredBy
+├── stars.ts                 # Seeded night sky over the whole card: stars (10 × 6 jittered grid), 3 shooting stars; coveredBy
 ├── styles/card.ts           # The card's CSS (typography of brief §5.2, sky layers)
 ├── energy-sky-card.ts       # The card: setConfig, hass, DOM built once, text updated in place
 └── energy-sky-card-editor.ts# Editor bundle: ha-form schema in 5 blocks, config cleaning (palettes are YAML-only)
@@ -93,7 +93,7 @@ test/
 
 ## Motion
 
-`data-motion` on the host: `on`, `paused` (tab hidden or card off-screen, 100 px margin) or `off` (`animate: false` or `prefers-reduced-motion`). CSS declares animations only under `on` / `paused`; the play state goes through `--esc-play`, because the `animation` shorthand resets a separate `animation-play-state` rule (jsdom can't see that: `npm run test:browser` checks it in Chrome). The halo breathes (3 s alternate = 6 s cycle, opacity ×0.55 ↔ ×1 and 12 % larger at the peak: it breathes down, never above its alpha, to keep the hero's contrast) only by day with production; stars twinkle (2 s alternate = 4 s, opacity ×0.15 ↔ ×1 of the star's own `--esc-o`, scale 0.6 ↔ 1.4) and three shooting stars pass (top right / top left / across the middle, every 11 / 17 / 23 s, each pass the first 8 % of its period) only at night; by day motes of sunlight drift 3 px and glow (`esc-float`, 5 s alternate, a per-mote duration inline, brighter with `--esc-halo-alpha`). Stars and motes cover the whole card: `clearText()` (end of `fit()`, and once fonts load) hides each one whose reach (radius at its peak + drift + 3 px) would touch a word, an icon or the hairline. No particle sits behind text, so the contrast test stays the background's alone; `test:browser` checks none touches text and every quarter has some. The day/night cross-fade (3 s) starts after the first paint (`data-ready`).
+`data-motion` on the host: `on`, `paused` (tab hidden or card off-screen, 100 px margin) or `off` (`animate: false` or `prefers-reduced-motion`). CSS declares animations only under `on` / `paused`; the play state goes through `--esc-play`, because the `animation` shorthand resets a separate `animation-play-state` rule (jsdom can't see that: `npm run test:browser` checks it in Chrome). The halo breathes (3 s alternate = 6 s cycle, opacity ×0.55 ↔ ×1 and 12 % larger at the peak: it breathes down, never above its alpha, to keep the hero's contrast) only by day with production; stars twinkle (2 s alternate = 4 s, opacity ×0.15 ↔ ×1 of the star's own `--esc-o`, scale 0.6 ↔ 1.4) and three shooting stars pass (top right / top left / across the middle, every 11 / 17 / 23 s, each pass the first 8 % of its period) only at night; by day three cloud shadows (dark navy, at most `CLOUD_MAX_ALPHA` 0.2) cross the card (`esc-drift`, a card-wide `.drift` from -110 % to 110 %, 47 / 61 / 73 s): they only darken, so the contrast can only rise (`sky.test.ts` checks it). Stars cover the whole card: `clearText()` (end of `fit()`, and once fonts load) hides each one whose reach (radius at its peak + 3 px) would touch a word, an icon or the hairline; `test:browser` checks none touches text and every quarter has some. Day dots were tried in 0.3.0 and dropped: small bright dots read as stars. The day/night cross-fade (3 s) starts after the first paint (`data-ready`).
 
 ## Palettes and contrast
 

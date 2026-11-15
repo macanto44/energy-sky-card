@@ -46,11 +46,11 @@ if (params.has('probe')) {
       const overflow = lines.filter(l => l.scrollWidth > l.clientWidth + 1).length;
       const content = card.shadowRoot.querySelector('.content');
       const tall = content.scrollHeight > content.clientHeight + 1 ? 1 : 0;
-      // The sky: visible particles of the current mode touching text (should be none), and the quarters they reach
+      // The night sky: visible stars touching text (should be none), and the quarters they reach
       const box = card.shadowRoot.querySelector('ha-card').getBoundingClientRect();
       const texts = [...card.shadowRoot.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight')]
         .map(el => el.getBoundingClientRect()).filter(r => r.width && r.height);
-      const dots = [...card.shadowRoot.querySelectorAll(card.dataset.mode === 'night' ? '.star' : '.mote')]
+      const dots = [...card.shadowRoot.querySelectorAll('.star')]
         .filter(el => !el.hidden).map(el => el.getBoundingClientRect());
       const hits = dots.filter(d => texts.some(t => d.left < t.right && d.right > t.left && d.top < t.bottom && d.bottom > t.top)).length;
       const quarters = new Set(dots.map(d => `${(d.left + d.right) / 2 > box.left + box.width / 2 ? 'r' : 'l'}${(d.top + d.bottom) / 2 > box.top + box.height / 2 ? 'b' : 't'}`)).size;

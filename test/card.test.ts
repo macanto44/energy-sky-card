@@ -121,16 +121,16 @@ describe('background', () => {
         expect(haCard.style.getPropertyValue('--esc-halo-alpha')).toBe('0.275');
     });
 
-    it('turns to night, with its stars and three shooting stars; motes of sunlight by day', () => {
+    it('turns to night, with its stars and three shooting stars; cloud shadows by day', () => {
         const card = mount();
         expect(card.dataset.mode).toBe('night');
         expect(card.shadowRoot!.querySelectorAll('.layer.night .star').length).toBe(generateStars().length);
         expect(card.shadowRoot!.querySelectorAll('.star.twinkle').length).toBe(generateStars().filter(s => s.twinkle).length);
         expect(card.shadowRoot!.querySelectorAll('.layer.night .shooting').length).toBe(3);
-        expect(card.shadowRoot!.querySelectorAll('.layer.day .mote').length).toBe(40);
+        expect(card.shadowRoot!.querySelectorAll('.layer.day .drift .cloud').length).toBe(3);
     });
 
-    it('hides the particles that would touch text, and only those', () => {
+    it('hides the stars that would touch text, and only those', () => {
         const card = mount();
         const root = card.shadowRoot!;
         const rect = (left: number, top: number, width: number, height: number) =>
@@ -145,7 +145,7 @@ describe('background', () => {
         Element.prototype.getBoundingClientRect = function (this: Element) { return fakes.get(this) ?? empty; };
         try {
             card.fit();
-            for (const el of root.querySelectorAll<HTMLElement>('.star, .mote')) {
+            for (const el of root.querySelectorAll<HTMLElement>('.star')) {
                 const x = parseFloat(el.style.left) * 4, y = parseFloat(el.style.top) * 2.5, reach = Number(el.dataset.reach);
                 expect(el.hidden).toBe(x < 200 + reach && y < 60 + reach);
             }

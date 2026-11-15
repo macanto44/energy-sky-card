@@ -4,13 +4,13 @@ Ideas to improve Energy Sky Card, by priority (written after 0.3.0, 2026-11-15).
 
 ## Now: small and safe
 
-1. [x] **README screenshots up to date** (0.4.0). `docs/images/*.png` predate 0.3.0 (night stars still held in the top-right quarter, no day motes). Regenerate them with `demo/shot.sh` (`bare`), and add a short night GIF: the animation is now the card's signature.
-2. [x] **`test:browser` in CI** (0.4.0). `ci.yml` and `release.yml` only run `npm test`: overflow at 304 px, animations paused off-screen and particles kept off text are only checked locally. Chrome is on GitHub's Ubuntu runners.
+1. [x] **README screenshots up to date** (0.3.1). `docs/images/*.png` predate 0.3.0 (night stars still held in the top-right quarter, no day motes). Regenerate them with `demo/shot.sh` (`bare`), and add a short night GIF: the animation is now the card's signature.
+2. [x] **`test:browser` in CI** (0.3.1). `ci.yml` and `release.yml` only run `npm test`: overflow at 304 px, animations paused off-screen and particles kept off text are only checked locally. Chrome is on GitHub's Ubuntu runners.
 
 ## Easier setup (most value for other users)
 
-3. [x] **Prefill from the Energy dashboard** (0.4.0). Home Assistant's energy preferences already list the solar, battery and grid sensors. `getStubConfig` only picks the first W sensor; reading `energy/get_prefs` (and the sensors on the same devices) would give a nearly ready card when it is added.
-4. [x] **One action per cell** (0.4.0, `cell_tap`). Tapping « Réseau » opens the grid sensor's more-info rather than the card's single action: the natural reflex on a dashboard.
+3. [x] **Prefill from the Energy dashboard** (0.3.1). Home Assistant's energy preferences already list the solar, battery and grid sensors. `getStubConfig` only picks the first W sensor; reading `energy/get_prefs` (and the sensors on the same devices) would give a nearly ready card when it is added.
+4. [x] **One action per cell** (0.3.1, `cell_tap`). Tapping « Réseau » opens the grid sensor's more-info rather than the card's single action: the natural reflex on a dashboard.
 5. [ ] **Accessibility.** A summary screen readers can read (« Production 3,2 kW, batterie 78 % en charge, vente 1,8 kW ») instead of fragments.
 
 ## A sky that carries more information (the card's identity)
