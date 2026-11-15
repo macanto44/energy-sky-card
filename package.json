@@ -1,0 +1,35 @@
+{
+  "name": "energy-sky-card",
+  "version": "0.1.0",
+  "description": "A Home Assistant dashboard card showing solar production, battery and grid on a sky that carries the tariff colour and the time of day",
+  "main": "energy-sky-card.js",
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "dev": "node esbuild.config.js --watch",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:browser": "node scripts/browser-check.mjs",
+    "demo:icons": "node scripts/demo-icons.mjs"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "energy",
+    "solar",
+    "card",
+    "typescript"
+  ],
+  "author": "macanto44",
+  "license": "MIT",
+  "devDependencies": {
+    "@mdi/js": "^7.4.47",
+    "@types/node": "^20.19.40",
+    "@vitest/coverage-v8": "^4.1.5",
+    "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.5"
+  }
+}

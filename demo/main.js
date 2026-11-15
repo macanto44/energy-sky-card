@@ -1,0 +1,45 @@
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, bare, probe)
+import { SCENARIOS, CONFIG } from './scenarios.js';
+const params = new URLSearchParams(location.search);
+const only = params.get('s');
+const lang = params.get('lang') || 'fr';
+const root = document.getElementById('cards');
+if (params.has('bare')) document.body.classList.add('bare');
+for (const [name, overrides] of Object.entries(SCENARIOS)) {
+  if (only && !only.split(',').includes(name)) continue;
+  const widths = (params.get('widths') || '360,304').split(',').map(Number);
+  for (const width of widths) {
+    const fig = document.createElement('figure');
+    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px"></div>`;
+    const card = document.createElement('energy-sky-card');
+    card.setConfig(CONFIG);
+    const states = {};
+    let t = 0;
+    for (const [id, state] of Object.entries(overrides)) {
+      const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
+      states[id] = { entity_id: id, state: String(state), attributes: {}, last_changed: stamp, last_updated: stamp };
+    }
+    card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' } };
+    fig.querySelector('.cell').appendChild(card);
+    root.appendChild(fig);
+  }
+}
+// ?probe: report each card's motion state and its running animations (for headless checks)
+if (params.has('probe')) {
+  setTimeout(() => {
+    const lines = [...document.querySelectorAll('energy-sky-card')].map((card, i) => {
+      const anims = card.shadowRoot.querySelector('ha-card').getAnimations({ subtree: true });
+      const running = anims.filter(a => a.playState === 'running').length;
+      const paused = anims.filter(a => a.playState === 'paused').length;
+      const lines = [...card.shadowRoot.querySelectorAll('.line')].filter(l => !l.hidden);
+      const overflow = lines.filter(l => l.scrollWidth > l.clientWidth + 1).length;
+      const content = card.shadowRoot.querySelector('.content');
+      const tall = content.scrollHeight > content.clientHeight + 1 ? 1 : 0;
+      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? 56}`;
+    });
+    const pre = document.createElement('pre');
+    pre.id = 'probe';
+    pre.textContent = lines.join('\n');
+    document.body.prepend(pre);
+  }, 1500);
+}

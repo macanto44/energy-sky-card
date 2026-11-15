@@ -1,0 +1,54 @@
+// Runs the built card in headless Chrome and checks what jsdom can't:
+// real CSS animations stop off-screen and never start under reduced motion.
+// Usage: npm run build && npm run test:browser   (CHROME=/path/to/chrome to override)
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const chrome = process.env.CHROME
+    ?? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(existsSync);
+if (!chrome) {
+    console.log('browser-check: no Chrome found, skipped (set CHROME=…)');
+    process.exit(0);
+}
+const page = `file://${resolve('demo/index.html')}`;
+
+function probe(query, extra = [], height = 500) {
+    const html = execFileSync(chrome, [
+        '--headless=new', '--disable-gpu', '--allow-file-access-from-files', `--window-size=720,${height}`,
+        '--virtual-time-budget=3000', ...extra, '--dump-dom', `${page}?probe=1&${query}`,
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const text = /<pre id="probe">([\s\S]*?)<\/pre>/.exec(html)?.[1] ?? '';
+    return text.trim().split('\n').map(line => {
+        const [name, rest] = line.split(' | ');
+        return { name, ...Object.fromEntries(rest.split(' ').map(kv => kv.split('='))) };
+    });
+}
+
+let failures = 0;
+const check = (ok, message) => {
+    console.log(`${ok ? '✓' : '✗'} ${message}`);
+    if (!ok) failures++;
+};
+
+const cards = probe('');
+check(cards.length === 12, `12 demo cards rendered (got ${cards.length})`);
+for (const c of cards) {
+    if (c.motion === 'on') check(Number(c.running) > 0 && Number(c.paused) === 0, `${c.name}: on screen, animating (${c.running} running)`);
+    else if (c.motion === 'paused') check(Number(c.running) === 0, `${c.name}: off-screen, nothing running (${c.paused} paused)`);
+    else check(false, `${c.name}: unexpected motion=${c.motion}`);
+}
+check(cards.some(c => c.motion === 'paused'), 'at least one card is off-screen');
+
+// Brief §5.3: no line overflows at 320 px (a 304 px card), in either language, extreme values included
+for (const lang of ['fr', 'en']) {
+    for (const c of probe(`lang=${lang}`, [], 2400)) {
+        check(c.overflow === '0' && c.tall === '0', `${lang} ${c.name}: no overflow (hero ${c.hero} px)`);
+    }
+}
+
+for (const c of probe('s=nuit,bleu', ['--force-prefers-reduced-motion'], 1150)) {
+    check(c.motion === 'off' && c.running === '0' && c.paused === '0', `${c.name}: reduced motion, no animation at all`);
+}
+
+process.exit(failures ? 1 : 0);

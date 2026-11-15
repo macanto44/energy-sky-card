@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Energy Sky Card — démo locale</title>
+<style>
+  body { margin: 0; padding: 16px; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; }
+  figure { margin: 0; }
+  figcaption { margin: 0 0 6px; opacity: .7; }
+  /* A sections-view cell: 3 rows of 56 px + 2 gaps of 8 px */
+  .cell { height: 184px; }
+  /* ?bare: one card, nothing around it, for README screenshots */
+  body.bare { padding: 0; background: transparent; }
+  body.bare figcaption { display: none; }
+</style>
+<script type="module">
+  // Stand-ins for Home Assistant's elements (the demo runs outside HA)
+  import { ICONS } from './icons.js';
+  customElements.define('ha-card', class extends HTMLElement {
+    connectedCallback() { this.style.display = 'block'; this.style.borderRadius = '12px'; }
+  });
+  customElements.define('ha-icon', class extends HTMLElement {
+    connectedCallback() {
+      const d = ICONS[this.getAttribute('icon')] ?? '';
+      this.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%"><path fill="currentColor" d="${d}"/></svg>`;
+    }
+  });
+  // The card after the stand-ins, so its ha-card is ours
+  const s = document.createElement('script');
+  s.src = '../energy-sky-card.js';
+  s.onload = () => import('./main.js');
+  document.head.appendChild(s);
+</script>
+</head>
+<body>
+<div class="row" id="cards"></div>
+
+</body>
+</html>
