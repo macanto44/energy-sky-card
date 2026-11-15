@@ -76,7 +76,6 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Facultatif : affichée après la charge, « 78 % ↑ · 24 °C ».',
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
-        cell_1: 'Les cases du bas, dans l\'ordre. « Libre » affiche n\'importe quelle entité.',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
     },
     en: {
@@ -87,7 +86,6 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Optional: shown after the charge, "78% ↑ · 24 °C".',
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
-        cell_1: 'The bottom cells, in order. "Free" shows any entity.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
     },
 };
