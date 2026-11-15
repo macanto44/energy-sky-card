@@ -1,6 +1,6 @@
 // The README's pictures, from the built card in the local demo (headless Chrome):
-// docs/images/{bleu,blanc,rouge,nuit}.png, and docs/images/nuit-anim.png, an
-// animated PNG of the night sky (4 s, looping: the twinkle's cycle).
+// docs/images/{bleu,blanc,rouge}.png, and docs/images/nuit-anim.png, an
+// animated PNG of the night sky (4 s, looping: the twinkle's cycle), 2 × like the stills.
 // Usage: npm run build && npm run screenshots   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -23,8 +23,8 @@ function shoot(out, scenario, seek, scale = 2) {
     ], { stdio: 'ignore' });
 }
 
-// The stills: the day ones with the halo near its peak, the night one mid-way through a shooting star
-const stills = { bleu: 3000, blanc: 3000, rouge: 3000, nuit: 4300 };
+// The stills, by day, with the halo near its peak (the night is the animation below)
+const stills = { bleu: 3000, blanc: 3000, rouge: 3000 };
 for (const [name, seek] of Object.entries(stills)) {
     shoot(`docs/images/${name}.png`, name, seek);
     console.log(`docs/images/${name}.png`);
@@ -76,12 +76,12 @@ function apng(frames, delay) {
     return Buffer.concat(parts);
 }
 
-// The animation: 4 s from the first shooting star's pass (4 s in), 1 ×, 100 ms a frame
+// The animation: 4 s from the first shooting star's pass (4 s in), 2 ×, 100 ms a frame
 const DELAY = 100, START = 4000, LENGTH = 4000;
 const frames = [];
 for (let t = START; t < START + LENGTH; t += DELAY) {
     const f = join(work, `f${frames.length}.png`);
-    shoot(f, 'nuit', t, 1);
+    shoot(f, 'nuit', t, 2);
     frames.push(f);
 }
 const anim = apng(frames, DELAY);

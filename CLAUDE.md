@@ -15,7 +15,7 @@ npm run dev          # rebuild on change
 npm run type-check   # tsc --noEmit, strict
 npm test             # Vitest, once (build first: test/build.test.ts checks the bundle)
 npm run test:browser # headless Chrome: animations pause off-screen, none under reduced motion, no overflow, sky off text (also in CI)
-npm run screenshots  # the README's pictures in docs/images/ (4 stills + nuit-anim.png, an animated PNG)
+npm run screenshots  # the README's pictures in docs/images/ (3 day stills + nuit-anim.png, the night as an animated PNG)
 npm run test:coverage
 ```
 

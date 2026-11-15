@@ -8,9 +8,7 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
 |---|---|
 | ![Jour Bleu](docs/images/bleu.png) | ![Jour Blanc](docs/images/blanc.png) |
 | **Jour Rouge** | **Nuit** |
-| ![Jour Rouge](docs/images/rouge.png) | ![Nuit](docs/images/nuit.png) |
-
-<img src="docs/images/nuit-anim.png" width="360" alt="La nuit, animée : les étoiles scintillent sur tout le ciel, une étoile filante passe">
+| ![Jour Rouge](docs/images/rouge.png) | ![Nuit, animée : les étoiles scintillent, une étoile filante passe](docs/images/nuit-anim.png) |
 
 ## Ce que montre la carte
 
