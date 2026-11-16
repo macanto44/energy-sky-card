@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- A second layout, `layout: side` (« Côté » in the editor's Cells block): the big number and its line on the left, the cells on the right as icon + value, one line each, in 2 rows (120 px) instead of 4. The cell's name stays for screen readers and shows on hover. Its sky is the lower part of the tariff gradient and its halo glows above the big number, away from the values, so white text keeps its contrast. On a narrow card the complements shorten, then go (« 78 % ↑ »), the big number steps 44 → 40 → 36 px, and the line under it may take two lines. `standard` stays the default.
+
 ## [0.3.2] — 2026-11-15
 
 - Each cell takes its own tap action (more-info, navigate, url, perform-action, none…), chosen in the editor's Cells block (« Appui sur la case ») or with `tap_action` in YAML: a built-in cell is then written `{ type: grid, tap_action: … }`. Without one, a tap opens the cell's entity unless the card has a `tap_action`, as in 0.3.1. `cell_tap` (0.3.1) leaves the editor and the docs; it is still read.

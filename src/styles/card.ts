@@ -1,8 +1,12 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
-import { CLOUD_MAX_ALPHA, CLOUD_RGB } from '../sky';
+import { CLOUD_MAX_ALPHA, CLOUD_RGB, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
+const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
+/** Side layout: the gradient from SIDE_SKY_FROM down, its first stop a mix of the top two */
+const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90d5) ${pct(1 - SIDE_SKY_FROM / 0.6)}, var(--esc-c1, #2169b0)) 0%, var(--esc-c1, #2169b0) ${pct((0.6 - SIDE_SKY_FROM) / (1 - SIDE_SKY_FROM))}, var(--esc-c2, #1d4f87) 100%)`;
+const SIDE_HALO_AT = `${SIDE_HALO.x}px ${SIDE_HALO.y}px`;
 
 export const CARD_CSS = `
 :host {
@@ -35,6 +39,7 @@ ha-card {
     inset: 0;
     background: radial-gradient(circle at 88% 12%, rgb(255, 214, 140), rgba(255, 214, 140, 0) 45%);
     opacity: var(--esc-halo-alpha, 0);
+    transform-origin: 88% 12%;
 }
 .star {
     position: absolute;
@@ -97,7 +102,7 @@ ha-card {
 :host { --esc-play: running; }
 :host([data-motion="paused"]) { --esc-play: paused; }
 :host([data-motion="on"][data-mode="day"][data-producing]) .halo,
-:host([data-motion="paused"][data-mode="day"][data-producing]) .halo { animation: esc-breathe 3s ease-in-out infinite alternate; animation-play-state: var(--esc-play); transform-origin: 88% 12%; }
+:host([data-motion="paused"][data-mode="day"][data-producing]) .halo { animation: esc-breathe 3s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
 :host([data-motion="on"][data-mode="night"]) .star.twinkle,
 :host([data-motion="paused"][data-mode="night"]) .star.twinkle { animation: esc-twinkle 2s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
 :host([data-motion="on"][data-mode="night"]) .shooting,
@@ -140,8 +145,10 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
     /* Room for the comma's tail below the baseline */
     padding: 2px 0 3px;
 }
+:host([data-layout="side"]) { --esc-hero-size: 44px; }
 :host([data-hero="48"]) { --esc-hero-size: 48px; }
 :host([data-hero="40"]) { --esc-hero-size: 40px; }
+:host([data-hero="36"]) { --esc-hero-size: 36px; }
 .hero-unit {
     font-size: 0.4em;
     font-weight: 400;
@@ -199,4 +206,62 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .value-tight, .extra-tight,
 :host([data-tight-extra]) [data-tight] .value-main, :host([data-tight-extra]) [data-tight] .extra { display: none; }
 :host([data-tight-extra]) [data-tight] .value-tight, :host([data-tight-extra]) [data-tight] .extra-tight { display: inline; }
+/* The side layout's last resort: the complements left out (« 78 % ↑ », no temperature) */
+.value-bare,
+:host([data-no-extra]) .extra, :host([data-no-extra]) .value-tight, :host([data-no-extra]) [data-bare] .value-main { display: none; }
+:host([data-no-extra]) [data-bare] .value-bare { display: inline; }
+/*
+ * Side layout (layout: side, 2 rows): the hero and context on the left, the
+ * cells listed on the right, one line each, the icon standing for the label
+ * (still read by screen readers, and shown on hover).
+ */
+:host([data-layout="side"]) .layer.day { background: ${SIDE_SKY}; }
+:host([data-layout="side"]) .halo {
+    background: radial-gradient(circle ${SIDE_HALO.radius}px at ${SIDE_HALO_AT}, rgb(255, 214, 140), rgba(255, 214, 140, 0));
+    transform-origin: ${SIDE_HALO_AT};
+}
+:host([data-layout="side"]) .content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-rows: auto auto;
+    align-content: center;
+    column-gap: 16px;
+    padding: 14px 18px 12px 20px;
+}
+:host([data-layout="side"]) .hero { grid-column: 1; grid-row: 1; align-self: end; }
+:host([data-layout="side"]) .hero:has(+ .context[hidden]) { grid-row: 1 / 3; align-self: center; }
+:host([data-layout="side"]) .context {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    margin: 8px 0 0;
+    font-size: 15px;
+    line-height: 20px;
+    /* Too long for one line beside the cells (fit() tries that first): two lines, never cut */
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+:host([data-layout="side"]) .context[hidden] { display: none; }
+:host([data-layout="side"]) .grid {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+    margin: 0;
+    padding: 0 0 0 16px;
+    border-top: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.22);
+    grid-template-columns: max-content;
+    row-gap: 3px;
+}
+:host([data-layout="side"]) .metric { display: flex; align-items: center; gap: 8px; }
+:host([data-layout="side"]) .label { position: relative; flex: none; }
+:host([data-layout="side"]) .label ha-icon { --mdc-icon-size: 15px; width: 15px; height: 15px; }
+:host([data-layout="side"]) .label-text { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+:host([data-layout="side"]) .value { margin-top: 0; font-size: 15px; line-height: 20px; }
+:host([data-layout="side"]) .extra { font-size: 12.5px; }
+:host([data-layout="side"][data-compact]) .content { padding: 8px 16px 6px 18px; }
+:host([data-layout="side"][data-compact]) .context { margin-top: 4px; }
+:host([data-layout="side"][data-compact]) .grid { row-gap: 0; }
 `;

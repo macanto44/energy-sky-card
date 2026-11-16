@@ -31,6 +31,18 @@ export const HALO_MAX_ALPHA = 0.55;
 export const HALO_BREATHE_PEAK = 1;
 export const DEFAULT_PRODUCTION_MAX = 6000;
 /**
+ * The side layout (2 rows, 120 px) puts values over the whole height, where
+ * the full gradient's top is too light for 15 px text: its sky is the lower
+ * part of the gradient, from this height down (the part the standard
+ * layout's values sit on)
+ */
+export const SIDE_SKY_FROM = 0.45;
+/**
+ * The side layout's halo: off the values' column, a glow from just above
+ * the card's top left corner, behind the hero (px: centre x, y, radius)
+ */
+export const SIDE_HALO = { x: 0, y: -30, radius: 100 } as const;
+/**
  * By day, cloud shadows drift across the card: a dark navy at most this
  * opaque. They only ever darken the sky, so white text keeps (or gains) its
  * contrast wherever they pass
@@ -79,6 +91,11 @@ export function composite(bottom: Rgb, top: Rgb, alpha: number): Rgb {
 export function gradientAt(palette: Palette, y: number): Rgb {
     const [a, b, c] = palette.map(hexToRgb);
     return y <= 0.6 ? composite(a, b, y / 0.6) : composite(b, c, (y - 0.6) / 0.4);
+}
+
+/** The side layout's sky at a height of the card (0 top, 1 bottom) */
+export function sideGradientAt(palette: Palette, y: number): Rgb {
+    return gradientAt(palette, SIDE_SKY_FROM + (1 - SIDE_SKY_FROM) * y);
 }
 
 export interface Background {

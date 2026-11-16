@@ -53,6 +53,8 @@ export interface MetricView {
      * « 100 % ↓ · -13° ✓ », narrow spaces (a battery with its temperature)
      */
     tight?: { value: string; extra: string };
+    /** The side layout's last resort, the value without its complement: « 100 % ↓ » (a battery with its temperature) */
+    bare?: string;
     /** The icon, for a free cell (its config's, else its entity's) */
     icon?: string;
 }
@@ -231,7 +233,7 @@ function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Nu
         value: temp === undefined ? charge : `${charge} · ${formatTemperature(temp, unit, loc)}`,
         extra: reached ? ` · ${localize(loc.lang, 'soc_reached')}` : '',
         extraShort: reached ? ` · ${localize(loc.lang, 'soc_reached_short')}` : '',
-        ...(temp === undefined ? {} : { tight: { value: `${charge}\u202F·\u202F${formatNumber(Math.round(temp), 0, loc)}°`, extra: reached ? '\u202F✓' : '' } }),
+        ...(temp === undefined ? {} : { tight: { value: `${charge}\u202F·\u202F${formatNumber(Math.round(temp), 0, loc)}°`, extra: reached ? '\u202F✓' : '' }, bare: charge }),
     };
 }
 

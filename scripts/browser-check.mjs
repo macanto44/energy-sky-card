@@ -1,6 +1,6 @@
 // Runs the built card in headless Chrome and checks what jsdom can't:
 // real CSS animations stop off-screen and never start under reduced motion,
-// nothing overflows, and the night's stars cover the card without touching text.
+// nothing overflows (both layouts), and the night's stars cover the card without touching text.
 // Usage: npm run build && npm run test:browser   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -66,8 +66,17 @@ for (const c of probe('h=184&s=bleu,extremes,coupure', [], 2400)) {
     check(c.overflow === '0' && c.tall === '0', `184 px ${c.name}: no overflow (hero ${c.hero} px)`);
 }
 
+// The side layout (2 rows, 120 px): nothing overflows on a phone, in either language, extreme values included
+for (const lang of ['fr', 'en']) {
+    for (const c of probe(`side&lang=${lang}`, [], 2400)) {
+        check(c.overflow === '0' && c.tall === '0', `side ${lang} ${c.name}: no overflow (hero ${c.hero} px${['', ', short SOC', ', tight battery', ', no complement'][Number(c.short)]})`);
+    }
+}
+// …and on a usual phone the battery keeps its temperature
+for (const c of probe('side&s=bleu&widths=360', [], 1200)) check(c.short === '0', `side ${c.name}: battery in full`);
+
 // The night sky covers the whole card (a visible star in each quarter) and none touches text
-for (const query of ['lang=fr', 'lang=en', 'h=184']) {
+for (const query of ['lang=fr', 'lang=en', 'h=184', 'side']) {
     for (const c of probe(query, [], 2400).filter(c => c.mode === 'night')) {
         check(c.hits === '0' && c.quarters === '4', `${query} ${c.name}: ${c.dots} stars in ${c.quarters} quarters, ${c.hits} on text`);
     }

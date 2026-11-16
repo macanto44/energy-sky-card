@@ -44,7 +44,7 @@ describe('schema', () => {
             './consumption_entity', './night_hero',
             'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
-            './cell_1', './cell_2', './cell_3', './cell_4',
+            './layout', './cell_1', './cell_2', './cell_3', './cell_4',
             './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
         ]);
@@ -188,6 +188,20 @@ describe('the 0.2 options', () => {
         expect(changes.at(-1)).not.toHaveProperty('night_hero');
         change({ night_hero: 'consumption', consumption_entity: 'sensor.home' });
         expect(changes.at(-1)).toMatchObject({ night_hero: 'consumption', consumption_entity: 'sensor.home' });
+    });
+});
+
+describe('the layout', () => {
+    it('offers standard and side at the top of the Cells block, standard by default (left out of the YAML)', () => {
+        const cells = editorSchema('fr').find(b => b.title === 'Cases')!;
+        expect(cells.schema?.[0].name).toBe('layout');
+        expect((cells.schema?.[0].selector as any).select.options.map((o: { value: string }) => o.value)).toEqual(['standard', 'side']);
+        const { form, change, changes } = mount();
+        expect(form.data?.layout).toBe('standard');
+        change({ animate: false });
+        expect(changes.at(-1)).not.toHaveProperty('layout');
+        change({ layout: 'side' });
+        expect(changes.at(-1)?.layout).toBe('side');
     });
 });
 

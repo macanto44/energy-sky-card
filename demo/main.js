@@ -1,18 +1,21 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, bare, probe, seek)
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, h=…, bare, probe, seek)
 import { ATTRIBUTES, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
 const lang = params.get('lang') || 'fr';
 const root = document.getElementById('cards');
+// ?side: the side layout, in a 2-row cell (120 px) unless h says otherwise
+const side = params.has('side');
+const height = params.get('h') || (side ? '120' : '');
 if (params.has('bare')) document.body.classList.add('bare');
 for (const [name, overrides] of Object.entries(SCENARIOS)) {
   if (only && !only.split(',').includes(name)) continue;
   const widths = (params.get('widths') || '360,304').split(',').map(Number);
   for (const width of widths) {
     const fig = document.createElement('figure');
-    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${params.get('h') ? `;height:${params.get('h')}px` : ''}"></div>`;
+    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}) });
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}) });
     const states = {};
     let t = 0;
     for (const [id, state] of Object.entries(overrides)) {
@@ -48,13 +51,13 @@ if (params.has('probe')) {
       const tall = content.scrollHeight > content.clientHeight + 1 ? 1 : 0;
       // The night sky: visible stars touching text (should be none), and the quarters they reach
       const box = card.shadowRoot.querySelector('ha-card').getBoundingClientRect();
-      const texts = [...card.shadowRoot.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight')]
+      const texts = [...card.shadowRoot.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight, .value-bare')]
         .map(el => el.getBoundingClientRect()).filter(r => r.width && r.height);
       const dots = [...card.shadowRoot.querySelectorAll('.star')]
         .filter(el => !el.hidden).map(el => el.getBoundingClientRect());
       const hits = dots.filter(d => texts.some(t => d.left < t.right && d.right > t.left && d.top < t.bottom && d.bottom > t.top)).length;
       const quarters = new Set(dots.map(d => `${(d.left + d.right) / 2 > box.left + box.width / 2 ? 'r' : 'l'}${(d.top + d.bottom) / 2 > box.top + box.height / 2 ? 'b' : 't'}`)).size;
-      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? 56} short=${card.hasAttribute('data-tight-extra') ? 2 : card.hasAttribute('data-short-extra') ? 1 : 0} dots=${dots.length} hits=${hits} quarters=${quarters}`;
+      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? (side ? 44 : 56)} short=${card.hasAttribute('data-no-extra') ? 3 : card.hasAttribute('data-tight-extra') ? 2 : card.hasAttribute('data-short-extra') ? 1 : 0} dots=${dots.length} hits=${hits} quarters=${quarters}`;
     });
     const pre = document.createElement('pre');
     pre.id = 'probe';
@@ -72,7 +75,7 @@ if (params.has('layout')) {
     const q = sel => [...card.shadowRoot.querySelectorAll(sel)].map(frac).join(' ');
     const pre = document.createElement('pre');
     pre.id = 'layout';
-    pre.textContent = `height=${box.height} compact=${card.hasAttribute('data-compact')} hero=${card.getAttribute('data-hero') ?? 56}\nhero ${q('.hero')}\ncontext ${q('.context')}\nlabels ${q('.label')}\nvalues ${q('.value')}\ngrid ${q('.grid')}`;
+    pre.textContent = `height=${box.height} compact=${card.hasAttribute('data-compact')} hero=${card.getAttribute('data-hero') ?? (side ? 44 : 56)}\nhero ${q('.hero')}\ncontext ${q('.context')}\nlabels ${q('.label')}\nvalues ${q('.value')}\ngrid ${q('.grid')}\nhero box ${(() => { const r = card.shadowRoot.querySelector('.hero-value').getBoundingClientRect(); return `x=${(r.left - box.left).toFixed(0)} top=${(r.top - box.top).toFixed(0)}`; })()}`;
     document.body.prepend(pre);
   }, 1000);
 }

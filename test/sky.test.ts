@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-    CLOUD_MAX_ALPHA, CLOUD_RGB, DEFAULT_PALETTES, HALO_BREATHE_PEAK, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, composite, computeBackground, contrastRatio,
-    gradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
+    CLOUD_MAX_ALPHA, CLOUD_RGB, DEFAULT_PALETTES, HALO_BREATHE_PEAK, HALO_MAX_ALPHA, HALO_RGB, NIGHT_PALETTE, SIDE_HALO, composite, computeBackground, contrastRatio,
+    gradientAt, sideGradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
 } from '../src/sky';
 import { SHOOTING_STARS, coveredBy, generateStars, starReach, starsMarkup } from '../src/stars';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
@@ -103,6 +103,56 @@ describe('contrast of white text', () => {
         expect(hexToRgb('#fff')).toEqual([1, 1, 1]);
         expect(contrastRatio(WHITE, [0, 0, 0])).toBeCloseTo(21);
         expect(gradientAt(['#000000', '#ffffff', '#000000'], 0.6)).toEqual([1, 1, 1]);
+    });
+});
+
+/*
+ * The side layout (2 rows, 120 px), measured the same way (demo ?layout&side,
+ * 440 and 304 px wide): the hero over 20.6–57.7 % of the height, its first
+ * glyph at 20 px from the left and the top; the context line 64.4–81.1 %;
+ * the cells' icons and values 10.4–91.2 %, on the right, the column at
+ * least 122 px from the left edge (the narrowest hero, « 2 W », and its gaps).
+ * By day the sky is the lower part of the gradient (sideGradientAt); the halo a
+ * circle from just above the top left corner, its alpha falling linearly to
+ * zero at its radius, 12 % larger at the peak of its breath.
+ */
+function sideHaloAlpha(x: number, y: number): number {
+    const reach = SIDE_HALO.radius * 1.12;
+    const d = Math.hypot(x - SIDE_HALO.x, y - SIDE_HALO.y);
+    return HALO_MAX_ALPHA * HALO_BREATHE_PEAK * Math.max(0, 1 - d / reach);
+}
+
+function sideContrasts(palette: Palette) {
+    const H = 120;
+    // The night keeps its own full gradient in every layout
+    const at = (y: number) => palette === NIGHT_PALETTE ? gradientAt(palette, y) : sideGradientAt(palette, y);
+    const lit = (y: number, x: number) => composite(at(y), HALO_RGB, sideHaloAlpha(x, Math.max(20, y * H)));
+    const values = [0.104, 0.3, 0.5, 0.7, 0.912];
+    return {
+        hero: minAt([0.206, 0.4, 0.577], y => contrastRatio(WHITE, lit(y, 20))),
+        context: minAt([0.644, 0.73, 0.811], y => contrastRatio(WHITE, lit(y, 20))),
+        value: minAt(values, y => contrastRatio(WHITE, at(y))),
+        icon: minAt(values, y => contrastRatio(composite(at(y), WHITE, 0.75), at(y))),
+    };
+}
+
+describe('contrast of white text, side layout', () => {
+    for (const [name, palette] of [...Object.entries(DEFAULT_PALETTES), ['Nuit', NIGHT_PALETTE] as const]) {
+        it(`passes on ${name}`, () => {
+            const c = sideContrasts(palette as Palette);
+            expect(c.value).toBeGreaterThanOrEqual(4.5);
+            expect(c.context).toBeGreaterThanOrEqual(4.5);
+            expect(c.icon).toBeGreaterThanOrEqual(3);
+            expect(c.hero).toBeGreaterThanOrEqual(3);
+        });
+    }
+
+    it('keeps the halo off the cells\' column, even at the peak of its breath', () => {
+        expect(sideHaloAlpha(122, 0.104 * 120)).toBe(0);
+    });
+
+    it('would fail with the full gradient: the values reach the card\'s top', () => {
+        expect(contrastRatio(WHITE, gradientAt(DEFAULT_PALETTES.Bleu, 0.104))).toBeLessThan(4.5);
     });
 });
 

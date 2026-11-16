@@ -44,6 +44,9 @@ export type CellTap = 'auto' | 'more-info' | 'card';
 /** What the hero shows at night: production (0 W, the default), the home's consumption, or the battery */
 export type NightHero = 'production' | 'consumption' | 'battery';
 
+/** The card's shape: the cells in a grid under the hero (standard), or listed on its right as icon + value (side) */
+export type CardLayout = 'standard' | 'side';
+
 export interface EnergySkyCardConfig {
     type: string;
     /** One power sensor, or several summed (micro-inverters + a string inverter) */
@@ -75,6 +78,8 @@ export interface EnergySkyCardConfig {
     /** The home's power use (W) */
     consumption_entity?: string;
     night_hero?: NightHero;
+    /** standard (default, 4 rows) or side (2 rows: the cells on the right, icon + value) */
+    layout?: CardLayout;
     /** Up to 4 cells, in order; without it, the built-in cells whose entities are set */
     cells?: CellConfig[];
     forecast_tomorrow_entity?: string;

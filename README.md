@@ -10,6 +10,10 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
 | **Jour Rouge** | **Nuit** |
 | ![Jour Rouge](docs/images/rouge.png) | ![Nuit, animée : les étoiles scintillent, une étoile filante passe](docs/images/nuit-anim.png) |
 
+| Format côté (`layout: side`), 2 rangées |
+|---|
+| ![Format côté : le grand chiffre à gauche, les cases à droite en icône + valeur](docs/images/cote.png) |
+
 ## Ce que montre la carte
 
 - **Production solaire instantanée**, en grand : « 748 W », puis « 3,2 kW » à partir de 1 000 W.
@@ -89,6 +93,7 @@ tap_action:
 | `forecast_tomorrow_entity` | — | Prévision de production pour demain (kWh). |
 | `consumption_entity` | — | Consommation de la maison (W). Pour la case « Consommation » et `night_hero`. |
 | `night_hero` | `production` | Ce que montre le grand chiffre la nuit : `production`, `consumption` (il faut `consumption_entity`) ou `battery` (il faut `battery.soc_entity`). La ligne du dessous dit alors ce que c'est : « Consommation · 7,2 kWh produits ». |
+| `layout` | `standard` | `standard` : les cases sous le grand chiffre (4 rangées). `side` : les cases à droite, une ligne chacune, l'icône à la place du nom (2 rangées, voir « Taille »). Aussi dans le bloc Cases de l'éditeur. |
 | `cells` | automatique | Les cases du bas, 4 au plus, dans l'ordre (voir plus bas). Sans elle : Batterie, Réseau, Tension, Prévu demain, selon les entités renseignées. |
 | `tariff_color_entity` | — | Couleur tarifaire du jour (`Bleu`, `Blanc`, `Rouge`). Inconnue : Bleu. |
 | `tariff_palettes` | voir plus bas | Remplace ou ajoute des palettes (YAML seulement). |
@@ -174,6 +179,8 @@ Les palettes par défaut sont légèrement plus sombres en haut que celles du pr
 
 Dans une vue « sections », la carte prend toute la largeur et 4 rangées (248 px), avec l'aération du prototype et les mesures ancrées en bas. Réduite à 3 rangées, elle passe à un espacement serré ; quand la largeur manque, le grand chiffre passe de 56 à 48 puis 40 px. Aucune ligne ne déborde à 320 px de large.
 
+Avec `layout: side`, elle demande 2 rangées (120 px) : le grand chiffre et sa ligne à gauche, les cases à droite, une ligne chacune avec son icône (le nom reste lu par les lecteurs d'écran et s'affiche au survol). Le ciel y est la partie basse du dégradé et le halo se tient au-dessus du grand chiffre, loin des valeurs, pour garder le même contraste. Quand la place manque, les compléments raccourcissent (« SOC ✓ », « 18° »), puis disparaissent (« 78 % ↑ »), le grand chiffre passe de 44 à 40 puis 36 px, et la ligne du dessous peut passer sur deux lignes. Si vous aviez réglé la hauteur de la carte à la main dans la vue sections, ajustez-la après avoir changé de format.
+
 ---
 
 <a id="english"></a>
@@ -220,6 +227,7 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |
 | `consumption_entity` | — | The home's power use (W), for the Consumption cell and `night_hero`. |
 | `night_hero` | `production` | What the big number shows at night: `production`, `consumption` or `battery`; the line below names it ("Consumption · 7.2 kWh produced"). |
+| `layout` | `standard` | `standard`: the cells under the big number (4 rows). `side`: the cells on its right, one line each, the icon standing for the name (2 rows, 120 px; the sky is the gradient's lower part and the halo stays above the big number, so the contrast holds). Also in the editor's Cells block. |
 | `cells` | automatic | Up to 4 bottom cells, in order: `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, or a free cell `{ entity, name, icon }` for any entity (powers read in W / kW, anything else as Home Assistant formats it). Each cell can take its own `tap_action` (a built-in one is then written `{ type: grid, tap_action: … }`), also set in the editor's Cells block; without one, a tap opens the cell's entity, unless the card has a `tap_action`. |
 | `tariff_color_entity` | — | Today's tariff colour (`Bleu`, `Blanc`, `Rouge`); unknown is Bleu. |
 | `tariff_palettes` | see above | Three colours per tariff, top to bottom (YAML only). |

@@ -14,6 +14,11 @@ import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The hero's sizes, largest first: it steps down until the card's lines fit */
 export const HERO_SIZES = [56, 48, 40] as const;
+/** The side layout's hero sizes (2 rows: a smaller hero beside the cells) */
+export const SIDE_HERO_SIZES = [44, 40, 36] as const;
+/** The side layout's ways to shorten a cell's line, in order: none, short complements, tight form, no complement */
+const SIDE_EXTRAS = [[], ['data-short-extra'], ['data-short-extra', 'data-tight-extra'], ['data-no-extra']] as const;
+const EXTRA_ATTRIBUTES = ['data-short-extra', 'data-tight-extra', 'data-no-extra'] as const;
 
 /** A config error, in the page's language (French or English) */
 function configError(fr: string, en: string): Error {
@@ -37,6 +42,9 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     }
     if (c.night_hero !== undefined && !(['production', 'consumption', 'battery'] as unknown[]).includes(c.night_hero)) {
         throw configError('night_hero : production, consumption ou battery', 'night_hero: production, consumption or battery');
+    }
+    if (c.layout !== undefined && !(['standard', 'side'] as unknown[]).includes(c.layout)) {
+        throw configError('layout : standard ou side', 'layout: standard or side');
     }
     if (c.cell_tap !== undefined && !(['auto', 'more-info', 'card'] as unknown[]).includes(c.cell_tap)) {
         throw configError('cell_tap : auto, more-info ou card', 'cell_tap: auto, more-info or card');
@@ -101,7 +109,7 @@ interface Refs {
     context: HTMLElement;
     contextFull: HTMLElement;
     contextShort: HTMLElement;
-    metrics: Map<MetricKey, { icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement; valueTight: HTMLElement; extraTight: HTMLElement }>;
+    metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement; valueTight: HTMLElement; extraTight: HTMLElement; valueBare: HTMLElement }>;
 }
 
 export class EnergySkyCard extends HTMLElement {
@@ -147,6 +155,11 @@ export class EnergySkyCard extends HTMLElement {
         this.readyFrame = undefined;
     }
 
+    /** The side layout: the cells listed on the hero's right */
+    private get side(): boolean {
+        return this.config?.layout === 'side';
+    }
+
     /** Animations: "on", "paused" (hidden or off-screen) or "off" */
     get motionState() {
         return this.motion.state;
@@ -169,6 +182,8 @@ export class EnergySkyCard extends HTMLElement {
     private build(): void {
         const config = this.config!;
         const cells = configuredCells(config);
+        if (this.side) this.setAttribute('data-layout', 'side');
+        else this.removeAttribute('data-layout');
         this.root.innerHTML = `
             <style>${CARD_CSS}</style>
             <ha-card>
@@ -182,7 +197,7 @@ export class EnergySkyCard extends HTMLElement {
                     <div class="grid">${cells.map(cell => `
                         <div class="metric" data-metric="${cell.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
-                            <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span><span class="value-tight"></span><span class="extra extra-tight"></span></div>
+                            <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span><span class="value-tight"></span><span class="extra extra-tight"></span><span class="value-bare"></span></div>
                         </div>`).join('')}</div>
                 </div>
             </ha-card>`;
@@ -199,7 +214,7 @@ export class EnergySkyCard extends HTMLElement {
                 const icon = q('ha-icon', el);
                 // Set as an attribute, never in markup: a free cell's icon comes from the config
                 icon.setAttribute('icon', cell.kind === 'custom' ? cell.custom!.icon || CUSTOM_CELL_ICON : METRIC_ICONS[cell.kind]);
-                return [cell.key, { icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el), valueTight: q('.value-tight', el), extraTight: q('.extra-tight', el) }];
+                return [cell.key, { el, icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el), valueTight: q('.value-tight', el), extraTight: q('.extra-tight', el), valueBare: q('.value-bare', el) }];
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
@@ -261,10 +276,11 @@ export class EnergySkyCard extends HTMLElement {
     /** Where text sits: the visible words and icons, and the hairline above the grid */
     private textBoxes(): Box[] {
         const root = this.root;
-        const boxes: Box[] = [...root.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight')]
+        const boxes: Box[] = [...root.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight, .value-bare')]
             .map(el => el.getBoundingClientRect());
         const grid = root.querySelector('.grid')?.getBoundingClientRect();
-        if (grid) boxes.push({ left: grid.left, right: grid.right, top: grid.top - 1, bottom: grid.top + 1 });
+        if (grid && this.side) boxes.push({ left: grid.left - 1, right: grid.left + 1, top: grid.top, bottom: grid.bottom });
+        else if (grid) boxes.push({ left: grid.left, right: grid.right, top: grid.top - 1, bottom: grid.top + 1 });
         return boxes.filter(b => b.right > b.left && b.bottom > b.top);
     }
 
@@ -292,27 +308,56 @@ export class EnergySkyCard extends HTMLElement {
         if (!refs) return;
         const content = refs.card.querySelector('.content') as HTMLElement;
         const hero = refs.heroValue.parentElement as HTMLElement;
-        const overflows = () => hero.scrollWidth > hero.clientWidth + 1 || content.scrollHeight > content.clientHeight + 1;
-        for (const compact of [false, true]) {
-            this.toggleAttribute('data-compact', compact);
-            for (const size of HERO_SIZES) {
-                if (size === HERO_SIZES[0]) this.removeAttribute('data-hero');
-                else this.setAttribute('data-hero', String(size));
-                if (!overflows()) return;
+        const context = refs.context;
+        // Side: the context line shares the left column with the hero; it may wrap onto a second line, as a last resort
+        const lineHeight = () => parseFloat(getComputedStyle(context).lineHeight) || 20;
+        const contextCut = () => this.side && !context.hidden
+            && (context.scrollWidth > context.clientWidth + 1 || context.scrollHeight > lineHeight() + 1);
+        const overflows = (withContext: boolean) => hero.scrollWidth > hero.clientWidth + 1 || content.scrollHeight > content.clientHeight + 1
+            || content.scrollWidth > content.clientWidth + 1 || (withContext && contextCut());
+        const sizes = this.side ? SIDE_HERO_SIZES : HERO_SIZES;
+        // Side: the cells' column takes the width its lines need, so a long line squeezes the hero; shorten the lines before the hero gets too small
+        const extras = this.side ? SIDE_EXTRAS : [[]];
+        const attempt = (withContext: boolean): boolean => {
+            for (const compact of [false, true]) {
+                this.toggleAttribute('data-compact', compact);
+                for (const set of extras) {
+                    for (const name of EXTRA_ATTRIBUTES) this.toggleAttribute(name, (set as readonly string[]).includes(name));
+                    for (const size of sizes) {
+                        if (size === sizes[0]) this.removeAttribute('data-hero');
+                        else this.setAttribute('data-hero', String(size));
+                        if (!overflows(withContext)) return true;
+                    }
+                }
             }
+            return false;
+        };
+        if (!this.side) {
+            attempt(false);
+            return;
         }
+        // Side: the context line in full on one line, else its short form on one line,
+        // else in full on two lines (the short form if even two lines are too few)
+        this.removeAttribute('data-short-context');
+        if (attempt(true)) return;
+        this.setAttribute('data-short-context', '');
+        if (attempt(true)) return;
+        this.removeAttribute('data-short-context');
+        attempt(false);
+        if (!context.hidden && context.scrollHeight > context.clientHeight + 1) this.setAttribute('data-short-context', '');
     }
 
     private fitExtras(): void {
         if (!this.refs) return;
+        // Side: fitLayout already chose the context's and the cells' forms
+        if (this.side) return;
         const tooWide = (l: HTMLElement) => l.scrollWidth > l.clientWidth + 1;
-        this.removeAttribute('data-short-extra');
-        this.removeAttribute('data-tight-extra');
         this.removeAttribute('data-short-context');
+        if (!this.refs.context.hidden && tooWide(this.refs.context)) this.setAttribute('data-short-context', '');
+        for (const name of EXTRA_ATTRIBUTES) this.removeAttribute(name);
         const lines = [...this.refs.metrics.values()].map(m => m.value.parentElement as HTMLElement);
         if (lines.some(tooWide)) this.setAttribute('data-short-extra', '');
         if (lines.some(tooWide)) this.setAttribute('data-tight-extra', '');
-        if (!this.refs.context.hidden && tooWide(this.refs.context)) this.setAttribute('data-short-context', '');
     }
 
     /** What the render depends on: each tracked entity's last_updated, and the locale */
@@ -341,6 +386,8 @@ export class EnergySkyCard extends HTMLElement {
             const el = refs.metrics.get(metric.key);
             if (!el) continue;
             setText(el.label, metric.label);
+            // Side: the icon stands for the label, which shows on hover
+            if (this.side && el.el.title !== metric.label) el.el.title = metric.label;
             setText(el.value, metric.value);
             setText(el.extra, metric.extra);
             setText(el.extraShort, metric.extraShort);
@@ -348,6 +395,8 @@ export class EnergySkyCard extends HTMLElement {
             setText(el.valueTight, metric.tight?.value ?? '');
             setText(el.extraTight, metric.tight?.extra ?? '');
             el.value.parentElement!.toggleAttribute('data-tight', !!metric.tight);
+            setText(el.valueBare, metric.bare ?? '');
+            el.value.parentElement!.toggleAttribute('data-bare', !!metric.bare);
             if (metric.icon && el.icon.getAttribute('icon') !== metric.icon) el.icon.setAttribute('icon', metric.icon);
         }
         // A longer hero ("12,3 kW" after "8 W") or metric may not fit any more
@@ -378,13 +427,15 @@ export class EnergySkyCard extends HTMLElement {
         }
     }
 
-    /** Sections view: full width, four rows (248 px), never under three */
+    /** Sections view: full width, four rows (248 px), never under three; the side layout two rows (120 px) */
     getGridOptions() {
-        return { columns: 12, rows: 4, min_columns: 6, min_rows: 3 };
+        return this.side
+            ? { columns: 12, rows: 2, min_columns: 6, min_rows: 2 }
+            : { columns: 12, rows: 4, min_columns: 6, min_rows: 3 };
     }
 
     getCardSize(): number {
-        return 4;
+        return this.side ? 2 : 4;
     }
 
     /**

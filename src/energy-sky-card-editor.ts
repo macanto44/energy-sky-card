@@ -29,6 +29,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production_entity: 'Puissance solaire (W, additionnées)',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
+        layout: 'Disposition', layout_standard: 'Standard : les cases sous le chiffre (4 rangées)', layout_side: 'Côté : icône + valeur à droite (2 rangées)',
         cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)', cell_tap_action: 'Appui sur la case',
         kind_none: 'Aucune', kind_battery: 'Batterie', kind_grid: 'Réseau', kind_voltage: 'Tension', kind_tomorrow: 'Prévu demain',
         kind_consumption: 'Consommation', kind_custom: 'Libre (une entité au choix)',
@@ -46,6 +47,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production_entity: 'Solar power (W, summed)',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
+        layout: 'Layout', layout_standard: 'Standard: the cells under the number (4 rows)', layout_side: 'Side: icon + value on the right (2 rows)',
         cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)', cell_tap_action: 'Tap on the cell',
         kind_none: 'None', kind_battery: 'Battery', kind_grid: 'Grid', kind_voltage: 'Voltage', kind_tomorrow: 'Tomorrow',
         kind_consumption: 'Consumption', kind_custom: 'Free (any entity)',
@@ -76,6 +78,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Facultatif : affichée après la charge, « 78 % ↑ · 24 °C ».',
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
+        layout: 'En Côté, l\'icône remplace le nom de chaque case (il s\'affiche au survol). Sur un tableau en sections, ajustez la hauteur de la carte si vous l\'aviez réglée à la main.',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
     },
     en: {
@@ -86,6 +89,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Optional: shown after the charge, "78% ↑ · 24 °C".',
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
+        layout: 'In Side, the icon stands for each cell\'s name (shown on hover). On a sections dashboard, adjust the card\'s height if you had set it by hand.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
     },
 };
@@ -154,7 +158,10 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
-            schema: cellFields(lang, data),
+            schema: [
+                { name: 'layout', selector: { select: { mode: 'list', options: (['standard', 'side'] as const).map(value => ({ value, label: t(`layout_${value}`) })) } } },
+                ...cellFields(lang, data),
+            ],
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('tariff'), icon: 'mdi:palette-outline',
@@ -228,6 +235,7 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         sun_entity: 'sun.sun',
         animate: true,
         night_hero: 'production',
+        layout: 'standard',
         ...config,
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
         ...cellSlots(config),
@@ -273,7 +281,7 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
         if (b?.invert === false) delete b.invert;
         if (b && !Object.keys(b).length) delete merged[block];
     }
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production' };
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', layout: 'standard' };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }

@@ -1,5 +1,5 @@
 // The README's pictures, from the built card in the local demo (headless Chrome):
-// docs/images/{bleu,blanc,rouge}.png, and docs/images/nuit-anim.png, an
+// docs/images/{bleu,blanc,rouge}.png, docs/images/cote.png (the side layout), and docs/images/nuit-anim.png, an
 // animated PNG of the night sky (4 s, looping: the twinkle's cycle), 2 × like the stills.
 // Usage: npm run build && npm run screenshots   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
@@ -14,12 +14,12 @@ if (!chrome) throw new Error('No Chrome found (set CHROME=…)');
 const page = `file://${resolve('demo/index.html')}`;
 const work = mkdtempSync(join(tmpdir(), 'esc-shots-'));
 
-/** One card, 360 × 248, frozen at `seek` ms, at `scale` × */
-function shoot(out, scenario, seek, scale = 2) {
+/** One card, 360 × 248 (or 120 in the side layout), frozen at `seek` ms, at `scale` × */
+function shoot(out, scenario, seek, scale = 2, side = false) {
     execFileSync(chrome, [
         '--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
-        `--force-device-scale-factor=${scale}`, '--window-size=360,248', '--virtual-time-budget=4000',
-        `--screenshot=${out}`, `${page}?s=${scenario}&bare&widths=360&seek=${seek}`,
+        `--force-device-scale-factor=${scale}`, `--window-size=360,${side ? 120 : 248}`, '--virtual-time-budget=4000',
+        `--screenshot=${out}`, `${page}?s=${scenario}&bare&widths=360&seek=${seek}${side ? '&side' : ''}`,
     ], { stdio: 'ignore' });
 }
 
@@ -29,6 +29,9 @@ for (const [name, seek] of Object.entries(stills)) {
     shoot(`docs/images/${name}.png`, name, seek);
     console.log(`docs/images/${name}.png`);
 }
+// The side layout (layout: side), Bleu
+shoot('docs/images/cote.png', 'bleu', 3000, 2, true);
+console.log('docs/images/cote.png');
 
 /** A PNG's chunks: [type, data] */
 function chunks(png) {
