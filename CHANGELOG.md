@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.6] — 2026-11-17
+
+No breaking change.
 
 - The flow's colours follow your theme: `--energy-sky-card-solar`, `-grid`, `-battery` and `-consumption` in a Home Assistant theme set them for every card, and `flow_colors` (YAML) for one.
 - README: pictures in English, the energy flow animated, the side layout with its flow and appliances; a live demo on GitHub Pages.
