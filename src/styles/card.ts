@@ -15,6 +15,12 @@ export const NODE_GLASS_ALPHA = 0.14;
 /** Per level: the wire's width (px) and one comet's trip (s) */
 const LEVELS = [[1.6, 3.2], [2.4, 2.6], [3.2, 2], [4, 1.4]] as const;
 const nodeTop = (FLOW_HEIGHT - NODE_HEIGHT) / 2;
+/**
+ * An animation, declared only while motion is on or paused (data-motion),
+ * on host attributes; the play state after the shorthand, which resets it
+ */
+const animated = (host: string, target: string, declarations: string) =>
+    `:host([data-motion="on"]${host}) ${target},\n:host([data-motion="paused"]${host}) ${target} { ${declarations} animation-play-state: var(--esc-play); }`;
 
 export const CARD_CSS = `
 :host {
@@ -109,19 +115,14 @@ ha-card {
 /* The play state comes through a variable: the animation shorthand would reset a separate rule's */
 :host { --esc-play: running; }
 :host([data-motion="paused"]) { --esc-play: paused; }
-:host([data-motion="on"][data-mode="day"][data-producing]) .halo,
-:host([data-motion="paused"][data-mode="day"][data-producing]) .halo { animation: esc-breathe 3s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
-:host([data-motion="on"][data-mode="night"]) .star.twinkle,
-:host([data-motion="paused"][data-mode="night"]) .star.twinkle { animation: esc-twinkle 2s ease-in-out infinite alternate; animation-play-state: var(--esc-play); }
-:host([data-motion="on"][data-mode="night"]) .shooting,
-:host([data-motion="paused"][data-mode="night"]) .shooting { animation: esc-shoot var(--esc-shoot-period, 11s) ease-out var(--esc-shoot-delay, 4s) infinite; animation-play-state: var(--esc-play); }
-:host([data-motion="on"][data-mode="day"]) .drift,
-:host([data-motion="paused"][data-mode="day"]) .drift { animation: esc-drift 60s linear infinite; animation-play-state: var(--esc-play); }
+${animated('[data-mode="day"][data-producing]', '.halo', 'animation: esc-breathe 3s ease-in-out infinite alternate;')}
+${animated('[data-mode="night"]', '.star.twinkle', 'animation: esc-twinkle 2s ease-in-out infinite alternate;')}
+${animated('[data-mode="night"]', '.shooting', 'animation: esc-shoot var(--esc-shoot-period, 11s) ease-out var(--esc-shoot-delay, 4s) infinite;')}
+${animated('[data-mode="day"]', '.drift', 'animation: esc-drift 60s linear infinite;')}
 /* Day ⇄ night: a 3 s cross-fade, once the first state is painted */
 :host([data-ready]:not([data-motion="off"])) .layer { transition: opacity 3s ease-in-out; }
 /* The flow's comets, along their wire (their keyframes are drawn for the width by layoutFlow), only unfolded */
-:host([data-motion="on"][data-expanded]) .wire:not([data-level="0"]) .comet,
-:host([data-motion="paused"][data-expanded]) .wire:not([data-level="0"]) .comet { display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow); animation-play-state: var(--esc-play); }
+${animated('[data-expanded]', '.wire:not([data-level="0"]) .comet', 'display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow);')}
 @media (prefers-reduced-motion: reduce) {
     .halo, .star, .shooting, .drift, .layer, .comet { animation: none !important; transition: none !important; }
 }
@@ -209,18 +210,6 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
     margin-top: 5px;
 }
 .extra { font-size: 13px; font-weight: 400; opacity: 0.8; }
-.extra-short, :host([data-short-extra]) .extra-full { display: none; }
-.context-short, :host([data-short-context]) .context-full { display: none; }
-:host([data-short-context]) .context-short { display: inline; }
-:host([data-short-extra]) .extra-short { display: inline; }
-/* The last resort, for a cell that has it (the battery with its temperature): « 100 % ↓ · -13° ✓ » */
-.value-tight, .extra-tight,
-:host([data-tight-extra]) [data-tight] .value-main, :host([data-tight-extra]) [data-tight] .extra { display: none; }
-:host([data-tight-extra]) [data-tight] .value-tight, :host([data-tight-extra]) [data-tight] .extra-tight { display: inline; }
-/* The side layout's last resort: the complements left out (« 78 % ↑ », no temperature) */
-.value-bare,
-:host([data-no-extra]) .extra, :host([data-no-extra]) .value-tight, :host([data-no-extra]) [data-bare] .value-main { display: none; }
-:host([data-no-extra]) [data-bare] .value-bare { display: inline; }
 /*
  * Side layout (layout: side, 2 rows): the hero and context on the left, the
  * cells listed on the right, one line each, the icon standing for the label

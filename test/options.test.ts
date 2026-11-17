@@ -1,26 +1,16 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { buildView, configuredMetrics, trackedEntities } from '../src/model';
 import { computeBackground } from '../src/sky';
-import '../src/energy-sky-card';
-import type { EnergySkyCard } from '../src/energy-sky-card';
-import { CARD_NAME } from '../src/constants';
-import { ANNEX_B, FULL_CONFIG, entity, makeHass } from './helpers';
+import { validateConfig } from '../src/energy-sky-card';
+import { ANNEX_B, FULL_CONFIG, entity, makeHass, mountCard as mount, nb } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
-const nb = ' ';
 const DAY = { ...ANNEX_B, 'sun.sun': 'above_horizon' };
 const metric = (config: EnergySkyCardConfig, states: Record<string, any>, key: string) =>
     buildView(config, makeHass(states)).metrics.find(m => m.key === key);
 
 afterEach(() => { document.body.innerHTML = ''; });
 
-function mount(config: EnergySkyCardConfig, states: Record<string, any> = ANNEX_B): EnergySkyCard {
-    const card = document.createElement(CARD_NAME) as EnergySkyCard;
-    card.setConfig(config);
-    card.hass = makeHass(states);
-    document.body.appendChild(card);
-    return card;
-}
 
 describe('battery temperature', () => {
     const withTemp = { ...FULL_CONFIG, battery: { ...FULL_CONFIG.battery, temperature_entity: 'sensor.bat_temp' } };
@@ -122,8 +112,8 @@ describe('the hero at night', () => {
         const card = mount({ ...noDaily, night_hero: 'consumption' }, night);
         const context = card.shadowRoot!.querySelector('.context') as HTMLElement;
         expect(context.hidden).toBe(false);
-        expect(context.querySelector('.context-full')!.textContent).toBe('Consommation');
-        expect(context.querySelector('.context-short')!.textContent).toBe('Conso.');
+        expect(context.textContent).toBe('Consommation');
+        expect(buildView({ ...noDaily, night_hero: 'consumption' }, makeHass(night)).contextShort).toBe('Conso.');
         card.hass = makeHass({ ...night, 'sun.sun': 'above_horizon' });
         expect(context.hidden).toBe(true);
     });
@@ -182,7 +172,6 @@ describe('cells', () => {
 });
 
 describe('validation of the new options', () => {
-    const card = () => document.createElement(CARD_NAME) as EnergySkyCard;
     const bad: [string, object, RegExp][] = [
         ['an empty production list', { production_entity: [] }, /production_entity/],
         ['an unknown night hero', { night_hero: 'moon' }, /night_hero/],
@@ -193,12 +182,12 @@ describe('validation of the new options', () => {
     ];
     for (const [what, extra, message] of bad) {
         it(`rejects ${what}`, () => {
-            expect(() => card().setConfig({ ...FULL_CONFIG, ...extra } as EnergySkyCardConfig)).toThrow(message);
+            expect(() => validateConfig({ ...FULL_CONFIG, ...extra } as EnergySkyCardConfig)).toThrow(message);
         });
     }
 
     it('accepts them all together', () => {
-        expect(() => card().setConfig({
+        expect(() => validateConfig({
             ...FULL_CONFIG, production_entity: ['sensor.a', 'sensor.b'], consumption_entity: 'sensor.home', night_hero: 'consumption',
             battery: { ...FULL_CONFIG.battery, invert: true }, grid: { ...FULL_CONFIG.grid, invert: false },
             cells: ['battery', { entity: 'sensor.ev', name: 'VE', icon: 'mdi:car' }],

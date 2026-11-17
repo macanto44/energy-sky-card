@@ -16,6 +16,11 @@ export type Source = 'sun' | 'grid' | 'batt';
 export type NodeKey = 'solar' | 'grid' | 'battery' | 'home';
 
 export const WIRES: Record<WireKey, Source> = { sh: 'sun', sg: 'sun', sb: 'sun', gh: 'grid', bh: 'batt', gb: 'grid', bg: 'batt' };
+/** The nodes each wire joins (a wire goes when either is missing) */
+const WIRE_ENDS: Record<WireKey, [NodeKey, NodeKey]> = {
+    sh: ['solar', 'home'], sg: ['solar', 'grid'], sb: ['solar', 'battery'], gh: ['grid', 'home'],
+    bh: ['battery', 'home'], gb: ['grid', 'battery'], bg: ['battery', 'grid'],
+};
 export const WIRE_KEYS = Object.keys(WIRES) as WireKey[];
 
 /** Below this a wire carries nothing (W) */
@@ -90,6 +95,8 @@ export function flowNodeEntity(config: EnergySkyCardConfig, node: NodeKey): stri
 export interface FlowView {
     nodes: Record<NodeKey, NodeView>;
     levels: Record<WireKey, 0 | 1 | 2 | 3 | 4>;
+    /** Wires not drawn: one of their nodes is missing */
+    off: WireKey[];
 }
 
 export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): FlowView {
@@ -106,29 +113,32 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
     const soc = numericState(hass.states[config.battery?.soc_entity ?? '']);
     const into = { sun: flows.wires.sh, grid: flows.wires.gh, batt: flows.wires.bh };
     const total = into.sun + into.grid + into.batt;
+    // The sun and the home are always there (the home worked out if need be); the grid and the battery with their entity
+    const present = (node: NodeKey) => node === 'solar' || node === 'home' || !!flowNodeEntity(config, node);
     const levels = Object.fromEntries(WIRE_KEYS.map(k => [k, flowLevel(flows.wires[k])])) as FlowView['levels'];
     return {
         nodes: {
             solar: {
-                present: true, label: localize(loc.lang, 'solar'), value: formatPower(solar, loc),
+                present: present('solar'), label: localize(loc.lang, 'solar'), value: formatPower(solar, loc),
                 ring: [[Math.min(pos(solar) / max, 1), 'sun']],
             },
             grid: {
-                present: !!config.grid?.power_entity, label: localize(loc.lang, 'grid'), value: formatPower(grid, loc),
+                present: present('grid'), label: localize(loc.lang, 'grid'), value: formatPower(grid, loc),
                 ring: [],
             },
             battery: {
-                present: !!(config.battery?.power_entity || config.battery?.soc_entity), label: localize(loc.lang, 'battery'),
+                present: present('battery'), label: localize(loc.lang, 'battery'),
                 value: config.battery?.power_entity ? formatPower(measured, loc) : formatPercent(soc, loc),
                 ring: soc === undefined ? [] : [[Math.min(Math.max(soc, 0), 100) / 100, 'batt']],
                 centre: soc === undefined ? undefined : String(Math.round(soc)),
             },
             home: {
-                present: true, label: localize(loc.lang, 'home'), value: formatPower(flows.home, loc),
+                present: present('home'), label: localize(loc.lang, 'home'), value: formatPower(flows.home, loc),
                 ring: total > 0 ? (['sun', 'batt', 'grid'] as const).filter(s => into[s] > 0).map(s => [into[s] / total, s]) : [],
             },
         },
         levels,
+        off: WIRE_KEYS.filter(k => !WIRE_ENDS[k].every(present)),
     };
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildView, configuredMetrics, dailyProduction, direction, normalizeConfig, trackedEntities } from '../src/model';
+import { buildView, configuredMetrics, dailyProduction, direction, metricForm, normalizeConfig, trackedEntities } from '../src/model';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -25,6 +25,21 @@ describe('the prototype readings (annex B)', () => {
         expect(metric(v, 'grid').label).toBe('Grid');
         expect(metric(v, 'voltage').label).toBe('Voltage');
         expect(metric(v, 'battery').extra).toBe('');
+    });
+});
+
+describe('shortened text', () => {
+    it('steps a cell from full to short, tight, then bare', () => {
+        const config = { ...FULL_CONFIG, battery: { ...FULL_CONFIG.battery, temperature_entity: 'sensor.bat_temp' } };
+        const battery = metric(view({ 'sensor.bat_temp': 21, 'input_boolean.reserve_batterie_nuit': 'on' }, config), 'battery');
+        expect(metricForm(battery, 0)).toEqual({ value: battery.value, extra: ' · SOC atteint' });
+        expect(metricForm(battery, 1)).toEqual({ value: battery.value, extra: ' · SOC ✓' });
+        expect(metricForm(battery, 2)).toEqual({ value: `25${nb}%\u202F·\u202F21°`, extra: '\u202F✓' });
+        expect(metricForm(battery, 3)).toEqual({ value: `25${nb}%`, extra: '' });
+        // A cell without a tight or bare form keeps its value
+        const grid = metric(view(), 'grid');
+        expect(metricForm(grid, 2)).toEqual({ value: grid.value, extra: '' });
+        expect(metricForm(grid, 3)).toEqual({ value: grid.value, extra: '' });
     });
 });
 

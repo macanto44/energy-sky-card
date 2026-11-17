@@ -1,4 +1,10 @@
+import '../src/energy-sky-card';
+import type { EnergySkyCard } from '../src/energy-sky-card';
+import { CARD_NAME } from '../src/constants';
 import type { EnergySkyCardConfig, HassEntity, HomeAssistant } from '../src/types';
+
+/** The no-break space the card puts between a number and its unit */
+export const nb = '\u00a0';
 
 let tick = 0;
 
@@ -56,3 +62,42 @@ export const ANNEX_B: Record<string, string | number> = {
     'input_boolean.reserve_batterie_nuit': 'off',
     'input_boolean.verrou_batterie_four': 'off',
 };
+
+/** A card on the page, set up with a config and readings (states, or a whole hass) */
+export function mountCard(config: EnergySkyCardConfig = FULL_CONFIG, readings: Record<string, string | number | HassEntity> | HomeAssistant = ANNEX_B): EnergySkyCard {
+    const card = document.createElement(CARD_NAME) as EnergySkyCard;
+    card.setConfig(config);
+    card.hass = 'states' in readings && typeof readings.states === 'object' ? readings as HomeAssistant : makeHass(readings as Record<string, string | number>);
+    document.body.appendChild(card);
+    return card;
+}
+
+/** An element in the card's shadow root */
+export const $ = (card: EnergySkyCard, selector: string) => card.shadowRoot!.querySelector(selector) as HTMLElement;
+
+/** What the card asks Home Assistant to do: hass-action and hass-more-info events, in order */
+export function actionsOf(card: HTMLElement): { type: string; detail: any }[] {
+    const events: { type: string; detail: any }[] = [];
+    for (const type of ['hass-action', 'hass-more-info']) card.addEventListener(type, e => events.push({ type, detail: (e as CustomEvent).detail }));
+    return events;
+}
+
+/** jsdom has no PointerEvent: a MouseEvent with the pointer's type carries button and coordinates */
+export const press = (el: HTMLElement, type: string, x = 10, y = 10) =>
+    el.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y }));
+export const tap = (el: HTMLElement) => { press(el, 'pointerdown'); press(el, 'pointerup'); };
+
+const MEASURES = ['scrollWidth', 'clientWidth', 'scrollHeight', 'clientHeight'] as const;
+
+/** jsdom has no layout: give every element a measure (undo with unmeasure) */
+export function measure(prop: typeof MEASURES[number], get: (el: HTMLElement) => number): void {
+    Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, get(this: HTMLElement) { return get(this); } });
+}
+
+/** Back to jsdom's measures (all zero) */
+export function unmeasure(): void {
+    for (const prop of MEASURES) delete (HTMLElement.prototype as any)[prop];
+}
+
+/** The card an element sits in */
+export const hostOf = (el: Element) => (el.getRootNode() as ShadowRoot).host as HTMLElement;

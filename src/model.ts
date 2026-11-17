@@ -59,6 +59,17 @@ export interface MetricView {
     icon?: string;
 }
 
+/**
+ * A cell's text at a level of shortening: 0 in full, 1 the short
+ * complement (« SOC ✓ »), 2 the tight form where the cell has one
+ * (« 100 % ↓ · -13° ✓ »), 3 no complement at all (« 78 % ↑ », side only)
+ */
+export function metricForm(m: MetricView, level: number): { value: string; extra: string } {
+    if (level >= 3) return { value: m.bare ?? m.value, extra: '' };
+    if (level >= 2 && m.tight) return m.tight;
+    return { value: m.value, extra: level >= 1 ? m.extraShort : m.extra };
+}
+
 export interface CardView {
     hero: ValueParts;
     /** "7,2 kWh produits" (at night, with what the hero shows in front), or undefined: no line */

@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { motionState } from '../src/motion';
 import { CARD_CSS } from '../src/styles/card';
 import { HALO_BREATHE_PEAK } from '../src/sky';
-import '../src/energy-sky-card';
-import type { EnergySkyCard } from '../src/energy-sky-card';
-import { CARD_NAME } from '../src/constants';
-import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
+import { ANNEX_B, FULL_CONFIG, mountCard } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
 /** A controllable IntersectionObserver */
@@ -44,13 +41,7 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
-function mount(config: EnergySkyCardConfig = FULL_CONFIG, overrides: Record<string, string | number> = {}): EnergySkyCard {
-    const card = document.createElement(CARD_NAME) as EnergySkyCard;
-    card.setConfig(config);
-    card.hass = makeHass({ ...ANNEX_B, ...overrides });
-    document.body.appendChild(card);
-    return card;
-}
+const mount = (config: EnergySkyCardConfig = FULL_CONFIG, overrides: Record<string, string | number> = {}) => mountCard(config, { ...ANNEX_B, ...overrides });
 
 describe('the rule', () => {
     const base = { animate: true, reducedMotion: false, tabHidden: false, offscreen: false };

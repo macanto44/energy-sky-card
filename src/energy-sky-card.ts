@@ -3,7 +3,7 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS } from './styles/card';
-import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, cellTapOpensEntity, configuredCells, normalizeConfig, productionEntities, trackedEntities, type MetricKey } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, cellTapOpensEntity, configuredCells, metricForm, normalizeConfig, productionEntities, trackedEntities, type CardView, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { CLOUDS, computeBackground, isHexColor } from './sky';
 import { coveredBy, starsMarkup, type Box } from './stars';
@@ -17,15 +17,13 @@ import type { EnergySkyCardConfig, HomeAssistant } from './types';
 export const HERO_SIZES = [56, 48, 40] as const;
 /** The side layout's hero sizes (2 rows: a smaller hero beside the cells) */
 export const SIDE_HERO_SIZES = [44, 40, 36] as const;
-/** The side layout's ways to shorten a cell's line, in order: none, short complements, tight form, no complement */
-const SIDE_EXTRAS = [[], ['data-short-extra'], ['data-short-extra', 'data-tight-extra'], ['data-no-extra']] as const;
-const EXTRA_ATTRIBUTES = ['data-short-extra', 'data-tight-extra', 'data-no-extra'] as const;
+/** How far the cells' text may shorten (metricForm): to the tight form in standard; side may drop the complements */
+const FORM_LEVELS = [0, 1, 2];
+const SIDE_FORM_LEVELS = [0, 1, 2, 3];
 /** The flow's nodes and their icons (the battery shows its charge instead, when known) */
 const NODES: [NodeKey, string][] = [['solar', METRIC_ICONS.tomorrow], ['grid', METRIC_ICONS.grid], ['battery', METRIC_ICONS.battery], ['home', METRIC_ICONS.consumption]];
 /** A ring's circumference: r = 17 in a 40 × 40 box */
 const RING = 2 * Math.PI * 17;
-/** The wires a missing node takes away with it */
-const WIRES_OF: Record<'grid' | 'battery', WireKey[]> = { grid: ['sg', 'gh', 'gb', 'bg'], battery: ['sb', 'bh', 'gb', 'bg'] };
 
 /** A config error, in the page's language (French or English) */
 function configError(fr: string, en: string): Error {
@@ -34,6 +32,23 @@ function configError(fr: string, en: string): Error {
 }
 
 const isStringList = (v: unknown): boolean => v === undefined || (Array.isArray(v) && v.every(x => typeof x === 'string'));
+
+/** An option's value by its dotted name, "battery.invert" */
+const optionAt = (c: object, name: string): unknown => name.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], c);
+/** "a, b ou c" */
+const oneOf = (values: string[], or: string) => `${values.slice(0, -1).join(', ')} ${or} ${values[values.length - 1]}`;
+
+/** The options checked by kind: one of a few values, true / false, a list of strings, a positive number */
+const CHOICES: [string, string[]][] = [
+    ['night_hero', ['production', 'consumption', 'battery']],
+    ['layout', ['standard', 'side']],
+    ['cell_tap', ['auto', 'more-info', 'card']],
+];
+const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
+    [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
+    [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
+    [['production_max', 'battery.power_threshold'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
+];
 
 export function validateConfig(config: unknown): EnergySkyCardConfig {
     if (!config || typeof config !== 'object') {
@@ -47,14 +62,12 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     if (!productionOk) {
         throw configError('production_entity est obligatoire (une entité ou une liste)', 'production_entity is required (one entity or a list)');
     }
-    if (c.night_hero !== undefined && !(['production', 'consumption', 'battery'] as unknown[]).includes(c.night_hero)) {
-        throw configError('night_hero : production, consumption ou battery', 'night_hero: production, consumption or battery');
+    for (const [name, values] of CHOICES) {
+        const v = optionAt(c, name);
+        if (v !== undefined && !values.includes(v as string)) throw configError(`${name} : ${oneOf(values, 'ou')}`, `${name}: ${oneOf(values, 'or')}`);
     }
-    if (c.layout !== undefined && !(['standard', 'side'] as unknown[]).includes(c.layout)) {
-        throw configError('layout : standard ou side', 'layout: standard or side');
-    }
-    if (c.cell_tap !== undefined && !(['auto', 'more-info', 'card'] as unknown[]).includes(c.cell_tap)) {
-        throw configError('cell_tap : auto, more-info ou card', 'cell_tap: auto, more-info or card');
+    for (const [names, ok, fr, en] of KINDS) {
+        for (const name of names) if (!ok(optionAt(c, name))) throw configError(`${name} ${fr}`, `${name} ${en}`);
     }
     if (c.cells !== undefined) {
         if (!Array.isArray(c.cells) || c.cells.length > MAX_CELLS) {
@@ -65,36 +78,14 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             const ok = typeof cell === 'string'
                 ? (CELL_KINDS as string[]).includes(cell)
                 : (typeof o.entity === 'string' && !!o.entity) || (CELL_KINDS as unknown[]).includes(o.type);
-            if (ok && o.tap_action !== undefined && !(o.tap_action && typeof o.tap_action === 'object' && typeof (o.tap_action as { action?: unknown }).action === 'string')) {
+            if (!ok) {
+                const shown = String(typeof cell === 'object' ? JSON.stringify(cell) : cell);
+                throw configError(`cells : « ${shown} » n'est ni ${CELL_KINDS.join(', ')}, ni { type: … }, ni { entity: … }`,
+                    `cells: "${shown}" is neither ${CELL_KINDS.join(', ')}, { type: … } nor { entity: … }`);
+            }
+            if (o.tap_action !== undefined && !isAction(o.tap_action)) {
                 throw configError('cells : tap_action doit avoir une action (more-info, navigate, url…)', 'cells: tap_action needs an action (more-info, navigate, url…)');
             }
-            if (!ok) {
-                throw configError(`cells : « ${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)} » n'est ni ${CELL_KINDS.join(', ')}, ni { type: … }, ni { entity: … }`,
-                    `cells: "${String(typeof cell === 'object' ? JSON.stringify(cell) : cell)}" is neither ${CELL_KINDS.join(', ')}, { type: … } nor { entity: … }`);
-            }
-        }
-    }
-    for (const [name, value] of [['battery.invert', c.battery?.invert], ['grid.invert', c.grid?.invert]] as const) {
-        if (value !== undefined && typeof value !== 'boolean') throw configError(`${name} doit valoir true ou false`, `${name} must be true or false`);
-    }
-    const lists: [string, unknown][] = [
-        ['daily_production_entities', c.daily_production_entities],
-        ['battery.soc_reached_entities', c.battery?.soc_reached_entities],
-        ['grid.outage_states', c.grid?.outage_states],
-    ];
-    for (const [name, value] of lists) {
-        if (!isStringList(value)) throw configError(`${name} doit être une liste`, `${name} must be a list`);
-    }
-    if (c.expandable !== undefined && typeof c.expandable !== 'boolean') {
-        throw configError('expandable doit valoir true ou false', 'expandable must be true or false');
-    }
-    if (c.animate !== undefined && typeof c.animate !== 'boolean') {
-        throw configError('animate doit valoir true ou false', 'animate must be true or false');
-    }
-    const numbers: [string, unknown][] = [['production_max', c.production_max], ['battery.power_threshold', c.battery?.power_threshold]];
-    for (const [name, value] of numbers) {
-        if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
-            throw configError(`${name} doit être un nombre positif`, `${name} must be a positive number`);
         }
     }
     if (c.tariff_palettes !== undefined) {
@@ -117,8 +108,7 @@ interface Refs {
     heroValue: HTMLElement;
     heroUnit: HTMLElement;
     context: HTMLElement;
-    contextFull: HTMLElement;
-    contextShort: HTMLElement;
+    contextText: HTMLElement;
     /** The unfolding part (expandable: true) */
     flow?: {
         panel: HTMLElement;
@@ -128,7 +118,7 @@ interface Refs {
         wires: Map<WireKey, { g: SVGGElement; paths: SVGPathElement[] }>;
         nodes: Map<NodeKey, { el: HTMLElement; label: HTMLElement; value: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }>;
     };
-    metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement; valueTight: HTMLElement; extraTight: HTMLElement; valueBare: HTMLElement }>;
+    metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement }>;
 }
 
 export class EnergySkyCard extends HTMLElement {
@@ -148,6 +138,13 @@ export class EnergySkyCard extends HTMLElement {
     private open = false;
     /** The width the flow's geometry was last drawn for */
     private flowWidth = 0;
+    /** The last view, its text in full (the fit writes a shorter form when needed) */
+    private view?: CardView;
+    /** The text that decides the layout, at the last fit */
+    private fitted = '';
+    /** How short the cells' text is (metricForm), and whether the context line is in its short form */
+    private form = 0;
+    private shortContext = false;
 
     constructor() {
         super();
@@ -227,6 +224,7 @@ export class EnergySkyCard extends HTMLElement {
         else this.removeAttribute('data-layout');
         this.toggleAttribute('data-expandable', config.expandable === true);
         this.flowWidth = 0;
+        this.fitted = '';
         this.root.innerHTML = `
             <style>${CARD_CSS}</style>
             <ha-card>
@@ -236,31 +234,30 @@ export class EnergySkyCard extends HTMLElement {
                 </div>
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
-                    <div class="context line" hidden><span class="context-full"></span><span class="context-short"></span></div>
+                    <div class="context line" hidden><span class="context-text"></span></div>
                     ${config.expandable ? '<i class="grabber" aria-hidden="true"></i>' : ''}
                     <div class="grid">${cells.map(cell => `
                         <div class="metric" data-metric="${cell.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
-                            <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span><span class="value-tight"></span><span class="extra extra-tight"></span><span class="value-bare"></span></div>
+                            <div class="value line"><span class="value-main"></span><span class="extra"></span></div>
                         </div>`).join('')}</div>
                 </div>
                 ${config.expandable ? flowMarkup() : ''}
             </ha-card>`;
-        const q = (sel: string, parent: ParentNode = this.root) => parent.querySelector(sel) as HTMLElement;
+        const q = (sel: string, parent: ParentNode = this.root) => find(parent, sel);
         this.refs = {
             card: q('ha-card'),
             flow: config.expandable ? this.flowRefs() : undefined,
             heroValue: q('.hero-value'),
             heroUnit: q('.hero-unit'),
             context: q('.context'),
-            contextFull: q('.context-full'),
-            contextShort: q('.context-short'),
+            contextText: q('.context-text'),
             metrics: new Map(cells.map(cell => {
                 const el = q(`[data-metric="${cell.key}"]`);
                 const icon = q('ha-icon', el);
                 // Set as an attribute, never in markup: a free cell's icon comes from the config
                 icon.setAttribute('icon', cell.kind === 'custom' ? cell.custom!.icon || CUSTOM_CELL_ICON : METRIC_ICONS[cell.kind]);
-                return [cell.key, { el, icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra-full', el), extraShort: q('.extra-short', el), valueTight: q('.value-tight', el), extraTight: q('.extra-tight', el), valueBare: q('.value-bare', el) }];
+                return [cell.key, { el, icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra', el) }];
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
@@ -325,21 +322,9 @@ export class EnergySkyCard extends HTMLElement {
         return { ...rest, entity: target.entity ?? this.actions.entity, ...(target.tap ? { tap_action: target.tap } : {}) };
     }
 
-    /**
-     * The roomiest layout at which nothing overflows (the hero's line across,
-     * the content down): the prototype's spacing with the hero at 56, 48 or
-     * 40 px, then the compact spacing (data-compact) at the same sizes.
-     * Measured, so it holds for any size, value or language. Then a metric
-     * line still too wide (« 100 % ↓ · SOC atteint » on a 320 px phone)
-     * switches the complements to their short form (data-short-extra), and
-     * one still too wide to the tight form (data-tight-extra: « 100 % ↓ · -13° ✓ »),
-     * and
-     * a context line too wide at night « Consommation » → « Conso. »
-     * (data-short-context).
-     */
+    /** Lay the card out for its size and text, then the flow, then clear the stars off the text */
     fit(): void {
         this.fitLayout();
-        this.fitExtras();
         this.layoutFlow();
         this.clearText();
     }
@@ -362,7 +347,7 @@ export class EnergySkyCard extends HTMLElement {
 
     /** The flow panel's elements, once built */
     private flowRefs(): NonNullable<Refs['flow']> {
-        const q = <T extends Element = HTMLElement>(sel: string, parent: ParentNode = this.root) => parent.querySelector(sel) as unknown as T;
+        const q = <T extends Element = HTMLElement>(sel: string, parent: ParentNode = this.root) => find<T>(parent, sel);
         return {
             panel: q('.panel'),
             box: q('.flow'),
@@ -402,18 +387,16 @@ export class EnergySkyCard extends HTMLElement {
                 if (part) offset += RING * part[0];
             });
         }
-        const off = new Set<WireKey>();
-        for (const node of ['grid', 'battery'] as const) if (!view.nodes[node].present) for (const w of WIRES_OF[node]) off.add(w);
         for (const [key, wire] of flow.wires) {
             setAttr(wire.g, 'data-level', String(view.levels[key]));
-            setAttr(wire.g, 'data-off', off.has(key) ? '' : null);
+            setAttr(wire.g, 'data-off', view.off.includes(key) ? '' : null);
         }
     }
 
     /** Where text sits: the visible words and icons, and the hairline above the grid */
     private textBoxes(): Box[] {
         const root = this.root;
-        const boxes: Box[] = [...root.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight, .value-bare')]
+        const boxes: Box[] = [...root.querySelectorAll('.hero-value, .hero-unit, .context-text, .label ha-icon, .label-text, .value-main, .extra')]
             .map(el => el.getBoundingClientRect());
         const grid = root.querySelector('.grid')?.getBoundingClientRect();
         if (grid && this.side) boxes.push({ left: grid.left - 1, right: grid.left + 1, top: grid.top, bottom: grid.bottom });
@@ -440,61 +423,77 @@ export class EnergySkyCard extends HTMLElement {
         }
     }
 
+    /** The cells' text at a level of shortening (data-form when shortened) */
+    private writeForms(level: number): void {
+        this.form = level;
+        setAttr(this, 'data-form', level ? String(level) : null);
+        for (const metric of this.view?.metrics ?? []) {
+            const el = this.refs?.metrics.get(metric.key);
+            if (!el) continue;
+            const { value, extra } = metricForm(metric, level);
+            setText(el.value, value);
+            setText(el.extra, extra);
+        }
+    }
+
+    /** The context line in full, or in its short form (« Conso. · … », data-short-context) */
+    private writeContext(short: boolean): void {
+        this.shortContext = short;
+        this.toggleAttribute('data-short-context', short);
+        if (this.refs) setText(this.refs.contextText, (short ? this.view?.contextShort : undefined) ?? this.view?.context ?? '');
+    }
+
+    /**
+     * The roomiest layout at which nothing overflows, measured, so it holds
+     * for any size, value or language: the prototype's spacing, then the
+     * compact one (data-compact, three rows); within each, the cells' text
+     * from full to short (writeForms), and within each, the hero from its
+     * largest size down (data-hero). In standard the cells' lines must fit
+     * too, failing which they take their tightest form and end in an
+     * ellipsis; a context line too wide takes its short form. In side the
+     * context line shares the left column with the hero: in full on one
+     * line, else short on one line, else in full on two lines (short if
+     * even two are too few).
+     */
     private fitLayout(): void {
         const refs = this.refs;
         if (!refs) return;
+        const side = this.side;
         const content = refs.card.querySelector('.content') as HTMLElement;
         const hero = refs.heroValue.parentElement as HTMLElement;
         const context = refs.context;
-        // Side: the context line shares the left column with the hero; it may wrap onto a second line, as a last resort
+        const lines = [...refs.metrics.values()].map(m => m.value.parentElement as HTMLElement);
+        const tooWide = (el: HTMLElement) => el.scrollWidth > el.clientWidth + 1;
         const lineHeight = () => parseFloat(getComputedStyle(context).lineHeight) || 20;
-        const contextCut = () => this.side && !context.hidden
-            && (context.scrollWidth > context.clientWidth + 1 || context.scrollHeight > lineHeight() + 1);
-        const overflows = (withContext: boolean) => hero.scrollWidth > hero.clientWidth + 1 || content.scrollHeight > content.clientHeight + 1
-            || content.scrollWidth > content.clientWidth + 1 || (withContext && contextCut());
-        const sizes = this.side ? SIDE_HERO_SIZES : HERO_SIZES;
-        // Side: the cells' column takes the width its lines need, so a long line squeezes the hero; shorten the lines before the hero gets too small
-        const extras = this.side ? SIDE_EXTRAS : [[]];
-        const attempt = (withContext: boolean): boolean => {
+        const contextCut = () => !context.hidden && (tooWide(context) || context.scrollHeight > lineHeight() + 1);
+        const fits = (strict: boolean) => !tooWide(hero) && !tooWide(content) && content.scrollHeight <= content.clientHeight + 1
+            && (!strict || (side ? !contextCut() : !lines.some(tooWide)));
+        const sizes = side ? SIDE_HERO_SIZES : HERO_SIZES;
+        const attempt = (strict: boolean, levels: number[]): boolean => {
             for (const compact of [false, true]) {
                 this.toggleAttribute('data-compact', compact);
-                for (const set of extras) {
-                    for (const name of EXTRA_ATTRIBUTES) this.toggleAttribute(name, (set as readonly string[]).includes(name));
+                for (const level of levels) {
+                    this.writeForms(level);
                     for (const size of sizes) {
-                        if (size === sizes[0]) this.removeAttribute('data-hero');
-                        else this.setAttribute('data-hero', String(size));
-                        if (!overflows(withContext)) return true;
+                        setAttr(this, 'data-hero', size === sizes[0] ? null : String(size));
+                        if (fits(strict)) return true;
                     }
                 }
             }
             return false;
         };
-        if (!this.side) {
-            attempt(false);
+        this.writeContext(false);
+        if (!side) {
+            if (!attempt(true, FORM_LEVELS)) attempt(false, FORM_LEVELS.slice(-1));
+            this.writeContext(!context.hidden && tooWide(context));
             return;
         }
-        // Side: the context line in full on one line, else its short form on one line,
-        // else in full on two lines (the short form if even two lines are too few)
-        this.removeAttribute('data-short-context');
-        if (attempt(true)) return;
-        this.setAttribute('data-short-context', '');
-        if (attempt(true)) return;
-        this.removeAttribute('data-short-context');
-        attempt(false);
-        if (!context.hidden && context.scrollHeight > context.clientHeight + 1) this.setAttribute('data-short-context', '');
-    }
-
-    private fitExtras(): void {
-        if (!this.refs) return;
-        // Side: fitLayout already chose the context's and the cells' forms
-        if (this.side) return;
-        const tooWide = (l: HTMLElement) => l.scrollWidth > l.clientWidth + 1;
-        this.removeAttribute('data-short-context');
-        if (!this.refs.context.hidden && tooWide(this.refs.context)) this.setAttribute('data-short-context', '');
-        for (const name of EXTRA_ATTRIBUTES) this.removeAttribute(name);
-        const lines = [...this.refs.metrics.values()].map(m => m.value.parentElement as HTMLElement);
-        if (lines.some(tooWide)) this.setAttribute('data-short-extra', '');
-        if (lines.some(tooWide)) this.setAttribute('data-tight-extra', '');
+        if (attempt(true, SIDE_FORM_LEVELS)) return;
+        this.writeContext(true);
+        if (attempt(true, SIDE_FORM_LEVELS)) return;
+        this.writeContext(false);
+        attempt(false, SIDE_FORM_LEVELS);
+        this.writeContext(!context.hidden && context.scrollHeight > context.clientHeight + 1);
     }
 
     /** What the render depends on: each tracked entity's last_updated, and the locale */
@@ -510,42 +509,29 @@ export class EnergySkyCard extends HTMLElement {
         if (key === this.renderedKey) return;
         this.renderedKey = key;
 
-        const view = buildView(this.config, this._hass);
+        const view = this.view = buildView(this.config, this._hass);
         const refs = this.refs;
         this.paintSky();
-        const before = this.fitSensitiveText();
         setText(refs.heroValue, view.hero.value);
         setText(refs.heroUnit, view.hero.unit);
         refs.context.hidden = view.context === undefined;
-        setText(refs.contextFull, view.context ?? '');
-        setText(refs.contextShort, view.contextShort ?? '');
         for (const metric of view.metrics) {
             const el = refs.metrics.get(metric.key);
             if (!el) continue;
             setText(el.label, metric.label);
             // Side: the icon stands for the label, which shows on hover
             if (this.side && el.el.title !== metric.label) el.el.title = metric.label;
-            setText(el.value, metric.value);
-            setText(el.extra, metric.extra);
-            setText(el.extraShort, metric.extraShort);
-            // Only a cell with a tight form gets one (data-tight on its line)
-            setText(el.valueTight, metric.tight?.value ?? '');
-            setText(el.extraTight, metric.tight?.extra ?? '');
-            el.value.parentElement!.toggleAttribute('data-tight', !!metric.tight);
-            setText(el.valueBare, metric.bare ?? '');
-            el.value.parentElement!.toggleAttribute('data-bare', !!metric.bare);
             if (metric.icon && el.icon.getAttribute('icon') !== metric.icon) el.icon.setAttribute('icon', metric.icon);
         }
+        this.writeForms(this.form);
+        this.writeContext(this.shortContext);
         this.updateFlow();
-        // A longer hero ("12,3 kW" after "8 W") or metric may not fit any more
-        if (before !== this.fitSensitiveText()) this.fit();
-    }
-
-    /** The text whose length decides the layout: the hero and the metric lines */
-    private fitSensitiveText(): string {
-        const refs = this.refs!;
-        return [refs.heroValue, refs.heroUnit, refs.contextFull, ...[...refs.metrics.values()].flatMap(m => [m.value, m.extra])]
-            .map(el => el.textContent).join('|');
+        // A longer hero ("12,3 kW" after "8 W") or line may not fit any more
+        const fitted = JSON.stringify([view.hero, view.context, view.metrics.map(m => [m.value, m.extra, m.tight, m.bare])]);
+        if (fitted !== this.fitted) {
+            this.fitted = fitted;
+            this.fit();
+        }
     }
 
     /** The background: day or night, the tariff colours, the halo's strength */
@@ -613,6 +599,11 @@ function flowMarkup(): string {
             <span class="ntext"><span class="nlab line"></span><span class="nval line"></span></span>
         </div>`).join('');
     return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${wires}</svg>${nodes}</div></div>`;
+}
+
+/** An element the card built (it is there: the markup is the card's own) */
+function find<T extends Element = HTMLElement>(parent: ParentNode, selector: string): T {
+    return parent.querySelector(selector) as unknown as T;
 }
 
 /** Set an attribute only when it changed (null removes it) */

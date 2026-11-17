@@ -55,13 +55,13 @@ if (params.has('probe')) {
       const tall = content.scrollHeight > content.clientHeight + 1 ? 1 : 0;
       // The night sky: visible stars touching text (should be none), and the quarters they reach
       const box = card.shadowRoot.querySelector('ha-card').getBoundingClientRect();
-      const texts = [...card.shadowRoot.querySelectorAll('.hero-value, .hero-unit, .context-full, .context-short, .label ha-icon, .label-text, .value-main, .extra, .value-tight, .value-bare')]
+      const texts = [...card.shadowRoot.querySelectorAll('.hero-value, .hero-unit, .context-text, .label ha-icon, .label-text, .value-main, .extra')]
         .map(el => el.getBoundingClientRect()).filter(r => r.width && r.height);
       const dots = [...card.shadowRoot.querySelectorAll('.star')]
         .filter(el => !el.hidden).map(el => el.getBoundingClientRect());
       const hits = dots.filter(d => texts.some(t => d.left < t.right && d.right > t.left && d.top < t.bottom && d.bottom > t.top)).length;
       const quarters = new Set(dots.map(d => `${(d.left + d.right) / 2 > box.left + box.width / 2 ? 'r' : 'l'}${(d.top + d.bottom) / 2 > box.top + box.height / 2 ? 'b' : 't'}`)).size;
-      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? (side ? 44 : 56)} short=${card.hasAttribute('data-no-extra') ? 3 : card.hasAttribute('data-tight-extra') ? 2 : card.hasAttribute('data-short-extra') ? 1 : 0} dots=${dots.length} hits=${hits} quarters=${quarters} comets=${comets}`;
+      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? (side ? 44 : 56)} short=${card.getAttribute('data-form') ?? 0} dots=${dots.length} hits=${hits} quarters=${quarters} comets=${comets}`;
     });
     const pre = document.createElement('pre');
     pre.id = 'probe';

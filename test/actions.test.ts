@@ -1,30 +1,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import '../src/energy-sky-card';
 import type { EnergySkyCard } from '../src/energy-sky-card';
 import { DOUBLE_TAP_MS, HOLD_MS } from '../src/actions';
-import { CARD_NAME } from '../src/constants';
-import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
+import { $, FULL_CONFIG, actionsOf, mountCard, press, tap } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
 const POPUP = { action: 'navigate', navigation_path: '#popup-flux-energie' };
 
 function mount(extra: Partial<EnergySkyCardConfig> = {}) {
-    const card = document.createElement(CARD_NAME) as EnergySkyCard;
-    card.setConfig({ ...FULL_CONFIG, ...extra });
-    card.hass = makeHass(ANNEX_B);
-    document.body.appendChild(card);
-    const events: { type: string; detail: any }[] = [];
-    for (const type of ['hass-action', 'hass-more-info']) {
-        card.addEventListener(type, e => events.push({ type, detail: (e as CustomEvent).detail }));
-    }
-    const target = card.shadowRoot!.querySelector('ha-card') as HTMLElement;
-    return { card, target, events };
+    const card = mountCard({ ...FULL_CONFIG, ...extra });
+    return { card, target: $(card, 'ha-card'), events: actionsOf(card) };
 }
-
-// jsdom has no PointerEvent: a MouseEvent with the pointer's type carries button and coordinates
-const press = (el: HTMLElement, type: string, x = 10, y = 10) =>
-    el.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y }));
-const tap = (el: HTMLElement) => { press(el, 'pointerdown'); press(el, 'pointerup'); };
 
 afterEach(() => {
     vi.useRealTimers();

@@ -2,19 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { EnergySkyCard, validateConfig } from '../src/energy-sky-card';
 import { CARD_NAME } from '../src/constants';
 import type { EnergySkyCardConfig, HomeAssistant } from '../src/types';
-import { ANNEX_B, FULL_CONFIG, entity, makeHass } from './helpers';
+import { $, ANNEX_B, FULL_CONFIG, entity, makeHass, mountCard, nb } from './helpers';
 import { generateStars } from '../src/stars';
 
-const nb = ' ';
-
-function mount(config: EnergySkyCardConfig = FULL_CONFIG, hass: HomeAssistant = makeHass(ANNEX_B)): EnergySkyCard {
-    const card = document.createElement(CARD_NAME) as EnergySkyCard;
-    card.setConfig(config);
-    card.hass = hass;
-    document.body.appendChild(card);
-    return card;
-}
-const $ = (card: EnergySkyCard, sel: string) => card.shadowRoot!.querySelector(sel) as HTMLElement;
+const mount = (config: EnergySkyCardConfig = FULL_CONFIG, hass: HomeAssistant = makeHass(ANNEX_B)) => mountCard(config, hass);
 const metricText = (card: EnergySkyCard, key: string) => $(card, `[data-metric="${key}"]`)?.textContent?.replace(/[ \n\t]+/g, ' ').trim();
 
 describe('registration', () => {
@@ -44,17 +35,16 @@ describe('render', () => {
         const card = mount();
         expect($(card, '.hero-value').textContent).toBe('2');
         expect($(card, '.hero-unit').textContent).toBe('W');
-        expect($(card, '.context-full').textContent).toBe('0,0 kWh produits');
+        expect($(card, '.context-text').textContent).toBe('0,0 kWh produits');
         expect(metricText(card, 'battery')).toBe(`Batterie 25${nb}%`);
         expect(metricText(card, 'grid')).toBe(`Réseau 748${nb}W`);
         card.hass = makeHass({ ...ANNEX_B, 'input_boolean.reserve_batterie_nuit': 'on' });
-        expect($(card, '[data-metric="battery"] .extra-full')?.textContent).toBe(' · SOC atteint');
-        expect($(card, '[data-metric="battery"] .extra-short')?.textContent).toBe(' · SOC ✓');
+        expect($(card, '[data-metric="battery"] .extra')?.textContent).toBe(' · SOC atteint');
         card.hass = makeHass(ANNEX_B);
         // The 0.1.0 option name still works
         const { soc_reached_entities, ...battery } = FULL_CONFIG.battery!;
         const old = mount({ ...FULL_CONFIG, battery: { ...battery, lock_entities: soc_reached_entities } }, makeHass({ ...ANNEX_B, 'input_boolean.reserve_batterie_nuit': 'on' }));
-        expect($(old, '[data-metric="battery"] .extra-full')?.textContent).toBe(' · SOC atteint');
+        expect($(old, '[data-metric="battery"] .extra')?.textContent).toBe(' · SOC atteint');
         expect(metricText(card, 'voltage')).toBe(`Tension 234${nb}V`);
         expect(metricText(card, 'tomorrow')).toBe(`Prévu demain 12,6${nb}kWh`);
         expect(card.shadowRoot!.querySelectorAll('ha-icon').length).toBe(4);

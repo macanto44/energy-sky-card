@@ -5,7 +5,7 @@ import { CARD_NAME } from '../src/constants';
 import { CARD_CSS, FLOW_COLOURS, NODE_GLASS_ALPHA } from '../src/styles/card';
 import { FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS, energyFlows, flowGeometry, flowLevel, flowView } from '../src/flow';
 import { DEFAULT_PALETTES, NIGHT_PALETTE, composite, contrastRatio, hexToRgb, type Rgb } from '../src/sky';
-import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
+import { $ as find, ANNEX_B, FULL_CONFIG, actionsOf, makeHass, mountCard, nb, press, tap } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
 const GRID = 'sensor.victrongrid_ac_l1_power31';
@@ -13,8 +13,6 @@ const BATT = 'sensor.victron_system_battery_power';
 const SOC = 'sensor.victron_system_battery_soc';
 const PV = 'sensor.production_pv';
 const DAY = { ...ANNEX_B, 'sun.sun': 'above_horizon' };
-/** The card puts a no-break space between a number and its unit */
-const nb = '\u00a0';
 
 describe('energy flows', () => {
     it('sends the sun to the grid, the battery, then the home (selling and charging at noon)', () => {
@@ -171,22 +169,12 @@ describe('flow geometry', () => {
 });
 
 describe('the expandable card', () => {
-    const cards: EnergySkyCard[] = [];
-    afterEach(() => { document.body.innerHTML = ''; cards.length = 0; });
+    afterEach(() => { document.body.innerHTML = ''; });
 
     function mount(extra: Partial<EnergySkyCardConfig> = {}, states: Record<string, string | number> = DAY) {
-        const card = document.createElement(CARD_NAME) as EnergySkyCard;
-        card.setConfig({ ...FULL_CONFIG, expandable: true, ...extra });
-        card.hass = makeHass(states);
-        document.body.appendChild(card);
-        const events: { type: string; detail: any }[] = [];
-        for (const type of ['hass-action', 'hass-more-info']) card.addEventListener(type, e => events.push({ type, detail: (e as CustomEvent).detail }));
-        cards.push(card);
-        const $ = (sel: string) => card.shadowRoot!.querySelector(sel) as HTMLElement;
-        return { card, events, $ };
+        const card = mountCard({ ...FULL_CONFIG, expandable: true, ...extra }, states);
+        return { card, events: actionsOf(card), $: (sel: string) => find(card, sel) };
     }
-    const press = (el: HTMLElement, type: string) => el.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
-    const tap = (el: HTMLElement) => { press(el, 'pointerdown'); press(el, 'pointerup'); };
 
     it('is off by default, and must be true or false', () => {
         const card = document.createElement(CARD_NAME) as EnergySkyCard;
