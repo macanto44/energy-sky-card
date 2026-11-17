@@ -263,11 +263,21 @@ describe('the appliances', () => {
     });
 
     it('open one slot at a time, with a name, an icon and a tap once the entity is set', () => {
-        expect(block({ flow: 'tap' })).toEqual(['consumer_1_entity']);
-        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_tap_action', 'consumer_2_entity']);
+        expect(block({ flow: 'tap' })).toEqual(['consumer_threshold', 'consumer_1_entity']);
+        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumer_threshold', 'consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_tap_action', 'consumer_2_entity']);
+        expect(editorLabel('fr', 'consumer_threshold')).toBe('Seuil d\'affichage');
+        expect(editorHelper('en', 'consumer_threshold')).toMatch(/10 W when empty/);
         expect(editorLabel('fr', 'consumer_2_entity')).toBe('Appareil 2');
         expect(editorLabel('en', 'consumer_2_name')).toBe('Name (optional)');
         expect(editorHelper('fr', 'consumer_1_entity')).toMatch(/quatre au plus/);
+    });
+
+    it('save the display threshold, and leave it out while empty', () => {
+        const { change, changes } = mount({ ...MINIMAL, flow: 'always' });
+        change({ animate: false });
+        expect(changes.at(-1)).not.toHaveProperty('consumer_threshold');
+        change({ consumer_threshold: 50 });
+        expect(changes.at(-1)?.consumer_threshold).toBe(50);
     });
 
     it('save as a consumers list, and leave it out when emptied', () => {

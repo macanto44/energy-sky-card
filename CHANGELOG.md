@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- An appliance below 10 W stays out of the energy flow, and the others take its place. `consumer_threshold` (« Seuil d'affichage » in the editor's Appliances block) sets the power; `0` always shows them.
+
 ## [0.3.5] — 2026-11-17
 
 No breaking change: `expandable: true` (0.3.3) still works, read as `flow: tap`.

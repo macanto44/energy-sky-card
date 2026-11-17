@@ -53,7 +53,7 @@ const RENAMED: [string, { fr: string; en: string }][] = [
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
-    [['production_max', 'battery.power_threshold'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
+    [['production_max', 'battery.power_threshold', 'consumer_threshold'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
 ];
 
 export function validateConfig(config: unknown): EnergySkyCardConfig {
@@ -165,6 +165,8 @@ export class EnergySkyCard extends HTMLElement {
     private open = false;
     /** The width the flow's geometry was last drawn for */
     private flowWidth = 0;
+    /** The appliances in the flow (above their threshold), by index: the corners hold these only */
+    private shownConsumers: number[] = [];
     /** The last view, its text in full (the fit writes a shorter form when needed) */
     private view?: CardView;
     /** The text that decides the layout, at the last fit */
@@ -252,6 +254,7 @@ export class EnergySkyCard extends HTMLElement {
         else this.removeAttribute('data-layout');
         setAttr(this, 'data-flow', config.flow ?? null);
         this.flowWidth = 0;
+        this.shownConsumers = [];
         this.fitted = '';
         this.root.innerHTML = `
             <style>${CARD_CSS}</style>
@@ -378,19 +381,25 @@ export class EnergySkyCard extends HTMLElement {
         const width = Math.round(flow.box.clientWidth);
         if (!width || width === this.flowWidth) return;
         this.flowWidth = width;
-        const geometry = flowGeometry(width, flow.consumers.length);
+        const shown = this.shownConsumers;
+        const geometry = flowGeometry(width, shown.length);
         flow.svg.setAttribute('viewBox', `0 0 ${width} ${FLOW_HEIGHT}`);
         flow.box.style.setProperty('--esc-node-w', `${geometry.nodeWidth}px`);
         flow.box.style.setProperty('--esc-centre-w', `${geometry.centreWidth}px`);
         flow.box.toggleAttribute('data-narrow', geometry.nodeWidth < 112);
         for (const [key, wire] of flow.wires) for (const path of wire.paths) path.setAttribute('d', geometry.paths[key]);
         flow.box.toggleAttribute('data-compact', geometry.consumers.some(c => c.compact));
-        geometry.consumers.forEach((place, i) => {
-            const { el, wire, paths } = flow.consumers[i];
-            el.hidden = !place.visible;
-            setAttr(wire, 'data-off', place.visible ? null : '');
+        // The appliances in the flow take the places in order; the others leave it
+        flow.consumers.forEach(({ el, wire, paths }, i) => {
+            const at = shown.indexOf(i);
+            const place = geometry.consumers[at];
+            el.hidden = !place?.visible;
+            setAttr(wire, 'data-off', place?.visible ? null : '');
+            if (!place?.visible) return;
             el.dataset.side = place.below ? 'below' : 'above';
             Object.assign(el.style, { left: `${place.left}px`, top: `${place.top}px`, width: `${place.width}px` });
+            // Its comet runs along its place's keyframes
+            wire.style.setProperty('--esc-flow', `esc-flow-c${at}`);
             for (const path of paths) path.setAttribute('d', place.path);
         });
         flow.keyframes.textContent = geometry.keyframes;
@@ -442,7 +451,19 @@ export class EnergySkyCard extends HTMLElement {
             node.el.toggleAttribute('data-idle', v.level === 0);
             drawRing(node.segs, [[v.share, 'use']]);
             setAttr(node.wire, 'data-level', String(v.level));
+            // Out of the flow at once; back in when the corners are laid out again (below)
+            if (!v.shown) {
+                node.el.hidden = true;
+                setAttr(node.wire, 'data-off', '');
+            }
         });
+        // An appliance came into or left the flow: lay the corners out again
+        const shown = view.consumers.flatMap((v, i) => v.shown ? [i] : []);
+        if (shown.join() !== this.shownConsumers.join()) {
+            this.shownConsumers = shown;
+            this.flowWidth = 0;
+            this.layoutFlow();
+        }
         for (const [key, wire] of flow.wires) {
             setAttr(wire.g, 'data-level', String(view.levels[key]));
             setAttr(wire.g, 'data-off', view.off.includes(key) ? '' : null);

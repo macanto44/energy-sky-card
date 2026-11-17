@@ -6,7 +6,7 @@ import { CARD_CSS, FLOW_COLOURS, NODE_GLASS_ALPHA } from '../src/styles/card';
 import { COMPACT_WIDTH, CONSUMER_ICON, FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS, energyFlows, flowGeometry, flowLevel, flowView } from '../src/flow';
 import { entity } from './helpers';
 import { DEFAULT_PALETTES, NIGHT_PALETTE, composite, contrastRatio, hexToRgb, type Rgb } from '../src/sky';
-import { $ as find, ANNEX_B, FULL_CONFIG, actionsOf, makeHass, mountCard, nb, press, tap } from './helpers';
+import { $ as find, ANNEX_B, FULL_CONFIG, actionsOf, makeHass, measure, mountCard, nb, press, tap, unmeasure } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
 const GRID = 'sensor.victrongrid_ac_l1_power31';
@@ -187,6 +187,17 @@ describe('appliances', () => {
         // The home takes 2.3 kW (3.2 − 0.4 − 0.5): the boiler is 70 % of it
         expect(v.consumers[0].share).toBeCloseTo(1.6 / 2.3);
         expect(v.consumers.map(c => c.level)).toEqual([3, 2, 0, 0]);
+        // Below 10 W, or without a reading, an appliance leaves the flow
+        expect(v.consumers.map(c => c.shown)).toEqual([true, true, false, false]);
+    });
+
+    it('leave the flow below consumer_threshold, and all stay with 0', () => {
+        const view = (threshold: number | undefined, boiler: number) =>
+            flowView({ ...FULL_CONFIG, consumers: CONSUMERS, consumer_threshold: threshold }, makeHass({ ...states, 'sensor.boiler': boiler })).consumers.map(c => c.shown);
+        expect(view(undefined, 9)).toEqual([false, true, false, false]);
+        expect(view(undefined, 10)).toEqual([true, true, false, false]);
+        expect(view(600, 1600)).toEqual([true, false, false, false]);
+        expect(view(0, 0)).toEqual([true, true, true, true]);
     });
 
     it('sit as whole nodes, one above and one below the home, when there are two and room', () => {
@@ -352,13 +363,31 @@ describe('the expandable card', () => {
         expect(boiler.getAttribute('aria-label')).toBe(`<b>Eau</b> 1,6${nb}kW`);
         expect(boiler.querySelector('ha-icon')!.getAttribute('icon')).toBe('mdi:water-boiler');
         expect($('[data-wire="c0"]').getAttribute('data-level')).toBe('3');
-        expect($('[data-consumer="1"]').hasAttribute('data-idle')).toBe(true);
+        // The pool, at 0 W, is out of the flow
+        expect($('[data-consumer="1"]').hidden).toBe(true);
+        expect($('[data-wire="c1"]').hasAttribute('data-off')).toBe(true);
         tap(boiler);
         tap($('[data-consumer="1"]'));
         expect(events).toEqual([
             { type: 'hass-more-info', detail: { entityId: 'sensor.boiler' } },
             { type: 'hass-action', detail: expect.objectContaining({ action: 'tap', config: expect.objectContaining({ tap_action: { action: 'navigate', navigation_path: '/piscine' } }) }) },
         ]);
+    });
+
+    it('lays the corners out again when an appliance comes into the flow', () => {
+        measure('clientWidth', el => el.classList.contains('flow') ? 400 : 0);
+        const consumers = [{ entity: 'sensor.boiler' }, { entity: 'sensor.pool' }];
+        const { card, $ } = mount({ consumers }, { ...DAY, 'sensor.boiler': 0, 'sensor.pool': 500 });
+        card.expanded = true;
+        // The pool alone: the first place, above the home, a whole node
+        expect($('[data-consumer="0"]').hidden).toBe(true);
+        expect($('[data-consumer="1"]').dataset.side).toBe('above');
+        expect($('[data-wire="c1"]').style.getPropertyValue('--esc-flow')).toBe('esc-flow-c0');
+        card.hass = makeHass({ ...DAY, 'sensor.boiler': 1600, 'sensor.pool': 500 });
+        expect($('[data-consumer="0"]').hidden).toBe(false);
+        expect($('[data-consumer="0"]').dataset.side).toBe('above');
+        expect($('[data-consumer="1"]').dataset.side).toBe('below');
+        unmeasure();
     });
 
     it('rejects more than four appliances, one without an entity, or a bad tap action', () => {

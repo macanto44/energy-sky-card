@@ -25,7 +25,7 @@ export interface SchemaItem {
 
 const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
-        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}',
+        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}', consumer_threshold: 'Seuil d\'affichage',
         production_entity: 'Puissance solaire (W, additionnées)',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
@@ -44,7 +44,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
-        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}',
+        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}', consumer_threshold: 'Display threshold',
         production_entity: 'Solar power (W, summed)',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
@@ -86,6 +86,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         flow: 'Le flux entre solaire, réseau, batterie et maison, sous la carte ; toucher un élément ouvre son entité. « Déplier en touchant » : toucher le grand chiffre ou sa ligne le montre ou le cache, le reste de la carte garde son « Appui ».',
         consumers: 'Un capteur de puissance (W) par appareil, quatre au plus : le premier au-dessus de « Maison », le deuxième en dessous, puis on alterne.',
         consumer_tap_action: 'Par défaut : ouvre l\'entité de l\'appareil.',
+        consumer_threshold: 'En dessous de cette puissance, un appareil n\'apparaît pas dans le flux. 10 W si vide ; 0 les montre toujours.',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
     },
     en: {
@@ -99,6 +100,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         flow: 'The flow between solar, grid, battery and home, under the card; a tap on a node opens its entity. "Unfold on a tap": a tap on the big number or its line shows or hides it, the rest of the card keeps its Tap.',
         consumers: 'One power sensor (W) per appliance, four at most: the first above the home, the second below, then in turn.',
         consumer_tap_action: 'By default: opens the appliance\'s entity.',
+        consumer_threshold: 'Below this power an appliance stays out of the flow. 10 W when empty; 0 always shows them.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
     },
 };
@@ -205,7 +207,7 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
 
 /** The appliances' slots: an entity each, its name, icon and tap once it has one; a slot shows once the previous one is filled */
 function consumerFields(data: Record<string, unknown>): SchemaItem[] {
-    const fields: SchemaItem[] = [];
+    const fields: SchemaItem[] = [{ name: 'consumer_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } }];
     for (let n = 1; n <= MAX_CONSUMERS; n++) {
         if (n > 1 && !data[`consumer_${n - 1}_entity`]) break;
         fields.push({ name: `consumer_${n}_entity`, selector: sensor({ device_class: 'power' }) });

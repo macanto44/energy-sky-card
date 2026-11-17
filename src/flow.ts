@@ -100,10 +100,14 @@ export interface ConsumerView {
     /** Its share of the home's power, 0 … 1 (its ring) */
     share: number;
     level: 0 | 1 | 2 | 3 | 4;
+    /** In the flow: its power reaches consumer_threshold (with 0, always) */
+    shown: boolean;
 }
 
 export { MAX_CONSUMERS };
 export const CONSUMER_ICON = 'mdi:power-plug-outline';
+/** Below this power (W) an appliance leaves the flow, unless consumer_threshold says otherwise */
+export const DEFAULT_CONSUMER_THRESHOLD = 10;
 
 export interface FlowView {
     nodes: Record<NodeKey, NodeView>;
@@ -153,7 +157,9 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
         },
         consumers: (config.consumers ?? []).slice(0, MAX_CONSUMERS).map(c => {
             const entity = hass.states[c.entity];
-            const power = pos(powerW(entity));
+            const reading = powerW(entity);
+            const power = pos(reading);
+            const threshold = config.consumer_threshold ?? DEFAULT_CONSUMER_THRESHOLD;
             const own = (key: string) => typeof entity?.attributes[key] === 'string' ? entity.attributes[key] as string : undefined;
             return {
                 label: c.name || own('friendly_name') || c.entity,
@@ -161,6 +167,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
                 value: formatPower(powerW(entity), loc),
                 share: flows.home ? Math.min(power / flows.home, 1) : 0,
                 level: flowLevel(power),
+                shown: threshold <= 0 || (reading !== undefined && power >= threshold),
             };
         }),
         levels,
