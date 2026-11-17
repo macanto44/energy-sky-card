@@ -298,7 +298,13 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .wire .line { stroke-opacity: 0.55; stroke-width: var(--esc-w); }
 .wire .glow { stroke-opacity: 0.16; stroke-width: calc(var(--esc-w) + 6px); }
 .wire[data-level="0"] .line { stroke: #fff; stroke-opacity: 0.16; stroke-width: 1.2px; stroke-dasharray: 2 5; }
-.wire[data-level="0"] .glow, .wire[data-off], .wire[data-wire="gb"][data-level="0"], .wire[data-wire="bg"][data-level="0"] { display: none; }
+.wire[data-level="0"] .glow, .wire[data-off] { display: none; }
+/* Grid ↔ battery: one link, dotted while idle; battery → grid is drawn only while a battery sells (it lies on the same line) */
+.wire[data-wire="bg"][data-level="0"] { display: none; }
+/* The bridge: where grid ↔ battery passes under sun → home, a gap of the panel's colour */
+.panel { --esc-panel: var(--esc-c2, #1d4f87); }
+:host([data-mode="night"]) .panel { --esc-panel: #0b1026; }
+.wire .gap { stroke: var(--esc-panel); stroke-opacity: 1; stroke-width: 10px; stroke-linecap: butt; }
 ${LEVELS.map(([w, d], i) => `.wire[data-level="${i + 1}"] { --esc-w: ${w}px; --esc-dur: ${d}s; }`).join('\n')}
 ${Object.entries(FLOW_COLOURS).map(([k, c]) => `.wire.${k} { color: ${c}; }`).join(' ')}
 ${WIRE_KEYS.map(k => `.wire[data-wire="${k}"] { --esc-flow: esc-flow-${k}; }`).join(' ')}

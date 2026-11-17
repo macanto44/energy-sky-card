@@ -2,7 +2,7 @@
 // the grid, the battery and the home. Pure: powers → flows → what each node
 // and wire shows, and the drawing's geometry for a width.
 
-import { batteryPower, gridPower, productionEntities, productionPower } from './model';
+import { DEFAULT_POWER_THRESHOLD, batteryPower, gridPower, productionEntities, productionPower } from './model';
 import { formatPercent, formatPower } from './format';
 import { localize, numberLocale } from './localize';
 import { numericState, powerW } from './utils';
@@ -32,10 +32,13 @@ const pos = (v: number | undefined) => Math.max(v ?? 0, 0);
 
 /**
  * Split the powers into flows. grid is positive when importing, battery
- * positive when charging (the card's conventions). The sun feeds the
- * export first (only the sun or the battery can export), then the battery,
- * then the home; the grid feeds what is left of the battery's charge, then
- * the home; the battery feeds what is left of the export, then the home.
+ * positive when charging (the card's conventions). Each source hands out
+ * exactly what it gives, and each sink gets exactly what it takes:
+ * - what is exported comes from the sun first, the rest from the battery;
+ * - what charges the battery comes from the sun (what it has left), the
+ *   rest from the grid (an off-peak charge, at night or on a dull day);
+ * - the home gets what is left of the sun, the import and the discharge.
+ * So home = sun + import + discharge − export − charge, as the meters say.
  */
 export function energyFlows(solar: number | undefined, grid: number | undefined, battery: number | undefined, consumption: number | undefined): Flows {
     let sun = pos(solar);
@@ -93,7 +96,10 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
     const loc = numberLocale(hass);
     const solar = productionPower(config, hass);
     const grid = gridPower(config, hass);
-    const battery = batteryPower(config, hass);
+    const measured = batteryPower(config, hass);
+    // A battery idling within its threshold (no arrow in its cell) moves no energy either
+    const threshold = config.battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
+    const battery = measured !== undefined && Math.abs(measured) <= threshold ? 0 : measured;
     const consumption = powerW(hass.states[config.consumption_entity ?? '']);
     const flows = energyFlows(solar, grid, battery, consumption);
     const max = config.production_max && config.production_max > 0 ? config.production_max : DEFAULT_PRODUCTION_MAX;
@@ -113,7 +119,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
             },
             battery: {
                 present: !!(config.battery?.power_entity || config.battery?.soc_entity), label: localize(loc.lang, 'battery'),
-                value: config.battery?.power_entity ? formatPower(battery, loc) : formatPercent(soc, loc),
+                value: config.battery?.power_entity ? formatPower(measured, loc) : formatPercent(soc, loc),
                 ring: soc === undefined ? [] : [[Math.min(Math.max(soc, 0), 100) / 100, 'batt']],
                 centre: soc === undefined ? undefined : String(Math.round(soc)),
             },

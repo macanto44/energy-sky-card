@@ -38,6 +38,30 @@ describe('energy flows', () => {
         expect(energyFlows(0, -1000, -1500, undefined).wires).toMatchObject({ bg: 1000, bh: 500 });
     });
 
+    it('balances: each source hands out what it gives, the home gets the rest', () => {
+        // [sun, grid (+ import), battery (+ charge)], all consistent readings
+        const cases: [number, number, number][] = [
+            [3200, -1800, 300], [1400, 0, -1200], [0, 200, -700], [0, 2600, 2000], [1000, 1500, 2000],
+            [500, -1500, -1200], [4000, -500, 3000], [2000, 300, 2000], [0, 0, 0], [6000, -6000, 0],
+        ];
+        for (const [sun, grid, battery] of cases) {
+            const { wires: w, home } = energyFlows(sun, grid, battery, undefined);
+            expect(w.sh + w.sg + w.sb).toBeCloseTo(sun);
+            expect(w.gh + w.gb).toBeCloseTo(Math.max(grid, 0));
+            expect(w.sg + w.bg).toBeCloseTo(Math.max(-grid, 0));
+            expect(w.sb + w.gb).toBeCloseTo(Math.max(battery, 0));
+            expect(w.bh + w.bg).toBeCloseTo(Math.max(-battery, 0));
+            expect(home).toBeCloseTo(sun + grid - battery);
+        }
+    });
+
+    it('charges from the sun before the grid, and sells the sun before the battery', () => {
+        // A dull day: 1 kW of sun, 2 kW into the battery, 0.5 kW for the home
+        expect(energyFlows(1000, 1500, 2000, undefined).wires).toMatchObject({ sb: 1000, gb: 1000, gh: 500, sh: 0 });
+        // Selling 1.5 kW with 0.5 kW of sun: the battery sells the rest
+        expect(energyFlows(500, -1500, -1200, undefined).wires).toMatchObject({ sg: 500, bg: 1000, bh: 200 });
+    });
+
     it('takes the home from its sensor when there is one, and nothing below 20 W', () => {
         expect(energyFlows(3200, -1800, 300, 1250).home).toBe(1250);
         expect(energyFlows(10, 5, undefined, undefined).wires.sh).toBe(0);
@@ -67,6 +91,20 @@ describe('flow view', () => {
         expect(v.nodes.battery.ring).toEqual([[0.64, 'batt']]);
         expect(v.nodes.battery.centre).toBe('64');
         expect(v.nodes.home.ring).toEqual([[0.75, 'sun'], [0.25, 'batt']]);
+    });
+
+    it('moves nothing through a battery idling within its threshold, but still shows its reading', () => {
+        const v = view({ [PV]: 1000, [GRID]: 0, [BATT]: 15, [SOC]: 50 });
+        expect(v.levels.sb).toBe(0);
+        expect(v.nodes.battery.value).toBe(`15${nb}W`);
+        expect(view({ [PV]: 1000, [GRID]: 0, [BATT]: 60 }, { ...FULL_CONFIG, battery: { ...FULL_CONFIG.battery, power_threshold: 100 } }).levels.sb).toBe(0);
+    });
+
+    it('lights the grid → battery link for an off-peak charge', () => {
+        const v = view({ [PV]: 0, [GRID]: 2600, [BATT]: 2000, [SOC]: 40 });
+        expect(v.levels).toMatchObject({ gb: 3, gh: 2, sb: 0, sh: 0 });
+        expect(v.nodes.home.value).toBe(`600${nb}W`);
+        expect(v.nodes.home.ring).toEqual([[1, 'grid']]);
     });
 
     it('leaves out a grid or a battery the card doesn\'t have', () => {
@@ -195,6 +233,17 @@ describe('the expandable card', () => {
         card.hass = makeHass({ ...DAY, [PV]: 3200, [GRID]: 250, [BATT]: 300, [SOC]: 78 });
         expect($('[data-node="grid"] .nval')).toBe(value);
         expect(value.textContent).toBe(`250${nb}W`);
+    });
+
+    it('draws the grid ↔ battery link under the sun → home wire, bridged', () => {
+        const { $ } = mount();
+        const order = [...$('.wires').querySelectorAll('.wire')].map(w => w.getAttribute('data-wire'));
+        expect(order.slice(0, 2)).toEqual(['gb', 'bg']);
+        expect(order.indexOf('sh')).toBeGreaterThan(1);
+        expect($('[data-wire="sh"] .gap')).not.toBeNull();
+        expect($('[data-wire="gb"]').hasAttribute('data-off')).toBe(false);
+        expect(CARD_CSS).toContain('.wire[data-wire="bg"][data-level="0"] { display: none; }');
+        expect(CARD_CSS).not.toMatch(/\.wire\[data-wire="gb"\]\[data-level="0"\]/);
     });
 
     it('drops a missing battery with its wires', () => {
