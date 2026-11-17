@@ -45,6 +45,9 @@ export type NightHero = 'production' | 'consumption' | 'battery';
 /** The card's shape: the cells in a grid under the hero (standard), or listed on its right as icon + value (side) */
 export type CardLayout = 'standard' | 'side';
 
+/** The energy flow under the card: unfolded by a tap on the big number, or always shown */
+export type FlowMode = 'tap' | 'always';
+
 export interface EnergySkyCardConfig {
     type: string;
     /** One power sensor, or several summed (micro-inverters + a string inverter) */
@@ -76,7 +79,9 @@ export interface EnergySkyCardConfig {
     night_hero?: NightHero;
     /** standard (default, 4 rows) or side (2 rows: the cells on the right, icon + value) */
     layout?: CardLayout;
-    /** A tap on the big number unfolds the energy flow (sun, grid, battery, home) under the card */
+    /** The energy flow (sun, grid, battery, home) under the card: on a tap on the big number, or always; none without it */
+    flow?: FlowMode;
+    /** 0.3.3's name of flow: tap, still read */
     expandable?: boolean;
     /** Up to 4 cells, in order; without it, the built-in cells whose entities are set */
     cells?: CellConfig[];

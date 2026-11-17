@@ -263,6 +263,29 @@ describe('the expandable card', () => {
         expect($('[data-wire="sg"]').hasAttribute('data-off')).toBe(false);
     });
 
+    it('reads 0.3.3\'s expandable: true as flow: tap, and rejects an unknown flow', () => {
+        const { card } = mount();
+        expect(card.getAttribute('data-flow')).toBe('tap');
+        expect(() => card.setConfig({ ...FULL_CONFIG, flow: 'sometimes' as any })).toThrow(/flow: tap or always/);
+    });
+
+    it('shows the flow from the start with flow: always, the big number keeping the card\'s tap', () => {
+        const { card, events, $ } = mount({ expandable: undefined, flow: 'always', tap_action: { action: 'navigate', navigation_path: '/menu' } });
+        expect(card.expanded).toBe(true);
+        expect(card.hasAttribute('data-expanded')).toBe(true);
+        expect($('.panel').hidden).toBe(false);
+        expect($('.grabber')).toBeNull();
+        expect($('.hero').hasAttribute('role')).toBe(false);
+        tap($('.hero'));
+        expect(events.map(e => e.type)).toEqual(['hass-action']);
+        // It can't be folded, and a node still opens its entity
+        card.expanded = false;
+        expect(card.expanded).toBe(true);
+        tap($('[data-node="grid"]'));
+        expect(events.at(-1)).toEqual({ type: 'hass-more-info', detail: { entityId: GRID } });
+        expect(card.getGridOptions().rows).toBe('auto');
+    });
+
     it('folds again on a new config', () => {
         const { card } = mount();
         card.expanded = true;
@@ -276,7 +299,7 @@ describe('the expandable card', () => {
 
 describe('the flow\'s stylesheet', () => {
     it('keeps the sky on the top part and runs the comets only unfolded and in motion', () => {
-        expect(CARD_CSS).toContain(':host([data-expandable]) .sky { bottom: auto; height: var(--esc-top-h); }');
+        expect(CARD_CSS).toContain(':host([data-flow]) .sky { bottom: auto; height: var(--esc-top-h); }');
         expect(CARD_CSS).toMatch(/:host\(\[data-motion="on"\]\[data-expanded\]\) \.wire:not\(\[data-level="0"\]\) \.comet,\s*:host\(\[data-motion="paused"\]\[data-expanded\]\) \.wire:not\(\[data-level="0"\]\) \.comet \{ display: inline; animation: esc-flow/);
         expect(CARD_CSS).toMatch(/\n\.comet \{ display: none; \}/);
     });

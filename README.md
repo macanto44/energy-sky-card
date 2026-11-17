@@ -49,9 +49,13 @@ The **standard** layout puts the cells under the big number, in four rows. The *
 
 ![The side layout: 3.2 kW and 7.2 kWh on the left, battery, grid, voltage and tomorrow on the right, each as an icon and a value](docs/images/cote.png)
 
-## Tap to see the flow.
+## The energy flow.
 
-With `expandable: true`, a tap on the big number or the line under it unfolds the card, in either layout. Under it, the energy flows between four nodes: the sun on the left, the home on the right, the grid above and the battery below.
+Under the card, in either layout, the energy flows between four nodes: the sun on the left, the home on the right, the grid above and the battery below. Show it two ways:
+
+- `flow: tap`: a tap on the big number or the line under it unfolds the card, and a tap on the unfolded part folds it again. A small handle under the card hints at it.
+- `flow: always`: the flow is always there, under the card.
+
 
 ![The unfolded card on a Rouge day: the sun sends 6.0 kW to the home and the grid, the battery feeds the home with 2.3 kW](docs/images/deplie.png)
 
@@ -60,9 +64,9 @@ With `expandable: true`, a tap on the big number or the line under it unfolds th
 - **The grid ↔ battery link** runs down the middle, under the sun → home wire (a small gap shows it's a bridge, not a junction). It lights up when the grid charges the battery, at off-peak hours for instance, or when the battery sells.
 - **The flows add up like your meters.** What you sell comes from the sun first, then the battery. What charges the battery comes from the sun first, then the grid. The home gets the rest. A battery below its idle threshold moves nothing.
 - **Each node** shows its power with the card's signs (grid negative when selling, battery negative when discharging) and a ring: production against your maximum, the battery's charge (with the percentage in the middle), and the share of each source in what your home uses.
-- **Tap a node** to open its entity. A tap on the unfolded part folds it again.
+- **Tap a node** to open its entity.
 
-The rest of the card keeps its own tap action, so a menu or a pop-up you open from the card still works. Hold and double tap stay the card's, on the big number too.
+With `flow: tap`, the rest of the card keeps its own tap action, so a menu or a pop-up you open from the card still works; with `flow: always`, the big number keeps it too. Hold and double tap stay the card's everywhere.
 
 ## At home on any screen.
 
@@ -116,7 +120,7 @@ To update, overwrite both files and raise the `?v=` in the resource URL so brows
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
 2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Cells** (layout, unfolding, and the four cells), **Tariff and sky**, and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Cells** (layout, energy flow, and the four cells), **Tariff and sky**, and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
@@ -157,7 +161,7 @@ Two rows on the dashboard, the energy flow one tap away. The home's consumption 
 ```yaml
 type: custom:energy-sky-card
 layout: side
-expandable: true
+flow: tap
 production_entity:
   - sensor.micro_inverters_power
   - sensor.string_inverter_power
@@ -292,7 +296,7 @@ All under `grid:`.
 | Option | Default | Description |
 | --- | --- | --- |
 | `layout` | `standard` | `standard`: the cells under the big number, four rows (248 px). `side`: the cells on the right, one line each, the icon standing for the name, two rows (120 px) |
-| `expandable` | `false` | `true`: a tap on the big number or its line unfolds the energy flow under the card. See [Tap to see the flow](#tap-to-see-the-flow) |
+| `flow` | none | The energy flow under the card: `tap` (unfolded by a tap on the big number or its line) or `always` (always shown). See [The energy flow](#the-energy-flow). 0.3.3's `expandable: true` still reads as `flow: tap` |
 | `cells` | automatic | Up to four cells, in order. Without it: Battery, Grid, Voltage and Tomorrow, those whose entities are set. See below |
 
 Each entry in `cells` is one of:
@@ -322,7 +326,7 @@ A cell without its own `tap_action` opens its entity, unless the card has a `tap
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `tap_action` | more info on the first production sensor | What a tap on the card does. Any Home Assistant action: `more-info`, `navigate`, `url`, `perform-action`, `toggle`, `none`… With `expandable: true`, a tap on the big number unfolds the card instead; the rest of the card keeps this action |
+| `tap_action` | more info on the first production sensor | What a tap on the card does. Any Home Assistant action: `more-info`, `navigate`, `url`, `perform-action`, `toggle`, `none`… With `flow: tap`, a tap on the big number unfolds the card instead; the rest of the card keeps this action |
 | `hold_action` | none | What a long press does, on the whole card |
 | `double_tap_action` | none | What a double tap does, on the whole card |
 
@@ -344,9 +348,9 @@ In the sections view, the card asks for the full width. Its height:
 | --- | --- | --- |
 | `standard` | 4 rows (248 px) | 3 rows (184 px), with tighter spacing |
 | `side` | 2 rows (120 px) | 2 rows |
-| Either, with `expandable: true` | **auto**: the card sets its own height, folded or unfolded | — |
+| Either, with `flow` | **auto**: the card sets its own height, with the flow or without | — |
 
-If you had set the card's height by hand in the **Layout** tab, change it after switching layouts. With `expandable: true`, the editor turns a fixed number of rows into **auto**.
+If you had set the card's height by hand in the **Layout** tab, change it after switching layouts. With a `flow`, the editor turns a fixed number of rows into **auto**.
 
 ## Languages
 
@@ -375,7 +379,7 @@ Add your daily meters to `daily_production_entities`.
 **`SOC reached` never shows**
 It needs `battery.soc_reached_entities`, and one of them `on`. See ["SOC reached"](#soc-reached).
 
-**The unfolded card is cut off**
+**The flow is cut off**
 Its height must be **auto** in the sections view: open the card's **Layout** tab and set the rows to auto.
 
 **The Home node doesn't open anything**

@@ -265,19 +265,19 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 :host([data-layout="side"][data-compact]) .context { margin-top: 4px; }
 :host([data-layout="side"][data-compact]) .grid { row-gap: 0; }
 /*
- * Expandable (expandable: true): the card sets its own height (the grid's
+ * The energy flow (flow: tap or always): the card sets its own height (the grid's
  * rows: auto), the sky stays on the top part at its usual height, and the
  * flow unfolds below on the gradient's last colour (the darkest).
  */
-:host([data-expandable]) { height: auto; --esc-top-h: 248px; }
-:host([data-expandable][data-layout="side"]) { --esc-top-h: 120px; }
-:host([data-expandable]) ha-card { height: auto; }
-:host([data-expandable]) .content { height: var(--esc-top-h); }
-:host([data-expandable]) .sky { bottom: auto; height: var(--esc-top-h); }
-:host([data-expandable][data-mode="day"]) ha-card { background: var(--esc-c2, #1d4f87); }
-:host([data-ready][data-expandable]:not([data-motion="off"])) ha-card { transition: background-color 3s ease-in-out; }
-:host([data-expandable]) .hero, :host([data-expandable]) .context { cursor: pointer; }
-:host([data-expandable]) .hero:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+:host([data-flow]) { height: auto; --esc-top-h: 248px; }
+:host([data-flow][data-layout="side"]) { --esc-top-h: 120px; }
+:host([data-flow]) ha-card { height: auto; }
+:host([data-flow]) .content { height: var(--esc-top-h); }
+:host([data-flow]) .sky { bottom: auto; height: var(--esc-top-h); }
+:host([data-flow][data-mode="day"]) ha-card { background: var(--esc-c2, #1d4f87); }
+:host([data-ready][data-flow]:not([data-motion="off"])) ha-card { transition: background-color 3s ease-in-out; }
+:host([data-flow="tap"]) .hero, :host([data-flow="tap"]) .context { cursor: pointer; }
+:host([data-flow="tap"]) .hero:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
 .grabber { position: absolute; left: 50%; bottom: 5px; width: 28px; height: 3px; margin-left: -14px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); }
 .panel { position: relative; z-index: 1; margin: 0 20px; padding: 10px 0 14px; border-top: 1px solid rgba(255, 255, 255, 0.22); font-family: var(--esc-font); }
 :host([data-layout="side"]) .panel { margin: 0 18px 0 20px; }

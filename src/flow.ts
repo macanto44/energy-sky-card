@@ -1,4 +1,4 @@
-// The unfolding part (expandable: true): the energy flow between the sun,
+// The energy flow (flow: tap or always) between the sun,
 // the grid, the battery and the home. Pure: powers → flows → what each node
 // and wire shows, and the drawing's geometry for a width.
 

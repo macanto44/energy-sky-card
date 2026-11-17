@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- The energy flow can be always shown: `flow: always`, in either layout. The editor's Cells block now has an « Energy flow » choice: none, unfold on a tap on the big number (`flow: tap`), or always shown. 0.3.3's `expandable: true` still works, as `flow: tap`, and the editor saves it under the new name.
+
 ## [0.3.4] — 2026-11-17
 
 ### ⚠️ Breaking changes

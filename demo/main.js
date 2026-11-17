@@ -6,8 +6,9 @@ const lang = params.get('lang') || 'fr';
 const root = document.getElementById('cards');
 // ?side: the side layout, in a 2-row cell (120 px) unless h says otherwise
 const side = params.has('side');
-// ?expand: expandable cards, unfolded (they set their own height)
+// ?expand: the flow on a tap, unfolded; ?expand=always: the flow always shown (both set their own height)
 const expand = params.has('expand');
+const flow = params.get('expand') === 'always' ? 'always' : 'tap';
 const height = expand ? '' : params.get('h') || (side ? '120' : '');
 if (params.has('bare')) document.body.classList.add('bare');
 for (const [name, overrides] of Object.entries(SCENARIOS)) {
@@ -17,7 +18,7 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     const fig = document.createElement('figure');
     fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : expand ? ';height:auto' : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { expandable: true } : {}) });
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow } : {}) });
     const states = {};
     let t = 0;
     for (const [id, state] of Object.entries(overrides)) {

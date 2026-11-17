@@ -45,7 +45,7 @@ describe('schema', () => {
             './consumption_entity', './night_hero',
             'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
-            './layout', './expandable', './cell_1', './cell_2', './cell_3', './cell_4',
+            './layout', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
             './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
         ]);
@@ -211,27 +211,42 @@ describe('English and French', () => {
 });
 
 describe('help under the layout fields', () => {
-    it('explains the unfolding in both languages, and nothing under the layout', () => {
-        expect(editorHelper('fr', 'expandable')).toBe('Toucher le grand chiffre ou sa ligne déplie le flux d\'énergie (solaire, réseau, batterie, maison) sous la carte ; toucher un élément ouvre son entité. Le reste de la carte garde son « Appui ».');
-        expect(editorHelper('en', 'expandable')).toMatch(/^A tap on the big number .* keeps its Tap\.$/);
+    it('explains the energy flow in both languages, and nothing under the layout', () => {
+        expect(editorHelper('fr', 'flow')).toMatch(/^Le flux entre solaire, réseau, batterie et maison/);
+        expect(editorHelper('en', 'flow')).toMatch(/^The flow between solar, grid, battery and home/);
         expect(editorHelper('fr', 'layout')).toBeUndefined();
         expect(editorHelper('en', 'layout')).toBeUndefined();
     });
 });
 
-describe('unfolding', () => {
-    it('is a switch under the layout, off by default (left out of the YAML)', () => {
+describe('the energy flow', () => {
+    it('offers none, on a tap or always, under the layout; none by default (left out of the YAML)', () => {
+        const cells = editorSchema('fr').find(b => b.title === 'Cases')!;
+        expect(cells.schema?.[1].name).toBe('flow');
+        expect((cells.schema?.[1].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
         const { form, change, changes } = mount();
-        expect(form.data?.expandable).toBe(false);
+        expect(form.data?.flow).toBe('none');
         change({ animate: false });
-        expect(changes.at(-1)).not.toHaveProperty('expandable');
-        change({ expandable: true });
-        expect(changes.at(-1)?.expandable).toBe(true);
+        expect(changes.at(-1)).not.toHaveProperty('flow');
+        change({ flow: 'tap' });
+        expect(changes.at(-1)?.flow).toBe('tap');
+        change({ flow: 'always' });
+        expect(changes.at(-1)?.flow).toBe('always');
+        change({ flow: 'none' });
+        expect(changes.at(-1)).not.toHaveProperty('flow');
     });
 
-    it('turns a fixed number of rows into auto, so the unfolded flow isn\'t cut', () => {
+    it('shows 0.3.3\'s expandable: true as on a tap, and saves it as flow: tap', () => {
+        const { form, change, changes } = mount({ ...MINIMAL, expandable: true });
+        expect(form.data?.flow).toBe('tap');
+        change({ animate: false });
+        expect(changes.at(-1)?.flow).toBe('tap');
+        expect(changes.at(-1)).not.toHaveProperty('expandable');
+    });
+
+    it('turns a fixed number of rows into auto, so the flow isn\'t cut', () => {
         const withRows = { ...MINIMAL, grid_options: { columns: 12, rows: 4 } } as EnergySkyCardConfig;
-        expect((nextConfig(withRows, { ...formData(withRows), expandable: true }) as any).grid_options).toEqual({ columns: 12, rows: 'auto' });
+        expect((nextConfig(withRows, { ...formData(withRows), flow: 'always' }) as any).grid_options).toEqual({ columns: 12, rows: 'auto' });
         expect((nextConfig(withRows, formData(withRows)) as any).grid_options).toEqual({ columns: 12, rows: 4 });
     });
 });

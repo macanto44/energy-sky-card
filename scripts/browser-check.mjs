@@ -84,6 +84,12 @@ for (const layout of ['', 'side&']) {
     }
 }
 for (const c of probe('expand&s=bleu,rouge&widths=360', [], 1400)) check(Number(c.comets) > 0, `unfolded ${c.name}: ${c.comets} comets running`);
+// The flow always shown, both layouts: same checks
+for (const layout of ['', 'side&']) {
+    for (const c of probe(`${layout}expand=always&s=bleu,extremes,charge`, [], 2800)) {
+        check(c.overflow === '0' && c.tall === '0' && (c.mode === 'night' || Number(c.comets) > 0), `always shown ${layout ? 'side ' : ''}${c.name}: no overflow, ${c.comets} comets`);
+    }
+}
 for (const c of probe('expand&s=bleu&widths=360', ['--force-prefers-reduced-motion'], 1400)) check(c.comets === '0' && c.running === '0', `unfolded ${c.name}, reduced motion: no comet`);
 
 // The night sky covers the whole card (a visible star in each quarter) and none touches text

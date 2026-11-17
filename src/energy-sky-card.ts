@@ -42,6 +42,7 @@ const oneOf = (values: string[], or: string) => `${values.slice(0, -1).join(', '
 const CHOICES: [string, string[]][] = [
     ['night_hero', ['production', 'consumption', 'battery']],
     ['layout', ['standard', 'side']],
+    ['flow', ['tap', 'always']],
 ];
 /** Older option names, no longer read, and what replaces them */
 const RENAMED: [string, { fr: string; en: string }][] = [
@@ -107,7 +108,8 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             }
         }
     }
-    return c as EnergySkyCardConfig;
+    // 0.3.3's expandable: true is flow: tap
+    return (c.expandable === true && c.flow === undefined ? { ...c, flow: 'tap' } : c) as EnergySkyCardConfig;
 }
 
 /** The elements updated in place on every change */
@@ -117,7 +119,7 @@ interface Refs {
     heroUnit: HTMLElement;
     context: HTMLElement;
     contextText: HTMLElement;
-    /** The unfolding part (expandable: true) */
+    /** The energy flow (flow: tap or always) */
     flow?: {
         panel: HTMLElement;
         box: HTMLElement;
@@ -142,7 +144,7 @@ export class EnergySkyCard extends HTMLElement {
     private cellTargets = new Map<string, { entity?: string; tap?: ActionConfig }>();
     private resizeObserver?: ResizeObserver;
     private readyFrame?: number;
-    /** Unfolded (expandable: true): the flow shows under the card */
+    /** Unfolded: the flow shows under the card (always with flow: always) */
     private open = false;
     /** The width the flow's geometry was last drawn for */
     private flowWidth = 0;
@@ -164,6 +166,7 @@ export class EnergySkyCard extends HTMLElement {
         this.build();
         this.open = false;
         this.removeAttribute('data-expanded');
+        if (this.config.flow === 'always') this.expanded = true;
         this.renderedKey = '';
         this.removeAttribute('data-ready');
         this.motion.setAnimate(this.config.animate !== false);
@@ -185,19 +188,19 @@ export class EnergySkyCard extends HTMLElement {
         this.readyFrame = undefined;
     }
 
-    /** Whether the energy flow is unfolded (expandable: true only) */
+    /** Whether the energy flow shows: unfolded with flow: tap, always with flow: always */
     get expanded(): boolean {
         return this.open;
     }
 
     set expanded(open: boolean) {
-        const next = open && this.config?.expandable === true;
+        const flow = this.config?.flow;
+        const next = flow === 'always' || (open && flow === 'tap');
         if (next === this.open && this.hasAttribute('data-expanded') === next) return;
         this.open = next;
         this.toggleAttribute('data-expanded', next);
-        const flow = this.refs?.flow;
-        if (flow) flow.panel.hidden = !next;
-        if (this.config?.expandable) this.refs?.heroValue.parentElement?.setAttribute('aria-expanded', String(next));
+        if (this.refs?.flow) this.refs.flow.panel.hidden = !next;
+        if (flow === 'tap') this.refs?.heroValue.parentElement?.setAttribute('aria-expanded', String(next));
         this.fit();
     }
 
@@ -230,7 +233,7 @@ export class EnergySkyCard extends HTMLElement {
         const cells = configuredCells(config);
         if (this.side) this.setAttribute('data-layout', 'side');
         else this.removeAttribute('data-layout');
-        this.toggleAttribute('data-expandable', config.expandable === true);
+        setAttr(this, 'data-flow', config.flow ?? null);
         this.flowWidth = 0;
         this.fitted = '';
         this.root.innerHTML = `
@@ -243,19 +246,19 @@ export class EnergySkyCard extends HTMLElement {
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
                     <div class="context line" hidden><span class="context-text"></span></div>
-                    ${config.expandable ? '<i class="grabber" aria-hidden="true"></i>' : ''}
+                    ${config.flow === 'tap' ? '<i class="grabber" aria-hidden="true"></i>' : ''}
                     <div class="grid">${cells.map(cell => `
                         <div class="metric" data-metric="${cell.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
                             <div class="value line"><span class="value-main"></span><span class="extra"></span></div>
                         </div>`).join('')}</div>
                 </div>
-                ${config.expandable ? flowMarkup() : ''}
+                ${config.flow ? flowMarkup() : ''}
             </ha-card>`;
         const q = (sel: string, parent: ParentNode = this.root) => find(parent, sel);
         this.refs = {
             card: q('ha-card'),
-            flow: config.expandable ? this.flowRefs() : undefined,
+            flow: config.flow ? this.flowRefs() : undefined,
             heroValue: q('.hero-value'),
             heroUnit: q('.hero-unit'),
             context: q('.context'),
@@ -277,7 +280,8 @@ export class EnergySkyCard extends HTMLElement {
             if (tap) return [[cell.key, { entity, tap }]];
             return opensEntity && entity ? [[cell.key, { entity }]] : [];
         }));
-        if (config.expandable) {
+        // flow: tap: the big number, its line and the unfolded panel fold and unfold
+        if (config.flow === 'tap') {
             const hero = this.refs.heroValue.parentElement as HTMLElement;
             for (const el of [hero, this.refs.context, this.refs.flow!.panel]) {
                 el.dataset.cellTarget = '';
@@ -287,6 +291,8 @@ export class EnergySkyCard extends HTMLElement {
             hero.tabIndex = 0;
             hero.setAttribute('aria-controls', 'esc-flow');
             hero.setAttribute('aria-expanded', 'false');
+        }
+        if (config.flow) {
             for (const [key] of NODES) {
                 const entity = flowNodeEntity(config, key);
                 if (!entity) continue;
@@ -563,7 +569,7 @@ export class EnergySkyCard extends HTMLElement {
     /** Sections view: full width, four rows (248 px), never under three; the side layout two rows (120 px) */
     getGridOptions() {
         // Unfolding changes the card's height: the grid lets the card set it
-        if (this.config?.expandable) return { columns: 12, rows: 'auto' as const, min_columns: 6 };
+        if (this.config?.flow) return { columns: 12, rows: 'auto' as const, min_columns: 6 };
         return this.side
             ? { columns: 12, rows: 2, min_columns: 6, min_rows: 2 }
             : { columns: 12, rows: 4, min_columns: 6, min_rows: 3 };
