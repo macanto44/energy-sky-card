@@ -1,9 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.5] — 2026-11-17
+
+No breaking change: `expandable: true` (0.3.3) still works, read as `flow: tap`.
 
 - Appliances in the energy flow: `consumers`, up to four (a water heater, a pool, a car…), around the home, the first above it, the second below, then in turn. Each shows its power, a ring with its share of the home's use, and a lilac wire from the home with comets that follow its power; it opens its entity on a tap, or runs its own `tap_action`. One or two get a whole node with their name on a wide card; more, or on a phone, they turn compact (icon and power, the name on hover and for screen readers), and a phone shows the first two. In the editor, an « Appliances » block with four slots, shown with a flow.
-
 - The energy flow can be always shown: `flow: always`, in either layout. The editor has a « Layout » block of its own, before Cells: the format (standard or side) and the energy flow (none, unfold on a tap on the big number with `flow: tap`, or always shown). 0.3.3's `expandable: true` still works, as `flow: tap`, and the editor saves it under the new name.
 
 ## [0.3.4] — 2026-11-17
