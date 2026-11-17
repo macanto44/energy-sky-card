@@ -1,9 +1,12 @@
 name: Demo
 
-# The live demo on GitHub Pages: demo/live.html on the built card, at each release (or by hand).
+# The live demo on GitHub Pages: demo/live.html on the built card, once a release is out (or by hand).
+# It follows the Release workflow rather than the tag: the github-pages environment deploys from main only,
+# and a workflow_run runs on main while building the released commit.
 on:
-  push:
-    tags: ["v*"]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -17,12 +20,16 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The released commit (by hand: main)
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22

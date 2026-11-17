@@ -73,7 +73,7 @@ test/
 - Release: bump `version` in `package.json` (and the `?v=` in the README), `npm run build`, commit, then push a tag `vX.Y.Z`. `.github/workflows/release.yml` checks the tag matches, builds, tests and publishes a release with the two bundles attached, which is what the Marketplace / HACS install (`hacs.json` → `filename: energy-sky-card.js`).
 - `.github/workflows/ci.yml` fails if the committed bundles don't match a fresh build: commit the rebuilt files with every source change.
 - `.github/workflows/validate.yml` runs HACS's validation (category `plugin`).
-- `.github/workflows/pages.yml` publishes the live demo (`demo/live.html` on the built card) to GitHub Pages at each tag, or by hand: https://macanto44.github.io/energy-sky-card/
+- `.github/workflows/pages.yml` publishes the live demo (`demo/live.html` on the built card) to GitHub Pages once the Release workflow succeeds (`workflow_run`: the `github-pages` environment deploys from `main` only, so not on the tag itself), or by hand: https://macanto44.github.io/energy-sky-card/
 
 ## Local demo
 
