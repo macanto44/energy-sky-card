@@ -133,7 +133,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
 }
 
 /** The drawing is this tall (px); its width is the panel's */
-export const FLOW_HEIGHT = 200;
+export const FLOW_HEIGHT = 220;
 export const NODE_HEIGHT = 46;
 const SAMPLES = 12;
 
@@ -149,50 +149,65 @@ export interface FlowGeometry {
 
 type Pt = [number, number];
 
-/** A point and the direction along a straight or quadratic segment */
-function along(p0: Pt, c: Pt | null, p1: Pt, t: number): { at: Pt; deg: number } {
+/** A wire: straight (no controls) or a cubic curve (two controls) */
+type Seg = [Pt, [Pt, Pt] | null, Pt];
+
+/** A point and the direction along a straight or cubic segment */
+function along([p0, c, p1]: Seg, t: number): { at: Pt; deg: number } {
     if (!c) return { at: [p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t], deg: Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) * 180 / Math.PI };
-    const u = 1 - t;
-    const at: Pt = [u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1]];
-    const dx = 2 * u * (c[0] - p0[0]) + 2 * t * (p1[0] - c[0]);
-    const dy = 2 * u * (c[1] - p0[1]) + 2 * t * (p1[1] - c[1]);
-    return { at, deg: Math.atan2(dy, dx) * 180 / Math.PI };
+    const [c1, c2] = c, u = 1 - t;
+    const point = (i: 0 | 1) => u * u * u * p0[i] + 3 * u * u * t * c1[i] + 3 * u * t * t * c2[i] + t * t * t * p1[i];
+    const slope = (i: 0 | 1) => 3 * u * u * (c1[i] - p0[i]) + 6 * u * t * (c2[i] - c1[i]) + 3 * t * t * (p1[i] - c2[i]);
+    return { at: [point(0), point(1)], deg: Math.atan2(slope(1), slope(0)) * 180 / Math.PI };
 }
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
+const pt = ([x, y]: Pt) => `${r1(x)},${r1(y)}`;
+
+/** How far in from a node's end a curve leaves its edge (past the rounded end, on the flat) */
+export const WIRE_INSET = 27;
 
 /**
  * Where everything sits for a panel `width` px wide: the sun on the left,
  * the home on the right (a straight wire between), the grid above and the
- * battery below in the middle, joined by quarter curves that never cross.
+ * battery below in the middle. The other wires join the edges that face
+ * each other (the sun's top to the grid's bottom…) with an S curve that
+ * stays inside, between the rows: the four corners are left free. The
+ * grid ↔ battery link runs straight down the middle.
  */
 export function flowGeometry(width: number): FlowGeometry {
     const W = Math.max(width, 160);
     const nodeWidth = Math.round(Math.min(Math.max((W - 48) / 2, 96), 128));
     const centreWidth = Math.round(Math.min(nodeWidth + 20, W - nodeWidth - 32));
-    const half = nodeWidth / 2, chalf = centreWidth / 2, r = NODE_HEIGHT / 2, mid = FLOW_HEIGHT / 2;
-    const top = 3 + r, bottom = FLOW_HEIGHT - 3 - r;
-    const sx = half, hx = W - half, cx = W / 2;
-    const segs: Record<WireKey, [Pt, Pt | null, Pt]> = {
+    const chalf = centreWidth / 2, r = NODE_HEIGHT / 2, mid = FLOW_HEIGHT / 2;
+    const top = 3 + r, bottom = FLOW_HEIGHT - 3 - r, cx = W / 2;
+    // The facing edges: the sun's and the home's inner ends, the grid's and the battery's outer ends
+    const sunIn = nodeWidth - WIRE_INSET, homeIn = W - nodeWidth + WIRE_INSET;
+    const centreLeft = cx - chalf + WIRE_INSET, centreRight = cx + chalf - WIRE_INSET;
+    /** An S curve between two horizontal edges, leaving and arriving straight up or down */
+    const s = (from: Pt, to: Pt): Seg => {
+        const k = (to[1] - from[1]) / 2;
+        return [from, [[from[0], from[1] + k], [to[0], to[1] - k]], to];
+    };
+    const segs: Record<WireKey, Seg> = {
         sh: [[nodeWidth, mid], null, [W - nodeWidth, mid]],
-        sg: [[sx, mid - r], [sx, top], [cx - chalf, top]],
-        gh: [[cx + chalf, top], [hx, top], [hx, mid - r]],
-        sb: [[sx, mid + r], [sx, bottom], [cx - chalf, bottom]],
-        bh: [[cx + chalf, bottom], [hx, bottom], [hx, mid + r]],
+        sg: s([sunIn, mid - r], [centreLeft, top + r]),
+        gh: s([centreRight, top + r], [homeIn, mid - r]),
+        sb: s([sunIn, mid + r], [centreLeft, bottom - r]),
+        bh: s([centreRight, bottom - r], [homeIn, mid + r]),
         gb: [[cx, top + r], null, [cx, bottom - r]],
         bg: [[cx, bottom - r], null, [cx, top + r]],
     };
     const paths = {} as Record<WireKey, string>;
     let keyframes = '';
     for (const key of WIRE_KEYS) {
-        const [p0, c, p1] = segs[key];
-        paths[key] = c
-            ? `M${r1(p0[0])},${r1(p0[1])} Q${r1(c[0])},${r1(c[1])} ${r1(p1[0])},${r1(p1[1])}`
-            : `M${r1(p0[0])},${r1(p0[1])} L${r1(p1[0])},${r1(p1[1])}`;
+        const seg = segs[key];
+        const [p0, c, p1] = seg;
+        paths[key] = c ? `M${pt(p0)} C${pt(c[0])} ${pt(c[1])} ${pt(p1)}` : `M${pt(p0)} L${pt(p1)}`;
         const steps = c ? SAMPLES : 1;
         const frames: string[] = [];
         for (let i = 0; i <= steps; i++) {
-            const { at, deg } = along(p0, c, p1, i / steps);
+            const { at, deg } = along(seg, i / steps);
             const ends = i === 0 || i === steps ? ' opacity: 0;' : '';
             frames.push(`${r1(i / steps * 100)}% { transform: translate(${r1(at[0])}px, ${r1(at[1])}px) rotate(${Math.round(deg)}deg);${ends} }`);
         }

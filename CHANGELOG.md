@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- The unfolded flow's outer wires now run inside: each joins the edges that face each other (the sun's top to the grid's bottom, the battery's top to the home's bottom…) with an S curve between the rows, leaving the four corners free. The flow is 20 px taller, so the curves have room.
+- Editor: no help under Layout, and a shorter one under the unfolding switch.
+
 ## [0.3.3] — 2026-11-17
 
 - `expandable: true` (« Déplier en touchant le grand chiffre » in the editor's Cells block): a tap on the big number or its line unfolds the energy flow under the card, in both layouts. The sun on the left, the home on the right, the grid above, the battery below, joined by curved wires, and the grid ↔ battery link down the middle (bridged under the sun → home wire) for an off-peak charge or a battery selling. The flows balance like the meters: sales come from the sun first, then the battery; the battery's charge from the sun first, then the grid; the home gets the rest; a battery within its `power_threshold` idles. Their colour says where the energy comes from, their width and comets how much. Each node shows its power with the card's signs, a ring (production against `production_max`, the battery's charge, the home's sources), and opens its entity on a tap. The home is `consumption_entity`, or worked out. The card then sets its own height (rows "auto"); the comets move on `transform` only and stop when folded, off-screen or without motion.

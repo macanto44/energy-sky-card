@@ -34,7 +34,7 @@ for (const [name, seek] of Object.entries(stills)) {
 shoot('docs/images/cote.png', 'bleu', 3000, 2, 120, '&side');
 console.log('docs/images/cote.png');
 // Unfolded (expandable: true), Rouge: the sun and the battery feed the home, the rest is sold
-shoot('docs/images/deplie.png', 'rouge', 900, 2, 473, '&expand');
+shoot('docs/images/deplie.png', 'rouge', 900, 2, 493, '&expand');
 console.log('docs/images/deplie.png');
 
 /** A PNG's chunks: [type, data] */

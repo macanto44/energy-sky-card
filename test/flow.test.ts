@@ -138,13 +138,35 @@ describe('flow geometry', () => {
         }
     });
 
-    it('starts each curve at a node\'s edge and ends it at another\'s', () => {
+    it('joins facing edges with S curves: the sun\'s top to the grid\'s bottom, the battery\'s top to the home\'s bottom…', () => {
         const g = flowGeometry(400);
         expect(g.nodeWidth).toBe(128);
-        expect(g.paths.sh).toBe('M128,100 L272,100');
         expect(g.centreWidth).toBe(148);
-        expect(g.paths.sg).toBe('M64,77 Q64,26 126,26');
-        expect(g.paths.bh).toBe('M274,174 Q336,174 336,123');
+        expect(g.paths.sg).toBe('M101,87 C101,68 153,68 153,49');
+        expect(g.paths.gh).toBe('M247,49 C247,68 299,68 299,87');
+        expect(g.paths.sb).toBe('M101,133 C101,152 153,152 153,171');
+        expect(g.paths.bh).toBe('M247,171 C247,152 299,152 299,133');
+        expect(g.paths.sh).toBe('M128,110 L272,110');
+        expect(g.paths.gb).toBe('M200,49 L200,171');
+    });
+
+    it('keeps the four corners free: every wire stays between the rows, inside the sun\'s and the home\'s inner halves', () => {
+        for (const width of [200, 264, 304, 400, 600]) {
+            const g = flowGeometry(width);
+            const points = [...g.keyframes.matchAll(/translate\(([-\d.]+)px, ([-\d.]+)px\)/g)].map(m => [Number(m[1]), Number(m[2])]);
+            expect(points.length).toBeGreaterThan(0);
+            for (const [x, y] of points) {
+                expect(x, `${width}: ${x}`).toBeGreaterThan(g.nodeWidth / 2);
+                expect(x, `${width}: ${x}`).toBeLessThan(width - g.nodeWidth / 2);
+                // Between the grid row's bottom and the battery row's top
+                expect(y).toBeGreaterThanOrEqual(3 + NODE_HEIGHT - 0.1);
+                expect(y).toBeLessThanOrEqual(FLOW_HEIGHT - 3 - NODE_HEIGHT + 0.1);
+            }
+            // The curves on each side stay clear of the grid ↔ battery link in the middle
+            const xs = (key: string) => [...(g.keyframes.split(`esc-flow-${key} `)[1].split('\n')[0]).matchAll(/translate\(([-\d.]+)px/g)].map(m => Number(m[1]));
+            expect(Math.max(...xs('sg'), ...xs('sb'))).toBeLessThan(width / 2);
+            expect(Math.min(...xs('gh'), ...xs('bh'))).toBeGreaterThan(width / 2);
+        }
     });
 });
 
