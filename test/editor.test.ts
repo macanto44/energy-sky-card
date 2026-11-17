@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { EnergySkyCardEditor, editorSchema, formData, nextConfig, type SchemaItem } from '../src/energy-sky-card-editor';
+import { EnergySkyCardEditor, editorHelper, editorLabel, editorSchema, formData, nextConfig, type SchemaItem } from '../src/energy-sky-card-editor';
 import { CARD_EDITOR_NAME } from '../src/constants';
+import { CARD_STRINGS } from '../src/localize';
 import { FULL_CONFIG, makeHass } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -202,6 +203,37 @@ describe('the layout', () => {
         expect(changes.at(-1)).not.toHaveProperty('layout');
         change({ layout: 'side' });
         expect(changes.at(-1)?.layout).toBe('side');
+    });
+});
+
+describe('English and French', () => {
+    it('labels every field and block, and offers every help, in both languages', () => {
+        for (const lang of ['fr', 'en'] as const) {
+            const data = { cell_1: 'custom', cell_2: 'battery' };
+            for (const block of editorSchema(lang, data)) {
+                expect(block.title).toBeTruthy();
+                for (const field of block.schema ?? []) {
+                    expect(editorLabel(lang, field.name), `${lang} ${field.name}`).not.toBe(field.name);
+                    const other = lang === 'fr' ? 'en' : 'fr';
+                    expect(editorHelper(lang, field.name, block.name) === undefined).toBe(editorHelper(other, field.name, block.name) === undefined);
+                }
+            }
+        }
+        expect(editorLabel('en', 'kind_custom')).toBe('Free (any entity)');
+        expect(editorLabel('en', 'loading')).toBe('Loading the editor…');
+    });
+
+    it('gives the card the same strings in both languages', () => {
+        expect(Object.keys(CARD_STRINGS.en).sort()).toEqual(Object.keys(CARD_STRINGS.fr).sort());
+    });
+});
+
+describe('help under the layout fields', () => {
+    it('explains the unfolding in both languages, and nothing under the layout', () => {
+        expect(editorHelper('fr', 'expandable')).toBe('Toucher le grand chiffre ou sa ligne déplie le flux d\'énergie (solaire, réseau, batterie, maison) sous la carte ; toucher un élément ouvre son entité. Le reste de la carte garde son « Appui ».');
+        expect(editorHelper('en', 'expandable')).toMatch(/^A tap on the big number .* keeps its Tap\.$/);
+        expect(editorHelper('fr', 'layout')).toBeUndefined();
+        expect(editorHelper('en', 'layout')).toBeUndefined();
     });
 });
 

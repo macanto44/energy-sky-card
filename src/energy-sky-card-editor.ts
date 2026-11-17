@@ -80,8 +80,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Facultatif : affichée après la charge, « 78 % ↑ · 24 °C ».',
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
-        expandable: 'Toucher le grand chiffre ou sa ligne déplie le flux d\'énergie (solaire, réseau, batterie, maison) sous la carte ; toucher un élément ouvre son entité. Le reste de la carte garde son « Appui ». La carte règle alors sa hauteur elle-même (hauteur « auto » dans la vue sections).',
-        layout: 'En Côté, l\'icône remplace le nom de chaque case (il s\'affiche au survol). Sur un tableau en sections, ajustez la hauteur de la carte si vous l\'aviez réglée à la main.',
+        expandable: 'Toucher le grand chiffre ou sa ligne déplie le flux d\'énergie (solaire, réseau, batterie, maison) sous la carte ; toucher un élément ouvre son entité. Le reste de la carte garde son « Appui ».',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
     },
     en: {
@@ -92,8 +91,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Optional: shown after the charge, "78% ↑ · 24 °C".',
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
-        expandable: 'A tap on the big number or its line unfolds the energy flow (solar, grid, battery, home) under the card; a tap on a node opens its entity. The rest of the card keeps its Tap. The card then sets its own height ("auto" in the sections view).',
-        layout: 'In Side, the icon stands for each cell\'s name (shown on hover). On a sections dashboard, adjust the card\'s height if you had set it by hand.',
+        expandable: 'A tap on the big number or its line unfolds the energy flow (solar, grid, battery, home) under the card; a tap on a node opens its entity. The rest of the card keeps its Tap.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
     },
 };
