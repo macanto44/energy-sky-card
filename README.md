@@ -1,54 +1,135 @@
 # Energy Sky Card
 
-Une carte de tableau de bord Home Assistant qui affiche la production solaire, la batterie et le réseau sur un ciel qui porte une information : la couleur tarifaire du jour (EDF Tempo) en journée, un ciel étoilé la nuit.
+**Your solar power, under your own sky.**
 
-*[English below](#english)*
+[![GitHub Release](https://img.shields.io/github/v/release/macanto44/energy-sky-card?style=flat-square)](https://github.com/macanto44/energy-sky-card/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square)](https://github.com/macanto44/energy-sky-card)
+[![Home Assistant](https://img.shields.io/badge/Home_Assistant-2024.8%2B-41BDF5.svg?style=flat-square)](https://www.home-assistant.io/)
+[![License](https://img.shields.io/github/license/macanto44/energy-sky-card?style=flat-square)](https://github.com/macanto44/energy-sky-card/blob/main/LICENSE)
 
-| Jour Bleu | Jour Blanc |
+| Bleu day | Blanc day |
 |---|---|
-| ![Jour Bleu](docs/images/bleu.png) | ![Jour Blanc](docs/images/blanc.png) |
-| **Jour Rouge** | **Nuit** |
-| ![Jour Rouge](docs/images/rouge.png) | ![Nuit, animée : les étoiles scintillent, une étoile filante passe](docs/images/nuit-anim.png) |
+| ![A blue sky card: 3.2 kW of solar, 7.2 kWh today, battery at 78 % and charging, 1.8 kW sold to the grid](docs/images/bleu.png) | ![A grey-blue sky card on a Blanc day: 860 W of solar, the battery full](docs/images/blanc.png) |
+| **Rouge day** | **Night** |
+| ![A red sky card on a Rouge day: 6.0 kW of solar, the battery discharging](docs/images/rouge.png) | ![The night card, animated: stars twinkle and a shooting star passes](docs/images/nuit-anim.png) |
 
-| Format côté (`layout: side`), 2 rangées | Dépliée (`expandable: true`) |
-|---|---|
-| ![Format côté : le grand chiffre à gauche, les cases à droite en icône + valeur](docs/images/cote.png) | ![Carte dépliée : le flux d'énergie entre solaire, réseau, batterie et maison](docs/images/deplie.png) |
+Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a background that tells you something too: the colour of today's electricity tariff by day (EDF Tempo's Bleu, Blanc and Rouge days), a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
 
-## Ce que montre la carte
+It's free, open source and made for Home Assistant. The card is in French and English.
 
-- **Production solaire instantanée**, en grand : « 748 W », puis « 3,2 kW » à partir de 1 000 W.
-- **Énergie produite aujourd'hui** : la somme de plusieurs compteurs journaliers. Un compteur indisponible est simplement laissé de côté.
-- **Quatre mesures** (chacune facultative : une case sans entité disparaît) :
-  - **Batterie** : charge en %, ↑ en charge, ↓ en décharge, et « · SOC atteint » quand la batterie a atteint la charge que vous visez (voir `soc_reached_entities` plus bas) ; rien sinon. Sur un écran trop étroit : « · SOC ✓ ».
-  - **Réseau** : la puissance échangée avec le réseau, précédée d'un « - » en cas d'injection (« 748 W » acheté, « -1,8 kW » injecté).
-  - **Tension** : en volts, ou « Coupure » quand l'alarme de perte réseau est déclenchée.
-  - **Prévu demain** : la prévision de production en kWh.
-- **Le fond** : un dégradé dans la couleur Tempo du jour, avec un halo solaire d'autant plus intense que la production est forte ; après le coucher du soleil, un ciel étoilé.
-- **Des animations sobres** : le halo solaire respire (il pâlit et grandit) quand les panneaux produisent et des ombres de nuages traversent lentement la carte ; la nuit, les étoiles scintillent sur tout le ciel et des étoiles filantes passent de temps en temps, sans jamais passer sous le texte. Elles s'arrêtent quand la carte est hors écran ou l'onglet caché, et ne démarrent pas si l'appareil demande moins d'animations (`prefers-reduced-motion`).
-- Une valeur indisponible s'affiche « — », jamais `unknown` ni `NaN`.
+[Install](#install) · [Set up](#set-up) · [Examples](#examples) · [Options](#options) · [Troubleshooting](#troubleshooting)
+
+---
+
+## The sky tells you the tariff.
+
+By day, the background is a gradient in today's tariff colour, read from a sensor such as the EDF Tempo integration's. A sun halo in the corner grows with your production: faint on a grey morning, bright at noon. After sunset, the sky turns to night, whatever the tariff. Any tariff sensor works: the palettes are keyed by its states, and you can add your own.
+
+## Quiet, not busy.
+
+The halo breathes slowly while the panels produce, and cloud shadows drift across the card. At night, stars twinkle over the whole sky and a shooting star passes now and then. Nothing ever moves behind the text, and nothing moves at all when the card is off-screen, the tab is hidden, your device asks for reduced motion, or you set `animate: false`. Day and night cross-fade over three seconds.
+
+## What it shows.
+
+- **Solar power now**, large: `748 W`, then `3.2 kW` from 1,000 W. Several production sensors (micro-inverters and a string inverter, say) are added up.
+- **Energy produced today**, the sum of your daily meters: `7.2 kWh produced`.
+- **Up to four cells** below:
+  - **Battery**: the charge, `↑` when charging, `↓` when discharging, the temperature if you have it (`78 % ↑ · 18 °C`), and `· SOC reached` when it has reached the charge you aim for.
+  - **Grid**: the power exchanged, with a `-` when you sell: `748 W` bought, `-1.8 kW` sold.
+  - **Voltage**, or `Outage` when your grid-loss alarm goes off.
+  - **Tomorrow**: the production forecast.
+  - **Consumption**: your home's power use.
+  - **Any entity you like**, with your own name and icon.
+- At night, the big number can show your **home's consumption** or the **battery's charge** instead of a production of zero.
+- A reading that isn't available shows `—`, never `unknown` or `NaN`.
+
+## Two shapes.
+
+The **standard** layout puts the cells under the big number, in four rows. The **side** layout lists them on the right, an icon and a value per line, in two rows: half the height for the same readings.
+
+![The side layout: 3.2 kW and 7.2 kWh on the left, battery, grid, voltage and tomorrow on the right, each as an icon and a value](docs/images/cote.png)
+
+## Tap to see the flow.
+
+With `expandable: true`, a tap on the big number or the line under it unfolds the card, in either layout. Under it, the energy flows between four nodes: the sun on the left, the home on the right, the grid above and the battery below.
+
+![The unfolded card on a Rouge day: the sun sends 6.0 kW to the home and the grid, the battery feeds the home with 2.3 kW](docs/images/deplie.png)
+
+- **The colour says where the energy comes from**: gold for the sun, mint for the battery, ice blue for the grid. Energy you sell stays gold on its way to the grid.
+- **The wire says how much**: the more power, the thicker the wire and the more and faster the comets that run along it. An idle wire is a faint dotted line.
+- **The grid ↔ battery link** runs down the middle, under the sun → home wire (a small gap shows it's a bridge, not a junction). It lights up when the grid charges the battery, at off-peak hours for instance, or when the battery sells.
+- **The flows add up like your meters.** What you sell comes from the sun first, then the battery. What charges the battery comes from the sun first, then the grid. The home gets the rest. A battery below its idle threshold moves nothing.
+- **Each node** shows its power with the card's signs (grid negative when selling, battery negative when discharging) and a ring: production against your maximum, the battery's charge (with the percentage in the middle), and the share of each source in what your home uses.
+- **Tap a node** to open its entity. A tap on the unfolded part folds it again.
+
+The rest of the card keeps its own tap action, so a menu or a pop-up you open from the card still works. Hold and double tap stay the card's, on the big number too.
+
+## At home on any screen.
+
+In the sections view the card takes the full width. It fits a 320 px phone without cutting a word: the big number steps down from 56 to 48 and 40 px, the spacing tightens at three rows, and long complements shorten (`· SOC reached` → `· SOC ✓`, `18 °C` → `18°`). Numbers follow your profile's number format (`3,2 kW` or `3.2 kW`).
+
+White text keeps at least a 4.5:1 contrast where it sits on every default palette, day and night. A test checks it.
+
+---
+
+## Install
+
+### What you need
+
+- **A solar power sensor**, in W or kW. Several are added up.
+- **Optional:** daily energy meters, a battery (charge, power, temperature), a grid power sensor, a voltage sensor, a grid-loss alarm, a forecast for tomorrow, a home consumption sensor, and a tariff colour sensor (today's colour from an EDF Tempo integration, for example).
+
+The card ships as two files that sit in the same folder:
+
+| File | What it is |
+| --- | --- |
+| `energy-sky-card.js` | The card. This is the only dashboard resource. |
+| `energy-sky-card-editor.js` | The visual editor. It loads the first time you open the card's settings. |
 
 <!-- ha-marketplace:exclude-start -->
-## Installation
+### Marketplace (Home Assistant 2026.11 and later)
 
-### Marketplace (Home Assistant 2026.11 et plus)
+1. Go to **Settings → Marketplace**, select **⋮ → Add from link** and enter `https://github.com/macanto44/energy-sky-card`, as a **Dashboard**.
+2. Install **Energy Sky Card**.
+3. Refresh your browser.
 
-1. **Paramètres → Marketplace**, menu **⋮ → Ajouter depuis un lien** (dépôt personnalisé).
-2. Collez `https://github.com/macanto44/energy-sky-card`, catégorie **Dashboard**.
-3. Installez **Energy Sky Card**, puis rechargez la page.
+New versions show up under **Settings → Updates**.
 
-Avant 2026.11, la même chose se fait dans HACS : **⋮ → Dépôts personnalisés**, catégorie **Dashboard**.
+### HACS (before Home Assistant 2026.11)
 
-### À la main
+In HACS, select **⋮ → Custom repositories**, add `https://github.com/macanto44/energy-sky-card` as a **Dashboard**, then download **Energy Sky Card** and refresh your browser.
 
-1. Téléchargez `energy-sky-card.js` et `energy-sky-card-editor.js` depuis la [dernière release](https://github.com/macanto44/energy-sky-card/releases) et copiez-les **dans le même dossier**, par exemple `/config/www/energy-sky-card/`.
-2. **Paramètres → Tableaux de bord → ⋮ → Ressources**, ajoutez `/local/energy-sky-card/energy-sky-card.js?v=0.3.3`, type **Module JavaScript**.
+### Manual
+
+1. Download [`energy-sky-card.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card.js) and [`energy-sky-card-editor.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card-editor.js) from the [latest release](https://github.com/macanto44/energy-sky-card/releases/latest).
+2. Copy both to the same folder, for example `/config/www/energy-sky-card/`.
+3. Go to **Settings → Dashboards → ⋮ → Resources → Add resource** and add:
+   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.3.3`
+   - Type: **JavaScript module**
+4. Refresh your browser.
+
+To update, overwrite both files and raise the `?v=` in the resource URL so browsers fetch the new version. The editor picks up the same `?v=` by itself.
 <!-- ha-marketplace:exclude-end -->
 
-## Configuration
+## Set up
 
-Ajoutée depuis le sélecteur de cartes, elle se pré-remplit avec les capteurs du **tableau de bord Énergie** (production, batterie, réseau, et les capteurs des mêmes appareils : charge, température, tension, production du jour, prévision de demain) et la couleur Tempo du jour si une entité la donne. Vérifiez le sens des puissances (voir plus bas).
+1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
+2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
+3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Cells** (layout, unfolding, and the four cells), **Tariff and sky**, and **Actions**.
 
-La carte se configure dans l'éditeur visuel (tout sauf les palettes) ou en YAML :
+Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
+
+```yaml
+type: custom:energy-sky-card
+production_entity: sensor.solar_power
+```
+
+## Examples
+
+Every example below is a complete card configuration. Replace the entity IDs with your own.
+
+### Solar, battery and grid
 
 ```yaml
 type: custom:energy-sky-card
@@ -60,91 +141,70 @@ daily_production_entities:
 battery:
   soc_entity: sensor.battery_soc
   power_entity: sensor.battery_power
-  soc_reached_entities:
-    - input_boolean.battery_target_reached
+  temperature_entity: sensor.battery_temperature
 grid:
   power_entity: sensor.grid_power
   voltage_entity: sensor.grid_voltage
   outage_entity: sensor.grid_lost_alarm
-  outage_states: [warning, alarm]
 forecast_tomorrow_entity: sensor.energy_production_tomorrow
 tariff_color_entity: sensor.edf_tempo_couleur_aujourd_hui
-tap_action:
-  action: navigate
-  navigation_path: '#popup-flux-energie'
 ```
 
-| Option | Défaut | Description |
-|---|---|---|
-| `production_entity` | **obligatoire** | Puissance solaire instantanée (W ; kW converti). Une entité, ou une liste additionnée (micro-onduleurs + onduleur de chaîne…) ; une entité indisponible est laissée de côté. |
-| `production_max` | `6000` | Puissance (W) à laquelle le halo est au maximum. |
-| `daily_production_entities` | — | Compteurs journaliers (kWh ; Wh converti), additionnés. Sans eux, pas de ligne « kWh produits ». |
-| `battery.soc_entity` | — | Charge de la batterie (%). Sans elle, pas de case Batterie. |
-| `battery.power_entity` | — | Puissance batterie (W), positive en charge : flèches ↑ / ↓. |
-| `battery.temperature_entity` | — | Température de la batterie, affichée après la charge : « 78 % ↑ · 24 °C ». Sur une carte étroite, « 78 % ↑ · 24° ». |
-| `battery.invert` | `false` | `true` si votre capteur est positif en **décharge** (Huawei, SolarEdge… selon l'intégration). |
-| `battery.power_threshold` | `20` | En dessous de cette puissance (W), la batterie est au repos : pas de flèche. (Avant 0.1.2 : `power_threshold` au premier niveau, toujours accepté.) |
-| `battery.soc_reached_entities` | — | Une ou plusieurs entités `on` / `off` (`input_boolean`, `binary_sensor`, `switch`) qui disent que la batterie a atteint sa charge cible. Si l'une est `on`, la case affiche « · SOC atteint » ; sinon rien. Sans elles, jamais de mention. (Avant 0.1.2 : `lock_entities`, toujours accepté.) |
-| `grid.power_entity` | — | Puissance réseau (W), positive à l'achat. |
-| `grid.invert` | `false` | `true` si votre capteur est positif à la **vente** (injection). |
-| `grid.voltage_entity` | — | Tension réseau (V). |
-| `grid.outage_entity` | — | Entité d'alarme de coupure. |
-| `grid.outage_states` | `[warning, alarm]` | États de `outage_entity` qui signifient « Coupure ». |
-| `forecast_tomorrow_entity` | — | Prévision de production pour demain (kWh). |
-| `consumption_entity` | — | Consommation de la maison (W). Pour la case « Consommation » et `night_hero`. |
-| `night_hero` | `production` | Ce que montre le grand chiffre la nuit : `production`, `consumption` (il faut `consumption_entity`) ou `battery` (il faut `battery.soc_entity`). La ligne du dessous dit alors ce que c'est : « Consommation · 7,2 kWh produits ». |
-| `expandable` | `false` | `true` : toucher le grand chiffre ou sa ligne déplie le flux d'énergie sous la carte (voir « Déplier »). Aussi dans le bloc Cases de l'éditeur. |
-| `layout` | `standard` | `standard` : les cases sous le grand chiffre (4 rangées). `side` : les cases à droite, une ligne chacune, l'icône à la place du nom (2 rangées, voir « Taille »). Aussi dans le bloc Cases de l'éditeur. |
-| `cells` | automatique | Les cases du bas, 4 au plus, dans l'ordre (voir plus bas). Sans elle : Batterie, Réseau, Tension, Prévu demain, selon les entités renseignées. |
-| `tariff_color_entity` | — | Couleur tarifaire du jour (`Bleu`, `Blanc`, `Rouge`). Inconnue : Bleu. |
-| `tariff_palettes` | voir plus bas | Remplace ou ajoute des palettes (YAML seulement). |
-| `sun_entity` | `sun.sun` | `below_horizon` : la nuit. |
-| `animate` | `true` | `false` coupe toutes les animations. |
-| `tap_action`, `hold_action`, `double_tap_action` | plus d'infos sur la production | Les actions natives de Home Assistant (`navigate`, `more-info`, `perform-action`, `url`, `none`…). |
+### Compact, with the flow
 
-### Le sens des puissances
-
-La carte attend une puissance réseau **positive à l'achat** et une puissance batterie **positive en charge**. Toutes les intégrations ne font pas ainsi : si la case Réseau affiche « -748 W » alors que vous achetez, ou ↓ alors que la batterie charge, ajoutez `invert: true` dans le bloc concerné (ou cochez « Inverser le signe du capteur » dans l'éditeur).
-
-### Les cases
-
-Par défaut, la carte montre les cases dont les entités sont renseignées. `cells` les choisit et les ordonne (4 au plus) : `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, ou une case libre pour n'importe quelle entité, avec un nom et une icône facultatifs :
+Two rows on the dashboard, the energy flow one tap away. The home's consumption makes the Home node tappable and can take over the big number at night.
 
 ```yaml
+type: custom:energy-sky-card
+layout: side
+expandable: true
+production_entity:
+  - sensor.micro_inverters_power
+  - sensor.string_inverter_power
 consumption_entity: sensor.home_power
+night_hero: consumption
+daily_production_entities:
+  - sensor.solar_energy_today
+battery:
+  soc_entity: sensor.battery_soc
+  power_entity: sensor.battery_power
+  invert: true
+grid:
+  power_entity: sensor.grid_power
+tariff_color_entity: sensor.edf_tempo_couleur_aujourd_hui
+hold_action:
+  action: navigate
+  navigation_path: /energy
+```
+
+### Your own cells
+
+Pick up to four cells and their order. A free cell shows any entity; each cell can have its own tap action.
+
+```yaml
+type: custom:energy-sky-card
+production_entity: sensor.solar_power
+consumption_entity: sensor.home_power
+battery:
+  soc_entity: sensor.battery_soc
+  power_entity: sensor.battery_power
+grid:
+  power_entity: sensor.grid_power
 cells:
   - battery
-  - grid
-  - consumption
-  - entity: sensor.ev_battery_level
-    name: Voiture
-    icon: mdi:car-electric
-```
-
-Une case libre affiche une puissance comme le reste de la carte (W / kW), et toute autre valeur comme Home Assistant la présente (unité, précision, états traduits). Sans nom, elle prend celui de l'entité ; sans icône, celle de l'entité.
-
-**Un appui sur une case.** Chaque case peut avoir sa propre action, choisie dans l'éditeur (bloc Cases, « Appui sur la case ») ou en YAML avec `tap_action` : plus d'infos, naviguer, ouvrir une URL, lancer une action, rien… Une case intégrée s'écrit alors `{ type: …, tap_action: … }`. Sans action, un appui ouvre l'entité de la case (Batterie → la charge, Réseau → la puissance…), sauf si la carte a son propre `tap_action`, qui s'applique alors.
-
-```yaml
-cells:
-  - type: battery
+  - type: grid
     tap_action:
       action: navigate
       navigation_path: /energy
-  - type: grid
-    tap_action:
-      action: url
-      url_path: https://www.services-rte.com
-  - voltage
+  - consumption
   - entity: sensor.ev_battery_level
-    name: Voiture
-    tap_action:
-      action: more-info
+    name: Car
+    icon: mdi:car-electric
 ```
 
-### « SOC atteint »
+### "SOC reached"
 
-La carte n'a pas d'avis sur ce qu'est une batterie « pleine » : c'est à vous de le dire avec une entité qui passe à `on`. Par exemple, un `binary_sensor` modèle allumé à partir de 95 % :
+The card has no opinion on what a full battery is: an entity tells it. A template binary sensor that turns on from 95 %:
 
 ```yaml
 template:
@@ -153,31 +213,30 @@ template:
         state: "{{ states('sensor.battery_soc') | float(0) >= 95 }}"
 ```
 
-puis `soc_reached_entities: [binary_sensor.battery_target_reached]`. Si votre installation a déjà un interrupteur qui bloque la charge à un certain niveau, mettez-le directement.
+Then, in the card:
 
-### Déplier : le flux d'énergie
+```yaml
+battery:
+  soc_entity: sensor.battery_soc
+  soc_reached_entities:
+    - binary_sensor.battery_target_reached
+```
 
-Avec `expandable: true`, toucher le grand chiffre ou la ligne du dessous déplie la carte (dans les deux formats) et montre où va l'énergie en ce moment : le soleil à gauche, la maison à droite, le réseau en haut, la batterie en bas. Toucher la partie dépliée la replie.
+If your installation already has a switch or an `input_boolean` that holds the charge at a level, use it directly. When any of the entities is on, the Battery cell reads `· SOC reached`.
 
-- La couleur dit d'où vient l'énergie (doré : solaire, menthe : batterie, bleu glacier : réseau) ; plus la puissance est forte, plus le fil est épais et plus les comètes sont nombreuses et rapides. Un fil sans courant est un pointillé.
-- Le réseau et la batterie sont reliés par le milieu (le fil passe sous celui du solaire, avec un petit pont) : il s'allume quand le réseau charge la batterie, en heures creuses par exemple, ou quand la batterie vend.
-- Les flux suivent les compteurs : ce qui est vendu vient d'abord du soleil, puis de la batterie ; ce qui charge la batterie vient d'abord du soleil, puis du réseau ; la maison reçoit le reste. Une batterie sous `battery.power_threshold` est au repos.
-- Chaque élément montre sa puissance avec le signe de la carte : Réseau négatif quand vous vendez, Batterie négative en décharge. Les anneaux : la production rapportée à `production_max`, la charge de la batterie (au centre), la part de chaque source pour la maison.
-- Toucher un élément ouvre son entité. La maison vient de `consumption_entity`, ou se calcule (solaire + réseau − charge de la batterie) ; sans capteur, la toucher n'ouvre rien. Sans batterie ou sans réseau, l'élément disparaît avec ses fils.
-- Le reste de la carte garde son `tap_action` ; l'appui long et le double appui restent ceux de la carte, sur le grand chiffre aussi.
-- La carte règle sa hauteur elle-même : dans la vue sections, sa hauteur passe à « auto » (l'éditeur le fait en cochant l'option). Les comètes s'arrêtent carte repliée, hors écran, et avec `animate: false` ou « mouvement réduit ».
+### A pop-up on tap
 
-### Ouvrir un pop-up Bubble Card
+The card's tap action can open a [Bubble Card](https://github.com/Clooos/Bubble-Card) pop-up, or anything else Home Assistant's actions do:
 
 ```yaml
 tap_action:
   action: navigate
-  navigation_path: '#popup-flux-energie'
+  navigation_path: '#energy-popup'
 ```
 
-### Palettes
+### Your own palettes
 
-Chaque palette donne trois couleurs, du haut vers le bas du dégradé (0 %, 60 %, 100 %) :
+Each palette is three colours, from the top of the gradient to the bottom (0 %, 60 %, 100 %), keyed by your tariff sensor's states (case doesn't matter). These are the defaults; add a key for any other state your sensor has:
 
 ```yaml
 tariff_palettes:
@@ -186,84 +245,157 @@ tariff_palettes:
   Rouge: ['#d2766a', '#ac443a', '#76261f']
 ```
 
-Les palettes par défaut sont légèrement plus sombres en haut que celles du prototype : avec celles d'origine, le texte blanc n'atteignait pas le contraste minimal (4,5:1 pour les valeurs, 3:1 pour les étiquettes et le grand chiffre). Un test vérifie chaque palette à l'endroit où se trouve le texte. Si vous fournissez vos propres couleurs, gardez-les assez sombres pour le texte blanc.
+Keep your colours dark enough for white text: the defaults are a little darker at the top than they could be, so that the values keep a 4.5:1 contrast.
 
-### Taille
+## Options
 
-Dans une vue « sections », la carte prend toute la largeur et 4 rangées (248 px), avec l'aération du prototype et les mesures ancrées en bas. Réduite à 3 rangées, elle passe à un espacement serré ; quand la largeur manque, le grand chiffre passe de 56 à 48 puis 40 px. Aucune ligne ne déborde à 320 px de large.
+`type: custom:energy-sky-card`
 
-Avec `layout: side`, elle demande 2 rangées (120 px) : le grand chiffre et sa ligne à gauche, les cases à droite, une ligne chacune avec son icône (le nom reste lu par les lecteurs d'écran et s'affiche au survol). Le ciel y est la partie basse du dégradé et le halo se tient au-dessus du grand chiffre, loin des valeurs, pour garder le même contraste. Quand la place manque, les compléments raccourcissent (« SOC ✓ », « 18° »), puis disparaissent (« 78 % ↑ »), le grand chiffre passe de 44 à 40 puis 36 px, et la ligne du dessous peut passer sur deux lignes. Si vous aviez réglé la hauteur de la carte à la main dans la vue sections, ajustez-la après avoir changé de format.
-
----
-
-<a id="english"></a>
-
-# English
-
-A Home Assistant dashboard card showing solar production, battery and grid on a sky that carries information: the day's tariff colour (EDF Tempo) by day, a starry sky at night.
-
-## What it shows
-
-- **Solar power now**, large: "748 W", then "3.2 kW" from 1,000 W.
-- **Energy produced today**: the sum of several daily meters; an unavailable one is left out.
-- **Four metrics** (each optional: a cell without its entity disappears): **Battery** (SOC %, ↑ charging / ↓ discharging, "SOC reached" when the battery has reached your target, see `soc_reached_entities`), **Grid** (the power exchanged, with a "-" when exporting: "748 W" bought, "-1.8 kW" sent back), **Voltage** (or "Outage"), **Tomorrow** (forecast kWh).
-- **Background**: the tariff colour by day with a sun halo scaled to production; a starry sky after sunset.
-- **Quiet animations**: the sun halo breathes (fading and growing) while the panels produce and cloud shadows drift slowly across the card; at night stars twinkle across the whole sky and shooting stars pass now and then, never under the text. Paused off-screen and in hidden tabs; none with `prefers-reduced-motion` or `animate: false`.
-- No reading shows "—", never `unknown` or `NaN`. The card speaks French and English, and follows your profile's number format.
-
-<!-- ha-marketplace:exclude-start -->
-## Installation
-
-**Marketplace (Home Assistant 2026.11+)**: Settings → Marketplace → ⋮ → Add from link, `https://github.com/macanto44/energy-sky-card`, category **Dashboard**. Before 2026.11, add it to HACS as a custom repository (category **Dashboard**).
-
-**Manually**: copy `energy-sky-card.js` and `energy-sky-card-editor.js` from the [latest release](https://github.com/macanto44/energy-sky-card/releases) into the same folder (e.g. `/config/www/energy-sky-card/`) and add `/local/energy-sky-card/energy-sky-card.js?v=0.3.3` as a JavaScript module resource.
-<!-- ha-marketplace:exclude-end -->
-
-## Configuration
-
-Added from the card picker, it fills itself in from the **Energy dashboard** (production, battery, grid, and the sensors on the same devices: charge, temperature, voltage, energy today, tomorrow's forecast) and today's Tempo colour when an entity gives it. Check the power signs (`invert`).
-
-Use the visual editor (everything but the palettes) or YAML. The options are those of the table above:
+### Production
 
 | Option | Default | Description |
-|---|---|---|
-| `production_entity` | **required** | Solar power now (W; kW converted). One entity, or a list that is summed (micro-inverters + string inverter…); an unavailable one is left out. |
-| `production_max` | `6000` | Power (W) at which the halo is strongest. |
-| `daily_production_entities` | — | Daily energy meters (kWh), summed. |
-| `battery.soc_entity` / `power_entity` | — | SOC (%), power (W, positive when charging). |
-| `battery.temperature_entity` | — | Battery temperature, shown after the charge: "78% ↑ · 24 °C" ("78% ↑ · 24°" on a narrow card). |
-| `battery.invert` / `grid.invert` | `false` | `true` when your sensor is positive when discharging / exporting (the card expects positive when charging / importing). |
-| `battery.power_threshold` | `20` | Below this power (W) the battery is idle: no ↑ / ↓ arrow. Before 0.1.2: top-level `power_threshold`, still accepted. |
-| `battery.soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) saying the battery has reached its target charge: when any is on, the cell reads "· SOC reached". E.g. a template `binary_sensor` with `{{ states('sensor.battery_soc') \| float(0) >= 95 }}`. Before 0.1.2: `lock_entities`, still accepted. |
-| `grid.power_entity` / `voltage_entity` / `outage_entity` | — | Power (W, positive when importing), voltage (V), outage alarm. |
-| `grid.outage_states` | `[warning, alarm]` | States of `outage_entity` that mean an outage. |
-| `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |
-| `consumption_entity` | — | The home's power use (W), for the Consumption cell and `night_hero`. |
-| `night_hero` | `production` | What the big number shows at night: `production`, `consumption` or `battery`; the line below names it ("Consumption · 7.2 kWh produced"). |
-| `expandable` | `false` | `true`: a tap on the big number or its line unfolds the energy flow under the card, in both layouts: the sun on the left, the home on the right, the grid above, the battery below, the grid ↔ battery link down the middle (bridged under the sun → home wire: an off-peak charge, or a battery selling); the flows follow the meters (sales come from the sun first, then the battery; the battery's charge from the sun first, then the grid; the home gets the rest; a battery within `battery.power_threshold` idles); colours by source, thicker and busier wires with more power, the card's signs (grid negative when selling, battery negative when discharging); a tap on a node opens its entity, a tap on the unfolded part folds it. The rest of the card keeps its `tap_action`, hold and double tap stay the card's. The card sets its own height (rows "auto" in the sections view; the editor sets it). |
-| `layout` | `standard` | `standard`: the cells under the big number (4 rows). `side`: the cells on its right, one line each, the icon standing for the name (2 rows, 120 px; the sky is the gradient's lower part and the halo stays above the big number, so the contrast holds). Also in the editor's Cells block. |
-| `cells` | automatic | Up to 4 bottom cells, in order: `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, or a free cell `{ entity, name, icon }` for any entity (powers read in W / kW, anything else as Home Assistant formats it). Each cell can take its own `tap_action` (a built-in one is then written `{ type: grid, tap_action: … }`), also set in the editor's Cells block; without one, a tap opens the cell's entity, unless the card has a `tap_action`. |
-| `tariff_color_entity` | — | Today's tariff colour (`Bleu`, `Blanc`, `Rouge`); unknown is Bleu. |
-| `tariff_palettes` | see above | Three colours per tariff, top to bottom (YAML only). |
-| `sun_entity` | `sun.sun` | `below_horizon` means night. |
-| `animate` | `true` | `false` turns every animation off. |
-| `tap_action`, `hold_action`, `double_tap_action` | more-info of production | Home Assistant's own actions. `navigate` to `'#my-popup'` opens a Bubble Card pop-up. |
+| --- | --- | --- |
+| `production_entity` | **required** | Solar power now, in W (kW and MW are converted). One entity, or a list that is added up. An unavailable one is left out of the sum |
+| `production_max` | `6000` | The power, in W, at which the sun halo is at its brightest. Also the full circle of the Sun node's ring |
+| `daily_production_entities` | — | Daily energy meters, in kWh (Wh and MWh are converted), added up for the `kWh produced` line. An unavailable one is left out; with none available, the line reads `— kWh produced`. Without them, no line |
+| `forecast_tomorrow_entity` | — | Tomorrow's production forecast, in kWh, for the Tomorrow cell |
+| `consumption_entity` | — | Your home's power use, in W, for the Consumption cell, `night_hero` and the Home node. Without it, the flow works out the home from the other readings |
+| `night_hero` | `production` | What the big number shows below the horizon: `production`, `consumption` (needs `consumption_entity`) or `battery` (the charge; needs `battery.soc_entity`). The line under it then names it: `Consumption · 7.2 kWh produced` |
 
-The default palettes are slightly darker at the top than the original prototype's, so white text meets WCAG contrast where it sits (tested).
+### Battery
+
+All under `battery:`.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `soc_entity` | — | The battery's charge, in %. Without it, no Battery cell |
+| `power_entity` | — | The battery's power, in W, positive when charging: the `↑` / `↓` arrows and the flow |
+| `temperature_entity` | — | The battery's temperature, shown after the charge in its sensor's unit: `78 % ↑ · 24 °C` |
+| `invert` | `false` | `true` if your sensor is positive when **discharging** (it depends on the integration) |
+| `power_threshold` | `20` | Below this power, in W, the battery is idle: no arrow, and no energy in the flow |
+| `soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) that say the battery has reached its target charge. When any is on, the cell reads `· SOC reached`; otherwise nothing |
+
+### Grid
+
+All under `grid:`.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `power_entity` | — | Power exchanged with the grid, in W, positive when buying. Without it, no Grid cell and no Grid node |
+| `invert` | `false` | `true` if your sensor is positive when **selling** |
+| `voltage_entity` | — | Grid voltage, in V, for the Voltage cell |
+| `outage_entity` | — | A grid-loss alarm. While it's in one of `outage_states`, the Voltage cell reads `Outage` |
+| `outage_states` | `[warning, alarm]` | The states of `outage_entity` that mean an outage |
+
+### Layout and cells
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `layout` | `standard` | `standard`: the cells under the big number, four rows (248 px). `side`: the cells on the right, one line each, the icon standing for the name, two rows (120 px) |
+| `expandable` | `false` | `true`: a tap on the big number or its line unfolds the energy flow under the card. See [Tap to see the flow](#tap-to-see-the-flow) |
+| `cells` | automatic | Up to four cells, in order. Without it: Battery, Grid, Voltage and Tomorrow, those whose entities are set. See below |
+
+Each entry in `cells` is one of:
+
+| Entry | Shows |
+| --- | --- |
+| `battery` | The charge, arrow, temperature and `SOC reached` |
+| `grid` | The grid power, `-` when selling |
+| `voltage` | The voltage, or `Outage` |
+| `tomorrow` | Tomorrow's forecast |
+| `consumption` | The home's power use (needs `consumption_entity`) |
+| `{ type: grid, tap_action: … }` | A built-in cell with a tap action of its own |
+| `{ entity: …, name: …, icon: …, tap_action: … }` | A free cell: any entity. Powers read like the rest of the card (W / kW); anything else as Home Assistant formats it. `name` and `icon` default to the entity's |
+
+A cell without its own `tap_action` opens its entity, unless the card has a `tap_action`, which then applies to the whole card.
+
+### Tariff and sky
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `tariff_color_entity` | — | Today's tariff colour, such as `Bleu`, `Blanc` or `Rouge`. An unknown state, or no entity, gives Bleu |
+| `tariff_palettes` | the three Tempo colours | Three colours per tariff state, top to bottom. Replaces or adds palettes. YAML only |
+| `sun_entity` | `sun.sun` | Night when it's `below_horizon` |
+| `animate` | `true` | `false` turns every animation off |
+
+### Actions
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `tap_action` | more info on the first production sensor | What a tap on the card does. Any Home Assistant action: `more-info`, `navigate`, `url`, `perform-action`, `toggle`, `none`… With `expandable: true`, a tap on the big number unfolds the card instead; the rest of the card keeps this action |
+| `hold_action` | none | What a long press does, on the whole card |
+| `double_tap_action` | none | What a double tap does, on the whole card |
+
+### Renamed options
+
+Older names still work, and the editor saves the new ones:
+
+| Before | Now |
+| --- | --- |
+| `power_threshold` (top level, 0.1.0) | `battery.power_threshold` |
+| `battery.lock_entities` (0.1.0) | `battery.soc_reached_entities` |
+
+## Sizing
+
+In the sections view, the card asks for the full width. Its height:
+
+| Layout | Height | At least |
+| --- | --- | --- |
+| `standard` | 4 rows (248 px) | 3 rows (184 px), with tighter spacing |
+| `side` | 2 rows (120 px) | 2 rows |
+| Either, with `expandable: true` | **auto**: the card sets its own height, folded or unfolded | — |
+
+If you had set the card's height by hand in the **Layout** tab, change it after switching layouts. With `expandable: true`, the editor turns a fixed number of rows into **auto**.
+
+## Languages
+
+The card speaks French and English, following your Home Assistant profile's language (French for `fr`, English otherwise). Numbers follow your profile's number format.
+
+## Troubleshooting
+
+**"Custom element doesn't exist: energy-sky-card"**
+The resource isn't loaded. Check **Settings → Dashboards → Resources**, then reload the page. In the Companion app, reset the frontend cache from the app's settings.
+
+**Still the old version after an update**
+Your browser is using a cached copy. For a manual install, raise the `?v=` in the resource URL. In every case, reload the page.
+
+**The settings panel stays on "Loading the editor…"**
+`energy-sky-card-editor.js` must be in the same folder as `energy-sky-card.js`.
+
+**The grid or battery goes the wrong way**
+The card expects grid power positive when buying and battery power positive when charging. Set `grid.invert: true` or `battery.invert: true`, or tick **Flip the sensor's sign** in the editor.
+
+**The battery arrow flickers between ↑ and ↓**
+Raise `battery.power_threshold` above your battery's standby power.
+
+**No `kWh produced` line**
+Add your daily meters to `daily_production_entities`.
+
+**`SOC reached` never shows**
+It needs `battery.soc_reached_entities`, and one of them `on`. See ["SOC reached"](#soc-reached).
+
+**The unfolded card is cut off**
+Its height must be **auto** in the sections view: open the card's **Layout** tab and set the rows to auto.
+
+**The Home node doesn't open anything**
+Without `consumption_entity`, the card works out the home's power from the other readings, and there's no entity to open.
+
+**The sky shows, but nothing moves**
+Check reduced motion in your system settings, then `animate`. The halo only breathes by day while the panels produce.
 
 ## Development
 
 ```bash
 npm install
 npm run build          # energy-sky-card.js and energy-sky-card-editor.js
-npm run type-check
+npm run type-check     # TypeScript, strict
 npm test               # Vitest
-npm run test:browser   # headless Chrome: animations pause off-screen, nothing overflows at 320 px
-npm run screenshots    # the pictures above, from the demo
+npm run test:browser   # headless Chrome: motion, overflow at 320 px, stars off the text, the unfolded flow
+npm run screenshots    # the pictures in this README, from the demo
 ```
 
-`demo/index.html` runs the built card on sample readings; `demo/shot.sh` screenshots it. See [CLAUDE.md](CLAUDE.md) for a map of the code.
+`demo/index.html` runs the built card on sample readings (`?side`, `?expand`, `?lang=en`…), and `demo/shot.sh` screenshots it. [CLAUDE.md](CLAUDE.md) maps the code, and [CHANGELOG.md](CHANGELOG.md) lists every change.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Third-party notices: [NOTICE.md](NOTICE.md).
+MIT. See [LICENSE](LICENSE). Third-party notices are in [NOTICE.md](NOTICE.md).
