@@ -19,6 +19,40 @@ It's free, open source and made for Home Assistant. The card is in French and En
 
 [Live demo](https://macanto44.github.io/energy-sky-card/) · [Install](#install) · [Set up](#set-up) · [Examples](#examples) · [Options](#options) · [Troubleshooting](#troubleshooting)
 
+<!-- ha-marketplace:exclude-start -->
+## Install
+
+[![Open your Home Assistant instance and open this repository in the Marketplace or HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=macanto44&repository=energy-sky-card&category=plugin)
+
+The button opens the card in your Home Assistant's Marketplace, which offers to add the repository if it doesn't know it yet. Or, by hand:
+
+### Marketplace (Home Assistant 2026.11 and later)
+
+1. Go to **Settings → Marketplace**, select **⋮ → Add from link** and enter `https://github.com/macanto44/energy-sky-card`, as a **Dashboard**.
+2. Install **Energy Sky Card**.
+3. Refresh your browser.
+
+New versions show up under **Settings → Updates**.
+
+### Manual
+
+The card ships as two files that sit in the same folder:
+
+| File | What it is |
+| --- | --- |
+| `energy-sky-card.js` | The card. This is the only dashboard resource. |
+| `energy-sky-card-editor.js` | The visual editor. It loads the first time you open the card's settings. |
+
+1. Download [`energy-sky-card.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card.js) and [`energy-sky-card-editor.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card-editor.js) from the [latest release](https://github.com/macanto44/energy-sky-card/releases/latest).
+2. Copy both to the same folder, for example `/config/www/energy-sky-card/`.
+3. Go to **Settings → Dashboards → ⋮ → Resources → Add resource** and add:
+   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.3.7`
+   - Type: **JavaScript module**
+4. Refresh your browser.
+
+To update, overwrite both files and raise the `?v=` in the resource URL so browsers fetch the new version. The editor picks up the same `?v=` by itself.
+<!-- ha-marketplace:exclude-end -->
+
 ---
 
 ## Your sky: the tariff, one colour, or the weather.
@@ -88,49 +122,6 @@ In the sections view the card takes the full width. It fits a 320 px phone witho
 White text keeps at least a 4.5:1 contrast where it sits on every default palette, day and night, on every weather sky with its clouds passing behind, and on your own solid colour (darkened if need be). A test checks it.
 
 ---
-
-## Install
-
-### What you need
-
-- **A solar power sensor**, in W or kW. Several are added up.
-- **Optional:** daily energy meters, a battery (charge, power, temperature), a grid power sensor, a voltage sensor, a grid-loss alarm, a forecast for tomorrow, a home consumption sensor, and a tariff colour sensor (today's colour from an EDF Tempo integration, for example).
-
-The card ships as two files that sit in the same folder:
-
-| File | What it is |
-| --- | --- |
-| `energy-sky-card.js` | The card. This is the only dashboard resource. |
-| `energy-sky-card-editor.js` | The visual editor. It loads the first time you open the card's settings. |
-
-<!-- ha-marketplace:exclude-start -->
-[![Open your Home Assistant instance and open this repository in the Marketplace or HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=macanto44&repository=energy-sky-card&category=plugin)
-
-The button opens the card in your Home Assistant's Marketplace (or HACS, before 2026.11), which offers to add the repository if it doesn't know it yet. Or, by hand:
-
-### Marketplace (Home Assistant 2026.11 and later)
-
-1. Go to **Settings → Marketplace**, select **⋮ → Add from link** and enter `https://github.com/macanto44/energy-sky-card`, as a **Dashboard**.
-2. Install **Energy Sky Card**.
-3. Refresh your browser.
-
-New versions show up under **Settings → Updates**.
-
-### HACS (before Home Assistant 2026.11)
-
-In HACS, select **⋮ → Custom repositories**, add `https://github.com/macanto44/energy-sky-card` as a **Dashboard**, then download **Energy Sky Card** and refresh your browser.
-
-### Manual
-
-1. Download [`energy-sky-card.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card.js) and [`energy-sky-card-editor.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card-editor.js) from the [latest release](https://github.com/macanto44/energy-sky-card/releases/latest).
-2. Copy both to the same folder, for example `/config/www/energy-sky-card/`.
-3. Go to **Settings → Dashboards → ⋮ → Resources → Add resource** and add:
-   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.3.7`
-   - Type: **JavaScript module**
-4. Refresh your browser.
-
-To update, overwrite both files and raise the `?v=` in the resource URL so browsers fetch the new version. The editor picks up the same `?v=` by itself.
-<!-- ha-marketplace:exclude-end -->
 
 ## Set up
 
