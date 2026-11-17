@@ -34,7 +34,7 @@ for (const [name, seek] of Object.entries(stills)) {
 shoot('docs/images/cote.png', 'bleu', 3000, 2, 120, '&side');
 console.log('docs/images/cote.png');
 // The side layout with its flow always shown and four appliances, at night (a still)
-shoot('docs/images/cote-flux.png', 'nuit', 900, 2, 369, '&side&expand=always&consumers=4', 440);
+shoot('docs/images/cote-flux.png', 'nuit', 900, 2, 406, '&side&expand=always&consumers=4', 440);
 console.log('docs/images/cote-flux.png');
 
 /** A PNG's chunks: [type, data] */
@@ -99,7 +99,7 @@ console.log(`docs/images/nuit-anim.png: ${frames.length} frames, ${(anim.length 
 const flowFrames = [];
 for (let t = 1000; t < 5000; t += DELAY) {
     const f = join(work, `g${flowFrames.length}.png`);
-    shoot(f, 'rouge', t, 1.5, 245, '&expand=always&consumers=2&flowonly', 440);
+    shoot(f, 'rouge', t, 1.5, 285, '&expand=always&consumers=2&flowonly', 440);
     flowFrames.push(f);
 }
 const flowAnim = apng(flowFrames, DELAY);

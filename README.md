@@ -64,6 +64,7 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 - **The grid ↔ battery link** runs down the middle, under the sun → home wire (a small gap shows it's a bridge, not a junction). It lights up when the grid charges the battery, at off-peak hours for instance, or when the battery sells.
 - **The flows add up like your meters.** What you sell comes from the sun first, then the battery. What charges the battery comes from the sun first, then the grid. The home gets the rest. A battery below its idle threshold moves nothing.
 - **Each node** shows its power with the card's signs (grid negative when selling, battery negative when discharging) and a ring: production against your maximum, the battery's charge (with the percentage in the middle), and the share of each source in what your home uses.
+- **It keeps its shape**: the flow's height follows its width (65 % of it, from 220 to 360 px), so it's never squashed on a wide card.
 - **Tap a node** to open its entity.
 - **Your appliances**, up to four (a water heater, a pool pump, a car charger…), sit around the home: the first above it, the second below, then in turn. Each shows its power, a ring with its share of what the home uses, and a lilac wire from the home that busies up with its power. One or two get a whole node with their name when the card is wide enough; more, or on a phone, they turn compact (the icon in its ring and the power; the name on hover and for screen readers), and a phone shows the first two. Tap one to open its entity, or give it a `tap_action` of its own. An appliance below 10 W (`consumer_threshold`) stays out of the flow, and the others move up.
 
@@ -280,7 +281,7 @@ Keep your colours dark enough for white text: the defaults are a little darker a
 
 ### The flow's colours
 
-The flow's wires and rings take one colour per source. Change them for one card with `flow_colors` (any CSS colour, a theme variable too):
+The flow's wires and rings take one colour per source. Change them for one card with the colour pickers in the editor's **Layout** section (shown with a flow), or with `flow_colors` in YAML (any CSS colour, a theme variable too):
 
 ```yaml
 flow_colors:
@@ -374,7 +375,7 @@ A cell without its own `tap_action` opens its entity, unless the card has a `tap
 | `tariff_palettes` | the three Tempo colours | Three colours per tariff state, top to bottom. Replaces or adds palettes. YAML only |
 | `sun_entity` | `sun.sun` | Night when it's `below_horizon` |
 | `animate` | `true` | `false` turns every animation off |
-| `flow_colors` | gold, ice blue, mint, lilac | The flow's colours: `solar`, `grid`, `battery`, `consumption`, each any CSS colour. A theme can set them for every card. See [The flow's colours](#the-flows-colours). YAML only |
+| `flow_colors` | gold, ice blue, mint, lilac | The flow's colours: `solar`, `grid`, `battery`, `consumption`, each any CSS colour. Also colour pickers in the editor's Layout section; a theme can set them for every card. See [The flow's colours](#the-flows-colours) |
 
 ### Actions
 

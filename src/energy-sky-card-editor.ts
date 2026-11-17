@@ -7,7 +7,7 @@ import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
 import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
-import { DEFAULT_PRODUCTION_MAX } from './sky';
+import { DEFAULT_PRODUCTION_MAX, FLOW_COLOURS } from './sky';
 import type { CellConfig, CellKind, ConsumerConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The parts of ha-form's schema the editor uses */
@@ -29,6 +29,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production_entity: 'Puissance solaire (W, additionnées)',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
+        flow_color_solar: 'Couleur du solaire', flow_color_grid: 'Couleur du réseau', flow_color_battery: 'Couleur de la batterie', flow_color_consumption: 'Couleur des appareils',
         flow: 'Flux d\'énergie', flow_none: 'Aucun', flow_tap: 'Déplier en touchant le grand chiffre', flow_always: 'Toujours visible',
         layout: 'Format', layout_standard: 'Standard : les cases sous le chiffre (4 rangées)', layout_side: 'Côté : icône + valeur à droite (2 rangées)',
         cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)', cell_tap_action: 'Appui sur la case',
@@ -48,6 +49,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         production_entity: 'Solar power (W, summed)',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
+        flow_color_solar: 'Solar colour', flow_color_grid: 'Grid colour', flow_color_battery: 'Battery colour', flow_color_consumption: 'Appliances colour',
         flow: 'Energy flow', flow_none: 'None', flow_tap: 'Unfold on a tap on the big number', flow_always: 'Always shown',
         layout: 'Format', layout_standard: 'Standard: the cells under the number (4 rows)', layout_side: 'Side: icon + value on the right (2 rows)',
         cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)', cell_tap_action: 'Tap on the cell',
@@ -83,7 +85,6 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Facultatif : affichée après la charge, « 78 % ↑ · 24 °C ».',
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
-        flow: 'Le flux entre solaire, réseau, batterie et maison, sous la carte ; toucher un élément ouvre son entité. « Déplier en touchant » : toucher le grand chiffre ou sa ligne le montre ou le cache, le reste de la carte garde son « Appui ».',
         consumers: 'Un capteur de puissance (W) par appareil, quatre au plus : le premier au-dessus de « Maison », le deuxième en dessous, puis on alterne.',
         consumer_tap_action: 'Par défaut : ouvre l\'entité de l\'appareil.',
         consumer_threshold: 'En dessous de cette puissance, un appareil n\'apparaît pas dans le flux. 10 W si vide ; 0 les montre toujours.',
@@ -97,7 +98,6 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         temperature_entity: 'Optional: shown after the charge, "78% ↑ · 24 °C".',
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
-        flow: 'The flow between solar, grid, battery and home, under the card; a tap on a node opens its entity. "Unfold on a tap": a tap on the big number or its line shows or hides it, the rest of the card keeps its Tap.',
         consumers: 'One power sensor (W) per appliance, four at most: the first above the home, the second below, then in turn.',
         consumer_tap_action: 'By default: opens the appliance\'s entity.',
         consumer_threshold: 'Below this power an appliance stays out of the flow. 10 W when empty; 0 always shows them.',
@@ -174,6 +174,8 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             schema: [
                 { name: 'layout', selector: { select: { mode: 'list', options: (['standard', 'side'] as const).map(value => ({ value, label: t(`layout_${value}`) })) } } },
                 { name: 'flow', selector: { select: { mode: 'list', options: (['none', 'tap', 'always'] as const).map(value => ({ value, label: t(`flow_${value}`) })) } } },
+                // The flow's colours, with a flow (a theme can set them too)
+                ...(data.flow === 'tap' || data.flow === 'always' ? FLOW_COLOR_FIELDS.map(key => ({ name: `flow_color_${key}`, selector: { color_rgb: {} } })) : []),
             ],
         },
         {
@@ -289,8 +291,28 @@ function cellsFromSlots(value: Record<string, unknown>): CellConfig[] {
     return cells;
 }
 
+/** The flow's colours in the editor: Home Assistant's colour picker gives [r, g, b] */
+const FLOW_COLOR_FIELDS = ['solar', 'grid', 'battery', 'consumption'] as const;
+const DEFAULT_FLOW_COLORS: Record<string, string> = { solar: FLOW_COLOURS.sun, grid: FLOW_COLOURS.grid, battery: FLOW_COLOURS.batt, consumption: FLOW_COLOURS.use };
+const FLOW_COLOR_SLOT = /^flow_color_/;
+const isRgb = (v: unknown): v is [number, number, number] => Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number');
+const toHex = (rgb: [number, number, number]) => '#' + rgb.map(n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')).join('');
+/** A #rrggbb colour as [r, g, b]; anything else (a theme variable, a named colour) has no picker value */
+function fromHex(colour: string): [number, number, number] | undefined {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(colour.trim());
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : undefined;
+}
+
+/** The pickers' values: the card's colour, else the default (a colour the picker can't show is left as it is) */
+function flowColorSlots(config: EnergySkyCardConfig): Record<string, unknown> {
+    return Object.fromEntries(FLOW_COLOR_FIELDS.map(key => {
+        const own = config.flow_colors?.[key];
+        return [`flow_color_${key}`, own ? fromHex(own) : fromHex(DEFAULT_FLOW_COLORS[key])];
+    }));
+}
+
 /** The form's slot fields, cells' and appliances', which the config writes as lists */
-const SLOT_KEY = /^(cell|consumer)_\d(_|$)/;
+const SLOT_KEY = /^(cell|consumer)_\d(_|$)|^flow_color_/;
 const CELL_SLOT = /^cell_\d(_|$)/;
 const CONSUMER_SLOT = /^consumer_\d_/;
 
@@ -306,6 +328,7 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         ...config,
         // 0.3.3's expandable: true is flow: tap
         flow: config.flow ?? (config.expandable ? 'tap' : 'none'),
+        ...flowColorSlots(config),
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
         ...cellSlots(config),
         ...consumerSlots(config),
@@ -362,6 +385,19 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
     }
     // No flow is written as no flow option; expandable (0.3.3) is saved as flow
     if (merged.flow === 'none') delete merged.flow;
+    // The colour pickers: written as flow_colors, a colour only when it isn't the default
+    if (Object.keys(value).some(key => FLOW_COLOR_SLOT.test(key))) {
+        const colours = { ...(previous.flow_colors ?? {}) } as Record<string, string>;
+        for (const key of FLOW_COLOR_FIELDS) {
+            const rgb = value[`flow_color_${key}`];
+            if (!isRgb(rgb)) continue;
+            const hex = toHex(rgb);
+            if (hex === DEFAULT_FLOW_COLORS[key]) delete colours[key];
+            else if (!(colours[key] && isRgb(fromHex(colours[key])) && toHex(fromHex(colours[key])!) === hex)) colours[key] = hex;
+        }
+        if (Object.keys(colours).length) merged.flow_colors = colours;
+        else delete merged.flow_colors;
+    }
     delete merged.expandable;
     // The flow changes the height: a fixed number of rows in the sections view would cut it
     const grid = merged.grid_options as { rows?: unknown } | undefined;

@@ -177,6 +177,9 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
 
 /** The drawing is this tall (px); its width is the panel's */
 export const FLOW_HEIGHT = 220;
+/** Taller on a wide card, so it keeps its shape: this share of the width, between FLOW_HEIGHT and FLOW_MAX_HEIGHT */
+export const FLOW_ASPECT = 0.65;
+export const FLOW_MAX_HEIGHT = 360;
 export const NODE_HEIGHT = 46;
 const SAMPLES = 12;
 
@@ -186,6 +189,8 @@ export interface FlowGeometry {
     /** The grid's and the battery's (alone on their rows: wider, while the curves keep some length) */
     centreWidth: number;
     paths: Record<WireKey, string>;
+    /** The drawing's height for this width */
+    height: number;
     /** The appliances, in the config's order */
     consumers: ConsumerPlace[];
     /** One @keyframes per wire, esc-flow-<key> (esc-flow-c<n> for an appliance's): a comet along it (transform only) */
@@ -240,8 +245,9 @@ export function flowGeometry(width: number, consumers = 0): FlowGeometry {
     const W = Math.max(width, 160);
     const nodeWidth = Math.round(Math.min(Math.max((W - 48) / 2, 96), 128));
     const centreWidth = Math.round(Math.min(nodeWidth + 20, W - nodeWidth - 32));
-    const chalf = centreWidth / 2, r = NODE_HEIGHT / 2, mid = FLOW_HEIGHT / 2;
-    const top = 3 + r, bottom = FLOW_HEIGHT - 3 - r, cx = W / 2;
+    const H = Math.round(Math.min(Math.max(W * FLOW_ASPECT, FLOW_HEIGHT), FLOW_MAX_HEIGHT));
+    const chalf = centreWidth / 2, r = NODE_HEIGHT / 2, mid = H / 2;
+    const top = 3 + r, bottom = H - 3 - r, cx = W / 2;
     // The facing edges: the sun's and the home's inner ends, the grid's and the battery's outer ends
     const sunIn = nodeWidth - WIRE_INSET, homeIn = W - nodeWidth + WIRE_INSET;
     const centreLeft = cx - chalf + WIRE_INSET, centreRight = cx + chalf - WIRE_INSET;
@@ -267,7 +273,7 @@ export function flowGeometry(width: number, consumers = 0): FlowGeometry {
     for (let i = 0; i < consumers; i++) {
         const below = i % 2 === 1, rank = Math.floor(i / 2);
         const onSide = Math.min(below ? Math.floor(consumers / 2) : Math.ceil(consumers / 2), perSide);
-        const rowTop = below ? FLOW_HEIGHT - 3 - NODE_HEIGHT : 3;
+        const rowTop = below ? H - 3 - NODE_HEIGHT : 3;
         const homeEdge = below ? mid + r : mid - r, nodeEdge = below ? rowTop : rowTop + NODE_HEIGHT;
         if (rank >= perSide) {
             places.push({ visible: false, compact, below, left: 0, top: rowTop, width: 0, path: '' });
@@ -304,5 +310,5 @@ export function flowGeometry(width: number, consumers = 0): FlowGeometry {
         keyframes += `@keyframes esc-flow-${key} { ${frames.join(' ')} }\n`;
     }
     places.forEach((place, i) => { place.path = paths[`c${i}`] ?? ''; });
-    return { nodeWidth, centreWidth, paths: paths as Record<WireKey, string>, consumers: places, keyframes };
+    return { nodeWidth, centreWidth, height: H, paths: paths as Record<WireKey, string>, consumers: places, keyframes };
 }

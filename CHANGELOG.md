@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- The energy flow keeps its shape on a wide card: its height follows its width (65 % of it, from 220 to 360 px) instead of a fixed 220 px.
+- The flow's colours can be picked in the editor's Layout section (one colour picker per source, shown with a flow); a colour set back to its default leaves the YAML, and a theme variable set in YAML is kept.
+- Editor: no help under the energy flow choice.
+
 ## [0.3.6] — 2026-11-17
 
 No breaking change.

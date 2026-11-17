@@ -213,9 +213,9 @@ describe('English and French', () => {
 });
 
 describe('help under the layout fields', () => {
-    it('explains the energy flow in both languages, and nothing under the layout', () => {
-        expect(editorHelper('fr', 'flow')).toMatch(/^Le flux entre solaire, réseau, batterie et maison/);
-        expect(editorHelper('en', 'flow')).toMatch(/^The flow between solar, grid, battery and home/);
+    it('puts no help under the layout or the energy flow', () => {
+        expect(editorHelper('fr', 'flow')).toBeUndefined();
+        expect(editorHelper('en', 'flow')).toBeUndefined();
         expect(editorHelper('fr', 'layout')).toBeUndefined();
         expect(editorHelper('en', 'layout')).toBeUndefined();
     });
@@ -244,6 +244,29 @@ describe('the energy flow', () => {
         change({ animate: false });
         expect(changes.at(-1)?.flow).toBe('tap');
         expect(changes.at(-1)).not.toHaveProperty('expandable');
+    });
+
+    it('offers a colour picker per source with a flow, showing the default or the card\'s colour', () => {
+        const display = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Disposition')!.schema!.map(f => f.name);
+        expect(display({ flow: 'none' })).toEqual(['layout', 'flow']);
+        expect(display({ flow: 'always' })).toEqual(['layout', 'flow', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
+        expect(editorLabel('fr', 'flow_color_consumption')).toBe('Couleur des appareils');
+        const data = formData({ ...MINIMAL, flow: 'always', flow_colors: { solar: '#ff8800', grid: 'var(--accent-color)' } });
+        expect(data.flow_color_solar).toEqual([255, 136, 0]);
+        // A colour the picker can't show is left to YAML
+        expect(data.flow_color_grid).toBeUndefined();
+        expect(data.flow_color_battery).toEqual([158, 240, 200]);
+    });
+
+    it('saves a picked colour as flow_colors, drops one set back to its default, and keeps a theme variable', () => {
+        const { change, changes } = mount({ ...MINIMAL, flow: 'always', flow_colors: { grid: 'var(--accent-color)' } });
+        change({ animate: false });
+        expect(changes.at(-1)?.flow_colors).toEqual({ grid: 'var(--accent-color)' });
+        change({ flow_color_solar: [255, 136, 0] });
+        expect(changes.at(-1)?.flow_colors).toEqual({ grid: 'var(--accent-color)', solar: '#ff8800' });
+        change({ flow_color_solar: [255, 214, 140] });
+        expect(changes.at(-1)?.flow_colors).toEqual({ grid: 'var(--accent-color)' });
+        expect(changes.at(-1)).not.toHaveProperty('flow_color_solar');
     });
 
     it('turns a fixed number of rows into auto, so the flow isn\'t cut', () => {

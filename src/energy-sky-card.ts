@@ -404,7 +404,8 @@ export class EnergySkyCard extends HTMLElement {
         this.flowWidth = width;
         const shown = this.shownConsumers;
         const geometry = flowGeometry(width, shown.length);
-        flow.svg.setAttribute('viewBox', `0 0 ${width} ${FLOW_HEIGHT}`);
+        flow.svg.setAttribute('viewBox', `0 0 ${width} ${geometry.height}`);
+        flow.box.style.setProperty('--esc-flow-h', `${geometry.height}px`);
         flow.box.style.setProperty('--esc-node-w', `${geometry.nodeWidth}px`);
         flow.box.style.setProperty('--esc-centre-w', `${geometry.centreWidth}px`);
         flow.box.toggleAttribute('data-narrow', geometry.nodeWidth < 112);

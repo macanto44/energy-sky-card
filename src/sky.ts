@@ -30,6 +30,8 @@ export const HALO_MAX_ALPHA = 0.55;
  */
 export const HALO_BREATHE_PEAK = 1;
 export const DEFAULT_PRODUCTION_MAX = 6000;
+/** The energy flow's colours, by where the energy comes from (a theme or flow_colors can change them) */
+export const FLOW_COLOURS = { sun: '#ffd68c', grid: '#cfe0ff', batt: '#9ef0c8', use: '#f4d9ff' } as const;
 /**
  * The side layout (2 rows, 120 px) puts values over the whole height, where
  * the full gradient's top is too light for 15 px text: its sky is the lower

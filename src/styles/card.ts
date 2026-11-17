@@ -1,6 +1,6 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
-import { CLOUD_MAX_ALPHA, CLOUD_RGB, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
+import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOW_COLOURS, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
 import { FLOW_HEIGHT, MAX_CONSUMERS, NODE_HEIGHT, WIRE_KEYS } from '../flow';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
@@ -8,8 +8,7 @@ const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
 /** Side layout: the gradient from SIDE_SKY_FROM down, its first stop a mix of the top two */
 const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90d5) ${pct(1 - SIDE_SKY_FROM / 0.6)}, var(--esc-c1, #2169b0)) 0%, var(--esc-c1, #2169b0) ${pct((0.6 - SIDE_SKY_FROM) / (1 - SIDE_SKY_FROM))}, var(--esc-c2, #1d4f87) 100%)`;
 const SIDE_HALO_AT = `${SIDE_HALO.x}px ${SIDE_HALO.y}px`;
-/** The flow's colours, by where the energy comes from */
-export const FLOW_COLOURS = { sun: '#ffd68c', grid: '#cfe0ff', batt: '#9ef0c8', use: '#f4d9ff' } as const;
+export { FLOW_COLOURS };
 /**
  * Each colour's CSS variable: a Home Assistant theme sets it for every card,
  * flow_colors in the config for one (on the host). The default otherwise.
@@ -20,7 +19,7 @@ const flowColour = (k: keyof typeof FLOW_COLOURS) => `var(${FLOW_COLOUR_VARS[k]}
 export const NODE_GLASS_ALPHA = 0.14;
 /** Per level: the wire's width (px) and one comet's trip (s) */
 const LEVELS = [[1.6, 3.2], [2.4, 2.6], [3.2, 2], [4, 1.4]] as const;
-const nodeTop = (FLOW_HEIGHT - NODE_HEIGHT) / 2;
+
 /**
  * An animation, declared only while motion is on or paused (data-motion),
  * on host attributes; the play state after the shorthand, which resets it
@@ -287,7 +286,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .grabber { position: absolute; left: 50%; bottom: 5px; width: 28px; height: 3px; margin-left: -14px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); }
 .panel { position: relative; z-index: 1; margin: 0 20px; padding: 10px 0 14px; border-top: 1px solid rgba(255, 255, 255, 0.22); font-family: var(--esc-font); }
 :host([data-layout="side"]) .panel { margin: 0 18px 0 20px; }
-.flow { position: relative; height: ${FLOW_HEIGHT}px; --esc-node-w: 118px; --esc-centre-w: 138px; }
+.flow { position: relative; height: var(--esc-flow-h); --esc-flow-h: ${FLOW_HEIGHT}px; --esc-node-w: 118px; --esc-centre-w: 138px; }
 .wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .wire path { fill: none; stroke: currentColor; stroke-linecap: round; }
 .wire .line { stroke-opacity: 0.55; stroke-width: var(--esc-w); }
@@ -313,7 +312,7 @@ ${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].ma
 .wire[data-level="3"] .c3, .wire[data-level="4"] .c3 { --esc-delay: calc(var(--esc-dur) * -0.667); }
 .node {
     position: absolute;
-    top: ${nodeTop}px;
+    top: calc((var(--esc-flow-h) - ${NODE_HEIGHT}px) / 2);
     width: var(--esc-node-w);
     height: ${NODE_HEIGHT}px;
     box-sizing: border-box;
@@ -330,7 +329,7 @@ ${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].ma
 .node[data-node="home"] { right: 0; }
 .node[data-node="grid"], .node[data-node="battery"] { width: var(--esc-centre-w); left: calc(50% - var(--esc-centre-w) / 2); }
 .node[data-node="grid"] { top: 3px; }
-.node[data-node="battery"] { top: ${FLOW_HEIGHT - 3 - NODE_HEIGHT}px; }
+.node[data-node="battery"] { top: calc(var(--esc-flow-h) - ${3 + NODE_HEIGHT}px); }
 .node[data-cell-target] { cursor: pointer; }
 .node[data-cell-target]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .disc { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); display: grid; place-items: center; }

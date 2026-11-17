@@ -122,6 +122,10 @@ describe('flow geometry', () => {
         expect(new Set(props)).toEqual(new Set(['transform', 'opacity']));
     });
 
+    it('grows with the width, so it keeps its shape: 65 % of it, from 220 to 360 px', () => {
+        expect([200, 264, 320, 400, 500, 600, 800].map(w => flowGeometry(w).height)).toEqual([220, 220, 220, 260, 325, 360, 360]);
+    });
+
     it('keeps the four nodes apart, from a phone to a wide card', () => {
         for (const width of [200, 264, 400, 600]) {
             const { nodeWidth } = flowGeometry(width);
@@ -141,12 +145,14 @@ describe('flow geometry', () => {
         const g = flowGeometry(400);
         expect(g.nodeWidth).toBe(128);
         expect(g.centreWidth).toBe(148);
-        expect(g.paths.sg).toBe('M101,87 C101,68 153,68 153,49');
-        expect(g.paths.gh).toBe('M247,49 C247,68 299,68 299,87');
-        expect(g.paths.sb).toBe('M101,133 C101,152 153,152 153,171');
-        expect(g.paths.bh).toBe('M247,171 C247,152 299,152 299,133');
-        expect(g.paths.sh).toBe('M128,110 L272,110');
-        expect(g.paths.gb).toBe('M200,49 L200,171');
+        // 400 px wide: 260 px tall (65 %)
+        expect(g.height).toBe(260);
+        expect(g.paths.sg).toBe('M101,107 C101,78 153,78 153,49');
+        expect(g.paths.gh).toBe('M247,49 C247,78 299,78 299,107');
+        expect(g.paths.sb).toBe('M101,153 C101,182 153,182 153,211');
+        expect(g.paths.bh).toBe('M247,211 C247,182 299,182 299,153');
+        expect(g.paths.sh).toBe('M128,130 L272,130');
+        expect(g.paths.gb).toBe('M200,49 L200,211');
     });
 
     it('keeps the four corners free: every wire stays between the rows, inside the sun\'s and the home\'s inner halves', () => {
@@ -159,7 +165,7 @@ describe('flow geometry', () => {
                 expect(x, `${width}: ${x}`).toBeLessThan(width - g.nodeWidth / 2);
                 // Between the grid row's bottom and the battery row's top
                 expect(y).toBeGreaterThanOrEqual(3 + NODE_HEIGHT - 0.1);
-                expect(y).toBeLessThanOrEqual(FLOW_HEIGHT - 3 - NODE_HEIGHT + 0.1);
+                expect(y).toBeLessThanOrEqual(g.height - 3 - NODE_HEIGHT + 0.1);
             }
             // The curves on each side stay clear of the grid ↔ battery link in the middle
             const xs = (key: string) => [...(g.keyframes.split(`esc-flow-${key} `)[1].split('\n')[0]).matchAll(/translate\(([-\d.]+)px/g)].map(m => Number(m[1]));
@@ -203,11 +209,11 @@ describe('appliances', () => {
     it('sit as whole nodes, one above and one below the home, when there are two and room', () => {
         const g = flowGeometry(400, 2);
         expect(g.consumers.map(c => [c.visible, c.compact, c.below, c.left, c.top, c.width])).toEqual([
-            [true, false, false, 282, 3, 118], [true, false, true, 282, FLOW_HEIGHT - 3 - NODE_HEIGHT, 118],
+            [true, false, false, 282, 3, 118], [true, false, true, 282, g.height - 3 - NODE_HEIGHT, 118],
         ]);
         // A straight wire from the home's edge to the node's
-        expect(g.consumers[0].path).toBe('M351,87 L351,49');
-        expect(g.consumers[1].path).toBe('M351,133 L351,171');
+        expect(g.consumers[0].path).toBe('M351,107 L351,49');
+        expect(g.consumers[1].path).toBe('M351,153 L351,211');
         expect(g.keyframes).toMatch(/@keyframes esc-flow-c0 /);
     });
 
