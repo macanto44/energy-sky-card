@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Breaking:** the older option names are no longer read: top-level `power_threshold` (use `battery.power_threshold`), `battery.lock_entities` (use `battery.soc_reached_entities`) and `cell_tap` (give each cell its own `tap_action`). A card that still has one shows an error that says what to use instead.
+- Internal: one text per cell instead of stacked forms hidden by CSS, one fit for both layouts, table-driven validation, shared test helpers. Nothing changes on screen.
+
 - The unfolded flow's outer wires now run inside: each joins the edges that face each other (the sun's top to the grid's bottom, the battery's top to the home's bottom…) with an S curve between the rows, leaving the four corners free. The flow is 20 px taller, so the curves have room.
 - Editor: no help under Layout, and a shorter one under the unfolding switch.
 

@@ -326,14 +326,15 @@ A cell without its own `tap_action` opens its entity, unless the card has a `tap
 | `hold_action` | none | What a long press does, on the whole card |
 | `double_tap_action` | none | What a double tap does, on the whole card |
 
-### Renamed options
+### Removed options
 
-Older names still work, and the editor saves the new ones:
+These older names are no longer read. A card that still has one shows an error naming what replaces it:
 
-| Before | Now |
+| Removed | Use instead |
 | --- | --- |
-| `power_threshold` (top level, 0.1.0) | `battery.power_threshold` |
-| `battery.lock_entities` (0.1.0) | `battery.soc_reached_entities` |
+| `power_threshold` (top level) | `battery.power_threshold` |
+| `battery.lock_entities` | `battery.soc_reached_entities` |
+| `cell_tap` | a `tap_action` on each cell |
 
 ## Sizing
 

@@ -102,18 +102,6 @@ describe('a tap on a cell', () => {
         expect(cell(card, 'battery').hasAttribute('role')).toBe(false);
     });
 
-    it('opens the cell\'s entity over the card\'s tap_action with more-info, and never with card', () => {
-        const forced = mount({ tap_action: POPUP, cell_tap: 'more-info' });
-        tap(cell(forced.card, 'tomorrow'));
-        tap(forced.target);
-        expect(forced.events.map(e => e.type)).toEqual(['hass-more-info', 'hass-action']);
-        expect(forced.events[0].detail.entityId).toBe('sensor.energy_production_tomorrow_2');
-        document.body.innerHTML = '';
-        const off = mount({ cell_tap: 'card' });
-        tap(cell(off.card, 'battery'));
-        expect(off.events.map(e => e.detail.entityId)).toEqual(['sensor.production_pv']);
-    });
-
     it('makes such a cell a keyboard button, and a free cell opens its own entity', () => {
         const { card, events } = mount({ cells: ['grid', { entity: 'sensor.boiler', name: 'Eau' }] });
         const free = cell(card, 'custom-1');
@@ -167,7 +155,9 @@ describe('a tap on a cell', () => {
         expect(() => mount({ cells: [{ type: 'solar' } as never] })).toThrow(/is neither/);
     });
 
-    it('rejects an unknown cell_tap', () => {
-        expect(() => mount({ cell_tap: 'maybe' as never })).toThrow(/cell_tap/);
+    it('rejects the older option names, saying what replaces them', () => {
+        expect(() => mount({ cell_tap: 'card' } as never)).toThrow('cell_tap is gone: each cell takes its own tap_action');
+        expect(() => mount({ power_threshold: 50 } as never)).toThrow('power_threshold is gone: use battery.power_threshold');
+        expect(() => mount({ battery: { soc_entity: 'sensor.soc', lock_entities: ['input_boolean.x'] } } as never)).toThrow('battery.lock_entities is gone: use battery.soc_reached_entities');
     });
 });

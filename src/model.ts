@@ -9,23 +9,6 @@ import { NO_VALUE, formatEnergy, joinParts, formatKWhValue, formatNumber, format
 export const DEFAULT_POWER_THRESHOLD = 20;
 export const DEFAULT_OUTAGE_STATES = ['warning', 'alarm'];
 
-/**
- * The config under today's option names (0.1.0–0.1.1 names still work):
- * battery.lock_entities becomes battery.soc_reached_entities, and the
- * top-level power_threshold becomes battery.power_threshold. Where both
- * names are set, the new one wins and the old one is dropped.
- */
-export function normalizeConfig<T extends Partial<EnergySkyCardConfig>>(config: T): T {
-    const hasOldThreshold = 'power_threshold' in config;
-    const hasOldLocks = !!config.battery && 'lock_entities' in config.battery;
-    if (!hasOldThreshold && !hasOldLocks) return config;
-    const { power_threshold, ...top } = config as T & { power_threshold?: number };
-    const { lock_entities, ...battery } = (config.battery ?? {}) as NonNullable<EnergySkyCardConfig['battery']> & { lock_entities?: string[] };
-    if (hasOldLocks) battery.soc_reached_entities ??= lock_entities;
-    if (hasOldThreshold) battery.power_threshold ??= power_threshold;
-    return { ...top, battery } as T;
-}
-
 /** A cell's id: its kind for a built-in one, "custom-<n>" for a free one (its place in cells) */
 export type MetricKey = string;
 
@@ -133,16 +116,6 @@ export function cellEntity(config: EnergySkyCardConfig, cell: CellSpec): string 
         case 'consumption': return config.consumption_entity;
         case 'custom': return cell.custom?.entity;
     }
-}
-
-/**
- * For a cell without a tap action of its own: whether a tap opens its
- * entity's dialog (yes, unless the card has a tap_action) rather than the
- * card's action. cell_tap (0.3.1) still decides when set.
- */
-export function cellTapOpensEntity(config: Pick<EnergySkyCardConfig, 'cell_tap' | 'tap_action'>): boolean {
-    if (config.cell_tap === 'card') return false;
-    return config.cell_tap === 'more-info' || config.tap_action === undefined;
 }
 
 /** The cells' keys, in grid order */

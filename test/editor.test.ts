@@ -108,24 +108,6 @@ describe('the « SOC atteint » option', () => {
         expect(form.computeHelper!({ name: 'soc_reached_entities' })).toMatch(/affiche « · SOC atteint »/);
         expect(form.computeHelper!({ name: 'production_max' })).toBeUndefined();
     });
-
-    it('moves the old top-level power_threshold into battery on the next save', () => {
-        const old = { ...MINIMAL, power_threshold: 50, battery: { soc_entity: 'sensor.soc' } } as EnergySkyCardConfig;
-        const { form, change, changes } = mount(old);
-        expect(form.data?.battery).toEqual({ soc_entity: 'sensor.soc', power_threshold: 50 });
-        expect(form.data).not.toHaveProperty('power_threshold');
-        change({ animate: false });
-        expect(changes.at(-1)).toMatchObject({ battery: { soc_entity: 'sensor.soc', power_threshold: 50 } });
-        expect(changes.at(-1)).not.toHaveProperty('power_threshold');
-    });
-
-    it('moves the old battery.lock_entities to soc_reached_entities on the next save', () => {
-        const old = { ...MINIMAL, battery: { soc_entity: 'sensor.soc', lock_entities: ['input_boolean.x'] } } as EnergySkyCardConfig;
-        const { form, change, changes } = mount(old);
-        expect(form.data?.battery).toEqual({ soc_entity: 'sensor.soc', soc_reached_entities: ['input_boolean.x'] });
-        change({ animate: false });
-        expect(changes.at(-1)?.battery).toEqual({ soc_entity: 'sensor.soc', soc_reached_entities: ['input_boolean.x'] });
-    });
 });
 
 describe('the 0.2 options', () => {

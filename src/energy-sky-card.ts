@@ -3,7 +3,7 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS } from './styles/card';
-import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, cellTapOpensEntity, configuredCells, metricForm, normalizeConfig, productionEntities, trackedEntities, type CardView, type MetricKey } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, configuredCells, metricForm, productionEntities, trackedEntities, type CardView, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { CLOUDS, computeBackground, isHexColor } from './sky';
 import { coveredBy, starsMarkup, type Box } from './stars';
@@ -42,7 +42,12 @@ const oneOf = (values: string[], or: string) => `${values.slice(0, -1).join(', '
 const CHOICES: [string, string[]][] = [
     ['night_hero', ['production', 'consumption', 'battery']],
     ['layout', ['standard', 'side']],
-    ['cell_tap', ['auto', 'more-info', 'card']],
+];
+/** Older option names, no longer read, and what replaces them */
+const RENAMED: [string, { fr: string; en: string }][] = [
+    ['power_threshold', { fr: 'utilisez battery.power_threshold', en: 'use battery.power_threshold' }],
+    ['battery.lock_entities', { fr: 'utilisez battery.soc_reached_entities', en: 'use battery.soc_reached_entities' }],
+    ['cell_tap', { fr: 'chaque case prend son propre tap_action', en: 'each cell takes its own tap_action' }],
 ];
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
@@ -54,7 +59,10 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     if (!config || typeof config !== 'object') {
         throw configError('Configuration invalide', 'Invalid configuration');
     }
-    const c = normalizeConfig(config as Partial<EnergySkyCardConfig>);
+    const c = config as Partial<EnergySkyCardConfig>;
+    for (const [old, now] of RENAMED) {
+        if (optionAt(c, old) !== undefined) throw configError(`${old} n'existe plus : ${now.fr}`, `${old} is gone: ${now.en}`);
+    }
     const production = c.production_entity;
     const productionOk = typeof production === 'string'
         ? production.length > 0
@@ -261,7 +269,8 @@ export class EnergySkyCard extends HTMLElement {
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
-        const opensEntity = cellTapOpensEntity(config);
+        // A cell without a tap action of its own opens its entity, unless the card has a tap action
+        const opensEntity = config.tap_action === undefined;
         this.cellTargets = new Map(cells.flatMap((cell): [string, { entity?: string; tap?: ActionConfig }][] => {
             const entity = cellEntity(config, cell);
             const tap = isAction(cell.tapAction) ? cell.tapAction : undefined;

@@ -39,8 +39,6 @@ export interface CustomCell {
 
 export type CellConfig = CellKind | BuiltinCell | CustomCell;
 
-export type CellTap = 'auto' | 'more-info' | 'card';
-
 /** What the hero shows at night: production (0 W, the default), the home's consumption, or the battery */
 export type NightHero = 'production' | 'consumption' | 'battery';
 
@@ -64,8 +62,6 @@ export interface EnergySkyCardConfig {
         power_threshold?: number;
         /** The sensor is positive when discharging (the card expects positive when charging) */
         invert?: boolean;
-        /** @deprecated 0.1.0–0.1.1 name of soc_reached_entities, still read */
-        lock_entities?: string[];
     };
     grid?: {
         power_entity?: string;
@@ -88,14 +84,7 @@ export interface EnergySkyCardConfig {
     tariff_color_entity?: string;
     tariff_palettes?: Record<string, [string, string, string]>;
     sun_entity?: string;
-    /** @deprecated 0.1.0–0.1.1 place of battery.power_threshold, still read */
-    power_threshold?: number;
     animate?: boolean;
-    /**
-     * @deprecated 0.3.1 only, still read: what a cell without a tap_action
-     * of its own does (auto, more-info, card). Each cell now takes its own.
-     */
-    cell_tap?: CellTap;
     tap_action?: Record<string, unknown>;
     hold_action?: Record<string, unknown>;
     double_tap_action?: Record<string, unknown>;

@@ -5,7 +5,7 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, cellKind, defaultCells, isBuiltinObject, isCustom, normalizeConfig } from './model';
+import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, cellKind, defaultCells, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
 import type { CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
@@ -329,8 +329,7 @@ export class EnergySkyCardEditor extends HTMLElement {
     private form?: HaForm;
 
     setConfig(config: EnergySkyCardConfig): void {
-        // An old option name (battery.lock_entities) is shown, and saved, under today's
-        this.config = normalizeConfig(config);
+        this.config = config;
         this.render();
     }
 
