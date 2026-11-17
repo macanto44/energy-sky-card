@@ -13,7 +13,7 @@
 | **Rouge day** | **Night** |
 | ![A red sky card on a Rouge day: 6.0 kW of solar, the battery discharging](docs/images/rouge.png) | ![The night card, animated: stars twinkle and a shooting star passes](docs/images/nuit-anim.png) |
 
-Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a background that tells you something too: the colour of today's electricity tariff by day (EDF Tempo's Bleu, Blanc and Rouge days), a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
+Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a background that tells you something too: by day, the colour of today's electricity tariff (EDF Tempo's Bleu, Blanc and Rouge days), or the weather outside, or simply a colour of your choosing; a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
 
 It's free, open source and made for Home Assistant. The card is in French and English. You can [try it live](https://macanto44.github.io/energy-sky-card/) in your browser first, on sample readings.
 
@@ -35,7 +35,7 @@ A sun halo in the corner grows with your production: faint on a grey morning, br
 
 ## Quiet, not busy.
 
-The halo breathes slowly while the panels produce, and cloud shadows drift across the card. At night, stars twinkle over the whole sky and a shooting star passes now and then. Nothing ever moves behind the text, and nothing moves at all when the card is off-screen, the tab is hidden, your device asks for reduced motion, or you set `animate: false`. Day and night cross-fade over three seconds.
+The halo breathes slowly while the panels produce, and cloud shadows drift across the card (under the weather sky: clouds, rain, snow, fog or lightning, as outside). At night, stars twinkle over the whole sky and a shooting star passes now and then. Nothing ever moves behind the text, and nothing moves at all when the card is off-screen, the tab is hidden, your device asks for reduced motion, or you set `animate: false`. Day and night cross-fade over three seconds.
 
 ## What it shows.
 
@@ -85,7 +85,7 @@ With `flow: tap`, the rest of the card keeps its own tap action, so a menu or a 
 
 In the sections view the card takes the full width. It fits a 320 px phone without cutting a word: the big number steps down from 56 to 48 and 40 px, the spacing tightens at three rows, and long complements shorten (`· SOC reached` → `· SOC ✓`, `18 °C` → `18°`). Numbers follow your profile's number format (`3,2 kW` or `3.2 kW`).
 
-White text keeps at least a 4.5:1 contrast where it sits on every default palette, day and night. A test checks it.
+White text keeps at least a 4.5:1 contrast where it sits on every default palette, day and night, on every weather sky with its clouds passing behind, and on your own solid colour (darkened if need be). A test checks it.
 
 ---
 
@@ -456,6 +456,9 @@ Its height must be **auto** in the sections view: open the card's **Layout** tab
 **The Home node doesn't open anything**
 Without `consumption_entity`, the card works out the home's power from the other readings, and there's no entity to open.
 
+**The weather sky looks cloudy whatever the weather**
+The card reads the `weather_entity`'s state. A state it doesn't know (or `unavailable`) shows as cloudy: check the entity's state in **Developer tools → States**.
+
 **The sky shows, but nothing moves**
 Check reduced motion in your system settings, then `animate`. The halo only breathes by day while the panels produce.
 
@@ -470,7 +473,7 @@ npm run test:browser   # headless Chrome: motion, overflow at 320 px, stars off 
 npm run screenshots    # the pictures in this README, from the demo
 ```
 
-`demo/index.html` runs the built card on sample readings (`?side`, `?expand`, `?lang=en`…), and `demo/shot.sh` screenshots it. [CLAUDE.md](CLAUDE.md) maps the code, and [CHANGELOG.md](CHANGELOG.md) lists every change.
+`demo/index.html` runs the built card on sample readings (`?side`, `?expand`, `?lang=en`, `?sky=weather&wx=rainy`, `?sky=solid&color=6a4c93`…), and `demo/shot.sh` screenshots it. [CLAUDE.md](CLAUDE.md) maps the code, and [CHANGELOG.md](CHANGELOG.md) lists every change.
 
 ## License
 

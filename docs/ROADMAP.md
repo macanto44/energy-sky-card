@@ -17,7 +17,7 @@ Ideas to improve Energy Sky Card, by priority (written after 0.3.0, 2026-11-15).
 
 6. [ ] **Tomorrow's Tempo colour.** The useful one, to plan ahead of a Rouge day: a thin band at the bottom, or a tint settling in at dusk. Must pass the contrast test.
 7. [ ] **Sunrise and sunset.** Day / night is binary today: a transition palette (dawn, golden hour) from the sun's elevation, and a halo that follows its position (`sun.sun` has elevation and azimuth).
-8. [ ] **Weather.** An optional `weather` entity: fewer light motes when overcast, the moon and its phase at night.
+8. [x] **Weather** (0.3.7: `background: weather`, clouds, rain, snow, fog, lightning; also `solid`). Still open: the moon and its phase at night.
 
 ## Reach
 
