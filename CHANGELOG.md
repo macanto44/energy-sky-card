@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- The energy flow's moving dots are single beads (the size of the old comets' head), without their trail.
 - An appliance below 10 W stays out of the energy flow, and the others take its place. `consumer_threshold` (« Seuil d'affichage » in the editor's Appliances block) sets the power; `0` always shows them.
 
 ## [0.3.5] — 2026-11-17

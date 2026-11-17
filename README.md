@@ -60,7 +60,7 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 ![The unfolded card on a Rouge day: the sun sends 6.0 kW to the home and the grid, the battery feeds the home with 2.3 kW](docs/images/deplie.png)
 
 - **The colour says where the energy comes from**: gold for the sun, mint for the battery, ice blue for the grid. Energy you sell stays gold on its way to the grid.
-- **The wire says how much**: the more power, the thicker the wire and the more and faster the comets that run along it. An idle wire is a faint dotted line.
+- **The wire says how much**: the more power, the thicker the wire and the more and faster the dots that run along it. An idle wire is a faint dotted line.
 - **The grid ↔ battery link** runs down the middle, under the sun → home wire (a small gap shows it's a bridge, not a junction). It lights up when the grid charges the battery, at off-peak hours for instance, or when the battery sells.
 - **The flows add up like your meters.** What you sell comes from the sun first, then the battery. What charges the battery comes from the sun first, then the grid. The home gets the rest. A battery below its idle threshold moves nothing.
 - **Each node** shows its power with the card's signs (grid negative when selling, battery negative when discharging) and a ring: production against your maximum, the battery's charge (with the percentage in the middle), and the share of each source in what your home uses.

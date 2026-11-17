@@ -666,7 +666,8 @@ function cloudsMarkup(): string {
 
 /** The flow's markup: the wires (SVG, drawn for the width by layoutFlow) under the four nodes (HTML) */
 function flowMarkup(consumers: number): string {
-    const comets = [1, 2, 3].map(n => `<g class="comet c${n}"><circle cx="-8" r="1.3" opacity="0.25"></circle><circle cx="-4" r="1.8" opacity="0.5"></circle><circle r="2.5"></circle></g>`).join('');
+    // Up to three dots per wire, one bead each, travelling along it (how many: the wire's level, in CSS)
+    const comets = [1, 2, 3].map(n => `<g class="comet c${n}"><circle r="2.5"></circle></g>`).join('');
     // The grid ↔ battery link first: it passes under the sun → home wire, which a gap of the panel's colour bridges over it
     const order: WireKey[] = ['gb', 'bg', ...WIRE_KEYS.filter(k => k !== 'gb' && k !== 'bg')];
     const wires = order.map(key => `<g class="wire ${WIRES[key]}" data-wire="${key}" data-level="0">${key === 'sh' ? '<path class="gap"></path>' : ''}<path class="glow"></path><path class="line"></path>${comets}</g>`).join('');
