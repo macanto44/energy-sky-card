@@ -60,7 +60,7 @@ const FLOW_COLOR_KEYS: Record<string, string> = {
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
-    [['production_max', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
+    [['production_max', 'production_threshold', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
 ];
 
 export function validateConfig(config: unknown): EnergySkyCardConfig {

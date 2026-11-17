@@ -35,17 +35,18 @@ const fields = (schema: SchemaItem[]) => schema.flatMap(block => (block.schema ?
 
 describe('schema', () => {
     it('has the blocks of the brief, in order', () => {
-        expect(editorSchema('fr').map(b => b.title)).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Ciel', 'Actions']);
-        expect(editorSchema('en').map(b => b.title)).toEqual(['Production', 'Battery', 'Grid', 'Layout', 'Cells', 'Sky', 'Actions']);
+        expect(editorSchema('fr').map(b => b.title)).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Ciel', 'Actions']);
+        expect(editorSchema('en').map(b => b.title)).toEqual(['Production', 'Battery', 'Grid', 'Layout', 'Cells', 'Appliances', 'Sky', 'Actions']);
     });
 
     it('covers every option except the palettes, with nested battery and grid', () => {
         expect(fields(editorSchema('fr'))).toEqual([
-            './production_entity', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
-            './consumption_entity', './night_hero', './stale_after',
+            './production_entity', './production_threshold', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
+            './stale_after',
             'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
-            './layout', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
+            './layout', './night_hero', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
+            './consumption_entity',
             './background', './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
         ]);
@@ -177,7 +178,7 @@ describe('the 0.2 options', () => {
 describe('the layout', () => {
     it('offers standard and side in a Layout block of its own, before Cells, standard by default (left out of the YAML)', () => {
         const display = editorSchema('fr').find(b => b.title === 'Disposition')!;
-        expect(display.schema?.map(f => f.name)).toEqual(['layout', 'flow']);
+        expect(display.schema?.map(f => f.name)).toEqual(['layout', 'night_hero', 'flow']);
         expect(editorLabel('fr', 'layout')).toBe('Format');
         expect((display.schema?.[0].selector as any).select.options.map((o: { value: string }) => o.value)).toEqual(['standard', 'side']);
         expect(editorSchema('fr').find(b => b.title === 'Cases')!.schema?.[0].name).toBe('cell_1');
@@ -224,8 +225,8 @@ describe('help under the layout fields', () => {
 describe('the energy flow', () => {
     it('offers none, on a tap or always, under the layout; none by default (left out of the YAML)', () => {
         const display = editorSchema('fr').find(b => b.title === 'Disposition')!;
-        expect(display.schema?.[1].name).toBe('flow');
-        expect((display.schema?.[1].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
+        expect(display.schema?.[2].name).toBe('flow');
+        expect((display.schema?.[2].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
         const { form, change, changes } = mount();
         expect(form.data?.flow).toBe('none');
         change({ animate: false });
@@ -248,8 +249,8 @@ describe('the energy flow', () => {
 
     it('offers a colour picker per source with a flow, showing the default or the card\'s colour', () => {
         const display = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Disposition')!.schema!.map(f => f.name);
-        expect(display({ flow: 'none' })).toEqual(['layout', 'flow']);
-        expect(display({ flow: 'always' })).toEqual(['layout', 'flow', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
+        expect(display({ flow: 'none' })).toEqual(['layout', 'night_hero', 'flow']);
+        expect(display({ flow: 'always' })).toEqual(['layout', 'night_hero', 'flow', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
         expect(editorLabel('fr', 'flow_color_consumption')).toBe('Couleur des appareils');
         const data = formData({ ...MINIMAL, flow: 'always', flow_colors: { solar: '#ff8800', grid: 'var(--accent-color)' } });
         expect(data.flow_color_solar).toEqual([255, 136, 0]);
@@ -280,14 +281,14 @@ describe('the appliances', () => {
     const titles = (data: Record<string, unknown>) => editorSchema('fr', data).map(b => b.title);
     const block = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Consommateurs')?.schema?.map(f => f.name);
 
-    it('have a block of their own, after Cells, only with a flow', () => {
-        expect(titles({ flow: 'none' })).not.toContain('Consommateurs');
-        expect(titles({ flow: 'always' })).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Ciel', 'Actions']);
+    it('have a block of their own, after Cells, with the home\'s consumption; the appliances only with a flow', () => {
+        expect(titles({ flow: 'none' })).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Ciel', 'Actions']);
+        expect(block({ flow: 'none' })).toEqual(['consumption_entity']);
     });
 
     it('open one slot at a time, with a name, an icon and a tap once the entity is set', () => {
-        expect(block({ flow: 'tap' })).toEqual(['consumer_threshold', 'consumer_1_entity']);
-        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumer_threshold', 'consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_tap_action', 'consumer_2_entity']);
+        expect(block({ flow: 'tap' })).toEqual(['consumption_entity', 'consumer_threshold', 'consumer_1_entity']);
+        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumption_entity', 'consumer_threshold', 'consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_tap_action', 'consumer_2_entity']);
         expect(editorLabel('fr', 'consumer_threshold')).toBe('Seuil d\'affichage');
         expect(editorHelper('en', 'consumer_threshold')).toMatch(/10 W when empty/);
         expect(editorLabel('fr', 'consumer_2_entity')).toBe('Appareil 2');

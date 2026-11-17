@@ -137,7 +137,10 @@ export function productionEntities(config: Pick<EnergySkyCardConfig, 'production
  */
 export function productionPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
     const values = productionEntities(config).map(id => powerW(hass.states[id])).filter((v): v is number => v !== undefined);
-    return values.length ? values.reduce((a, b) => a + b, 0) : undefined;
+    if (!values.length) return undefined;
+    const total = values.reduce((a, b) => a + b, 0);
+    // Below production_threshold (a charge controller's own draw, say), nothing is produced
+    return config.production_threshold && total < config.production_threshold ? 0 : total;
 }
 
 const signed = (value: number | undefined, invert: boolean | undefined) =>

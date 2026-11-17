@@ -128,7 +128,7 @@ White text keeps at least a 4.5:1 contrast where it sits on every default palett
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
 2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (with a flow), **Sky** (Tempo, solid or weather, the sun, animations), and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, the big number at night, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (the home's consumption, and your appliances with a flow), **Sky** (Tempo, solid or weather, the sun, animations), and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
@@ -316,6 +316,7 @@ A card's `flow_colors` wins over the theme. The text stays white on the card's o
 | Option | Default | Description |
 | --- | --- | --- |
 | `production_entity` | **required** | Solar power now, in W (kW and MW are converted). One entity, or a list that is added up. An unavailable one is left out of the sum |
+| `production_threshold` | — | Below this power, in W, the production reads 0: a charge controller drawing a few watts on the solar line no longer shows as production. No threshold by default |
 | `production_max` | `6000` | The power, in W, at which the sun halo is at its brightest. Also the full circle of the Sun node's ring |
 | `daily_production_entities` | — | Daily energy meters, in kWh (Wh and MWh are converted), added up for the `kWh produced` line. An unavailable one is left out; with none available, the line reads `— kWh produced`. Without them, no line |
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast, in kWh, for the Tomorrow cell |

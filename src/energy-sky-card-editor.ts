@@ -27,7 +27,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
         production: 'Production', battery: 'Batterie', grid: 'Réseau', sky: 'Ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}', consumer_threshold: 'Seuil d\'affichage',
         production_entity: 'Puissance solaire (W, additionnées)',
-        stale_after: 'Valeur figée après',
+        stale_after: 'Valeur figée après', production_threshold: 'Seuil de production',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
         flow_color_solar: 'Couleur du solaire', flow_color_grid: 'Couleur du réseau', flow_color_battery: 'Couleur de la batterie', flow_color_consumption: 'Couleur des appareils',
@@ -50,7 +50,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
     en: {
         production: 'Production', battery: 'Battery', grid: 'Grid', sky: 'Sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}', consumer_threshold: 'Display threshold',
         production_entity: 'Solar power (W, summed)',
-        stale_after: 'Stale after',
+        stale_after: 'Stale after', production_threshold: 'Production threshold',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
         flow_color_solar: 'Solar colour', flow_color_grid: 'Grid colour', flow_color_battery: 'Battery colour', flow_color_consumption: 'Appliances colour',
@@ -87,8 +87,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
         stale_after: 'Une mesure sans nouvelle valeur depuis ce délai est signalée : l\'icône de sa case devient une horloge. 30 min si vide ; 0 désactive.',
         power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓. 20 W si vide.',
-        production_entity: 'Plusieurs capteurs (micro-onduleurs, onduleur de chaîne…) sont additionnés.',
-        night_hero: 'Après le coucher du soleil, la production est nulle : le grand chiffre peut montrer autre chose. Il faut la consommation de la maison ou la charge de la batterie renseignée.',
+        production_threshold: 'En dessous de cette puissance, la production compte pour 0 (la veille d\'un régulateur, par exemple). Aucun seuil si vide.',
         temperature_entity: 'Facultatif : affichée après la charge, « 78 % ↑ · 24 °C ».',
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
@@ -101,8 +100,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
         stale_after: 'A reading with nothing new for this long is flagged: its cell\'s icon turns to a clock. 30 min when empty; 0 turns it off.',
         power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow. 20 W when empty.',
-        production_entity: 'Several sensors (micro-inverters, string inverter…) are summed.',
-        night_hero: 'After sunset production is zero: the big number can show something else. Needs the home consumption or the battery charge set.',
+        production_threshold: 'Below this power the production reads 0 (a charge controller\'s standby draw, say). No threshold when empty.',
         temperature_entity: 'Optional: shown after the charge, "78% ↑ · 24 °C".',
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
@@ -149,11 +147,10 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             name: '', type: 'expandable', flatten: true, expanded: true, title: t('production'), icon: 'mdi:solar-power-variant-outline',
             schema: [
                 { name: 'production_entity', required: true, selector: sensor({ device_class: 'power', multiple: true }) },
+                { name: 'production_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'production_max', selector: { number: { min: 100, max: 100000, step: 100, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'daily_production_entities', selector: sensor({ multiple: true }) },
                 { name: 'forecast_tomorrow_entity', selector: sensor() },
-                { name: 'consumption_entity', selector: sensor({ device_class: 'power' }) },
-                { name: 'night_hero', selector: { select: { mode: 'dropdown', options: heroOptions } } },
                 { name: 'stale_after', selector: { number: { min: 0, max: 1440, step: 1, mode: 'box', unit_of_measurement: 'min' } } },
             ],
         },
@@ -182,6 +179,7 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             name: '', type: 'expandable', flatten: true, title: t('display'), icon: 'mdi:page-layout-body',
             schema: [
                 { name: 'layout', selector: { select: { mode: 'list', options: (['standard', 'side'] as const).map(value => ({ value, label: t(`layout_${value}`) })) } } },
+                { name: 'night_hero', selector: { select: { mode: 'dropdown', options: heroOptions } } },
                 { name: 'flow', selector: { select: { mode: 'list', options: (['none', 'tap', 'always'] as const).map(value => ({ value, label: t(`flow_${value}`) })) } } },
                 // The flow's colours, with a flow (a theme can set them too)
                 ...(data.flow === 'tap' || data.flow === 'always' ? FLOW_COLOR_FIELDS.map(key => ({ name: `flow_color_${key}`, selector: { color_rgb: {} } })) : []),
@@ -191,11 +189,14 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
             schema: cellFields(lang, data),
         },
-        // The appliances, with a flow only
-        ...(data.flow === 'tap' || data.flow === 'always' ? [{
-            name: '', type: 'expandable' as const, flatten: true, title: t('consumers'), icon: 'mdi:power-plug-outline',
-            schema: consumerFields(data),
-        }] : []),
+        // The home's consumption, and the appliances with a flow
+        {
+            name: '', type: 'expandable', flatten: true, title: t('consumers'), icon: 'mdi:power-plug-outline',
+            schema: [
+                { name: 'consumption_entity', selector: sensor({ device_class: 'power' }) },
+                ...(data.flow === 'tap' || data.flow === 'always' ? consumerFields(data) : []),
+            ],
+        },
         {
             name: '', type: 'expandable', flatten: true, title: t('sky'), icon: 'mdi:weather-partly-cloudy',
             schema: [

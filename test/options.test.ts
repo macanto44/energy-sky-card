@@ -194,3 +194,13 @@ describe('validation of the new options', () => {
         })).not.toThrow();
     });
 });
+
+describe('production_threshold', () => {
+    it('reads a production below it as 0, and leaves it alone without one', async () => {
+        const { productionPower } = await import('../src/model');
+        const hass = { states: { 'sensor.pv': { entity_id: 'sensor.pv', state: '3', attributes: { unit_of_measurement: 'W' }, last_changed: '', last_updated: '' } } } as any;
+        expect(productionPower({ type: 'x', production_entity: 'sensor.pv' } as any, hass)).toBe(3);
+        expect(productionPower({ type: 'x', production_entity: 'sensor.pv', production_threshold: 10 } as any, hass)).toBe(0);
+        expect(productionPower({ type: 'x', production_entity: 'sensor.pv', production_threshold: 3 } as any, hass)).toBe(3);
+    });
+});

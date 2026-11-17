@@ -102,6 +102,8 @@ export interface EnergySkyCardConfig {
     flow_colors?: { solar?: string; grid?: string; battery?: string; consumption?: string };
     /** Minutes without a new reading before a value is flagged as stale (30 by default; 0 never) */
     stale_after?: number;
+    /** Below this power (W) the production reads 0 (none by default) */
+    production_threshold?: number;
     /** Below this power (W) an appliance leaves the flow (10 by default; 0 keeps them all) */
     consumer_threshold?: number;
     /** Up to 4 cells, in order; without it, the built-in cells whose entities are set */

@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- `production_threshold`: below this power (W), the production reads 0, in the big number, the halo and the flow (a charge controller's standby draw on the solar line, say). No threshold by default; in the editor's Production section.
+- Editor: « Grand chiffre la nuit » moves to Disposition / Layout, « Consommation de la maison » to Consommateurs / Appliances (now always shown; the appliances themselves still need a flow). Two helper lines are gone (under the solar power and the big number at night).
+
 ## [0.3.7] — 2026-11-17
 
 No breaking change: the Tempo sky stays the default.
