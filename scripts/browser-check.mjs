@@ -75,6 +75,17 @@ for (const lang of ['fr', 'en']) {
 // …and on a usual phone the battery keeps its temperature
 for (const c of probe('side&s=bleu&widths=360', [], 1200)) check(c.short === '0', `side ${c.name}: battery in full`);
 
+// Unfolded (expandable: true), both layouts: nothing overflows, the comets run on the busy wires
+for (const layout of ['', 'side&']) {
+    for (const lang of ['fr', 'en']) {
+        for (const c of probe(`${layout}expand&lang=${lang}`, [], 2800)) {
+            check(c.overflow === '0' && c.tall === '0', `unfolded ${layout ? 'side ' : ''}${lang} ${c.name}: no overflow`);
+        }
+    }
+}
+for (const c of probe('expand&s=bleu,rouge&widths=360', [], 1400)) check(Number(c.comets) > 0, `unfolded ${c.name}: ${c.comets} comets running`);
+for (const c of probe('expand&s=bleu&widths=360', ['--force-prefers-reduced-motion'], 1400)) check(c.comets === '0' && c.running === '0', `unfolded ${c.name}, reduced motion: no comet`);
+
 // The night sky covers the whole card (a visible star in each quarter) and none touches text
 for (const query of ['lang=fr', 'lang=en', 'h=184', 'side']) {
     for (const c of probe(query, [], 2400).filter(c => c.mode === 'night')) {

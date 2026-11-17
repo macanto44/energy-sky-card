@@ -4,18 +4,19 @@ import type { HomeAssistant } from './types';
 
 export type CardString =
     | 'produced' | 'battery' | 'grid'
+    | 'solar' | 'home'
     | 'voltage' | 'outage' | 'tomorrow' | 'soc_reached' | 'soc_reached_short' | 'consumption' | 'consumption_short';
 
 const STRINGS: Record<'fr' | 'en', Record<CardString, string>> = {
     fr: {
         produced: '{value} kWh produits',
-        battery: 'Batterie', grid: 'Réseau',
+        battery: 'Batterie', grid: 'Réseau', solar: 'Solaire', home: 'Maison',
         voltage: 'Tension', outage: 'Coupure', tomorrow: 'Prévu demain',
         soc_reached: 'SOC atteint', soc_reached_short: 'SOC ✓', consumption: 'Consommation', consumption_short: 'Conso.',
     },
     en: {
         produced: '{value} kWh produced',
-        battery: 'Battery', grid: 'Grid',
+        battery: 'Battery', grid: 'Grid', solar: 'Solar', home: 'Home',
         voltage: 'Voltage', outage: 'Outage', tomorrow: 'Tomorrow',
         soc_reached: 'SOC reached', soc_reached_short: 'SOC ✓', consumption: 'Consumption', consumption_short: 'Use',
     },

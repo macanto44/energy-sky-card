@@ -12,6 +12,8 @@ export interface ActionsConfig {
     tap_action?: ActionConfig;
     hold_action?: ActionConfig;
     double_tap_action?: ActionConfig;
+    /** A tap runs this instead of an action (the card's unfolding, on the big number) */
+    toggle?: () => void;
 }
 
 export type Gesture = 'tap' | 'hold' | 'double_tap';
@@ -40,6 +42,7 @@ export function readActions(config: object | undefined, entity: string | undefin
 
 /** Whether a tap leads anywhere: an explicit action, or the entity's dialog by default */
 export function tapIsActive(config: ActionsConfig): boolean {
+    if (config.toggle) return true;
     return config.tap_action === undefined ? Boolean(config.entity) : active(config.tap_action);
 }
 
@@ -54,12 +57,17 @@ function emit(host: HTMLElement, type: string, detail: unknown): void {
  * Card pop-up). Unset hold and double tap do nothing.
  */
 export function runGesture(host: HTMLElement, config: ActionsConfig, gesture: Gesture): void {
+    if (gesture === 'tap' && config.toggle) {
+        config.toggle();
+        return;
+    }
     const action = config[`${gesture}_action` as const];
     if (action === undefined) {
         if (gesture === 'tap' && config.entity) emit(host, 'hass-more-info', { entityId: config.entity });
         return;
     }
-    if (active(action)) emit(host, 'hass-action', { config, action: gesture });
+    const { toggle: _toggle, ...payload } = config;
+    if (active(action)) emit(host, 'hass-action', { config: payload, action: gesture });
 }
 
 /**

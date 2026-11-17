@@ -141,7 +141,8 @@ describe('the stylesheet', () => {
 
     it('declares animations only when motion is on or paused (never off-screen-and-running, never off)', () => {
         const animated = all.filter(([sel, body]) => /(^|;|\s)animation\s*:\s*esc-/.test(body) && !sel.startsWith('@'));
-        expect(animated.length).toBe(4);
+        // halo, stars, shooting stars, clouds, and the flow's comets
+        expect(animated.length).toBe(5);
         for (const [selector] of animated) {
             for (const part of selector.split(',')) {
                 expect(part).toMatch(/data-motion="(on|paused)"/);
@@ -180,7 +181,7 @@ describe('the stylesheet', () => {
     });
 
     it('turns everything off under prefers-reduced-motion, as a second guard', () => {
-        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.drift, \.layer \{ animation: none !important; transition: none !important; \}/);
+        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.drift, \.layer, \.comet \{ animation: none !important; transition: none !important; \}/);
     });
 
     it('cross-fades day and night over 3 s, except when motion is off', () => {

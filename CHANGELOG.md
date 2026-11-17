@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- `expandable: true` (« Déplier en touchant le grand chiffre » in the editor's Cells block): a tap on the big number or its line unfolds the energy flow under the card, in both layouts. The sun on the left, the home on the right, the grid above, the battery below, joined by wires that never cross; their colour says where the energy comes from, their width and comets how much. Each node shows its power with the card's signs, a ring (production against `production_max`, the battery's charge, the home's sources), and opens its entity on a tap. The home is `consumption_entity`, or worked out. The card then sets its own height (rows "auto"); the comets move on `transform` only and stop when folded, off-screen or without motion.
+
 - A second layout, `layout: side` (« Côté » in the editor's Cells block): the big number and its line on the left, the cells on the right as icon + value, one line each, in 2 rows (120 px) instead of 4. The cell's name stays for screen readers and shows on hover. Its sky is the lower part of the tariff gradient and its halo glows above the big number, away from the values, so white text keeps its contrast. On a narrow card the complements shorten, then go (« 78 % ↑ »), the big number steps 44 → 40 → 36 px, and the line under it may take two lines. `standard` stays the default.
 
 ## [0.3.2] — 2026-11-15

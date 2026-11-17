@@ -1,12 +1,20 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
 import { CLOUD_MAX_ALPHA, CLOUD_RGB, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
+import { FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS } from '../flow';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
 const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
 /** Side layout: the gradient from SIDE_SKY_FROM down, its first stop a mix of the top two */
 const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90d5) ${pct(1 - SIDE_SKY_FROM / 0.6)}, var(--esc-c1, #2169b0)) 0%, var(--esc-c1, #2169b0) ${pct((0.6 - SIDE_SKY_FROM) / (1 - SIDE_SKY_FROM))}, var(--esc-c2, #1d4f87) 100%)`;
 const SIDE_HALO_AT = `${SIDE_HALO.x}px ${SIDE_HALO.y}px`;
+/** The flow's colours, by where the energy comes from */
+export const FLOW_COLOURS = { sun: '#ffd68c', grid: '#cfe0ff', batt: '#9ef0c8' } as const;
+/** The node's glass: white over the sky at this opacity at most (the contrast test uses it) */
+export const NODE_GLASS_ALPHA = 0.14;
+/** Per level: the wire's width (px) and one comet's trip (s) */
+const LEVELS = [[1.6, 3.2], [2.4, 2.6], [3.2, 2], [4, 1.4]] as const;
+const nodeTop = (FLOW_HEIGHT - NODE_HEIGHT) / 2;
 
 export const CARD_CSS = `
 :host {
@@ -111,8 +119,11 @@ ha-card {
 :host([data-motion="paused"][data-mode="day"]) .drift { animation: esc-drift 60s linear infinite; animation-play-state: var(--esc-play); }
 /* Day ⇄ night: a 3 s cross-fade, once the first state is painted */
 :host([data-ready]:not([data-motion="off"])) .layer { transition: opacity 3s ease-in-out; }
+/* The flow's comets, along their wire (their keyframes are drawn for the width by layoutFlow), only unfolded */
+:host([data-motion="on"][data-expanded]) .wire:not([data-level="0"]) .comet,
+:host([data-motion="paused"][data-expanded]) .wire:not([data-level="0"]) .comet { display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow); animation-play-state: var(--esc-play); }
 @media (prefers-reduced-motion: reduce) {
-    .halo, .star, .shooting, .drift, .layer { animation: none !important; transition: none !important; }
+    .halo, .star, .shooting, .drift, .layer, .comet { animation: none !important; transition: none !important; }
 }
 /* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
 :host([data-compact]) .content { padding: 14px 20px 12px; }
@@ -264,4 +275,79 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 :host([data-layout="side"][data-compact]) .content { padding: 8px 16px 6px 18px; }
 :host([data-layout="side"][data-compact]) .context { margin-top: 4px; }
 :host([data-layout="side"][data-compact]) .grid { row-gap: 0; }
+/*
+ * Expandable (expandable: true): the card sets its own height (the grid's
+ * rows: auto), the sky stays on the top part at its usual height, and the
+ * flow unfolds below on the gradient's last colour (the darkest).
+ */
+:host([data-expandable]) { height: auto; --esc-top-h: 248px; }
+:host([data-expandable][data-layout="side"]) { --esc-top-h: 120px; }
+:host([data-expandable]) ha-card { height: auto; }
+:host([data-expandable]) .content { height: var(--esc-top-h); }
+:host([data-expandable]) .sky { bottom: auto; height: var(--esc-top-h); }
+:host([data-expandable][data-mode="day"]) ha-card { background: var(--esc-c2, #1d4f87); }
+:host([data-ready][data-expandable]:not([data-motion="off"])) ha-card { transition: background-color 3s ease-in-out; }
+:host([data-expandable]) .hero, :host([data-expandable]) .context { cursor: pointer; }
+:host([data-expandable]) .hero:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+.grabber { position: absolute; left: 50%; bottom: 5px; width: 28px; height: 3px; margin-left: -14px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); }
+.panel { position: relative; z-index: 1; margin: 0 20px; padding: 10px 0 14px; border-top: 1px solid rgba(255, 255, 255, 0.22); font-family: var(--esc-font); }
+:host([data-layout="side"]) .panel { margin: 0 18px 0 20px; }
+.flow { position: relative; height: ${FLOW_HEIGHT}px; --esc-node-w: 118px; --esc-centre-w: 138px; }
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wire path { fill: none; stroke: currentColor; stroke-linecap: round; }
+.wire .line { stroke-opacity: 0.55; stroke-width: var(--esc-w); }
+.wire .glow { stroke-opacity: 0.16; stroke-width: calc(var(--esc-w) + 6px); }
+.wire[data-level="0"] .line { stroke: #fff; stroke-opacity: 0.16; stroke-width: 1.2px; stroke-dasharray: 2 5; }
+.wire[data-level="0"] .glow, .wire[data-off], .wire[data-wire="gb"][data-level="0"], .wire[data-wire="bg"][data-level="0"] { display: none; }
+${LEVELS.map(([w, d], i) => `.wire[data-level="${i + 1}"] { --esc-w: ${w}px; --esc-dur: ${d}s; }`).join('\n')}
+${Object.entries(FLOW_COLOURS).map(([k, c]) => `.wire.${k} { color: ${c}; }`).join(' ')}
+${WIRE_KEYS.map(k => `.wire[data-wire="${k}"] { --esc-flow: esc-flow-${k}; }`).join(' ')}
+/* Comets: none without motion; one at level 1, two at 2, three above, evenly spaced */
+.comet { display: none; }
+.comet circle { fill: currentColor; }
+/* Spare comets of a quieter wire: hidden, still in step for when the wire gets busier */
+.wire[data-level="1"] .c2, .wire[data-level="1"] .c3, .wire[data-level="2"] .c3 { visibility: hidden; }
+.wire[data-level="2"] .c2 { --esc-delay: calc(var(--esc-dur) * -0.5); }
+.wire[data-level="3"] .c2, .wire[data-level="4"] .c2 { --esc-delay: calc(var(--esc-dur) * -0.333); }
+.wire[data-level="3"] .c3, .wire[data-level="4"] .c3 { --esc-delay: calc(var(--esc-dur) * -0.667); }
+.node {
+    position: absolute;
+    top: ${nodeTop}px;
+    width: var(--esc-node-w);
+    height: ${NODE_HEIGHT}px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 0 6px;
+    border-radius: ${NODE_HEIGHT / 2}px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, ${NODE_GLASS_ALPHA}), rgba(255, 255, 255, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.node[hidden] { display: none; }
+.node[data-node="solar"] { left: 0; }
+.node[data-node="home"] { right: 0; }
+.node[data-node="grid"], .node[data-node="battery"] { width: var(--esc-centre-w); left: calc(50% - var(--esc-centre-w) / 2); }
+.node[data-node="grid"] { top: 3px; }
+.node[data-node="battery"] { top: ${FLOW_HEIGHT - 3 - NODE_HEIGHT}px; }
+.node[data-cell-target] { cursor: pointer; }
+.node[data-cell-target]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.disc { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); display: grid; place-items: center; }
+.ring { position: absolute; inset: -3px; width: 40px; height: 40px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 2.5; }
+.ring .track { stroke: rgba(255, 255, 255, 0.14); }
+.seg { stroke-linecap: round; }
+.seg:not([data-source]), .seg[data-source=""] { display: none; }
+${Object.entries(FLOW_COLOURS).map(([k, c]) => `.seg[data-source="${k}"] { stroke: ${c}; }`).join(' ')}
+.disc ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; display: inline-flex; }
+.centre { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.node[data-centre] .disc ha-icon, .node:not([data-centre]) .centre { display: none; }
+.ntext { min-width: 0; display: flex; flex-direction: column; }
+.nlab { font-size: 9.5px; font-weight: 600; line-height: 12px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.78; }
+.nval { font-size: 15px; font-weight: 500; line-height: 19px; font-variant-numeric: tabular-nums; }
+.flow[data-narrow] .nval { font-size: 13.5px; }
+.flow[data-narrow] .nlab { font-size: 8.5px; }
+.flow[data-narrow] .node { gap: 6px; padding: 0 8px 0 5px; }
+.flow[data-narrow] .disc { width: 32px; height: 32px; }
+.flow[data-narrow] .ring { width: 38px; height: 38px; }
 `;

@@ -1,5 +1,6 @@
 // The README's pictures, from the built card in the local demo (headless Chrome):
-// docs/images/{bleu,blanc,rouge}.png, docs/images/cote.png (the side layout), and docs/images/nuit-anim.png, an
+// docs/images/{bleu,blanc,rouge}.png, docs/images/cote.png (the side layout), docs/images/deplie.png
+// (unfolded, the energy flow), and docs/images/nuit-anim.png, an
 // animated PNG of the night sky (4 s, looping: the twinkle's cycle), 2 × like the stills.
 // Usage: npm run build && npm run screenshots   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
@@ -14,12 +15,12 @@ if (!chrome) throw new Error('No Chrome found (set CHROME=…)');
 const page = `file://${resolve('demo/index.html')}`;
 const work = mkdtempSync(join(tmpdir(), 'esc-shots-'));
 
-/** One card, 360 × 248 (or 120 in the side layout), frozen at `seek` ms, at `scale` × */
-function shoot(out, scenario, seek, scale = 2, side = false) {
+/** One card, 360 px wide, `height` tall (query: the demo's options), frozen at `seek` ms, at `scale` × */
+function shoot(out, scenario, seek, scale = 2, height = 248, query = '') {
     execFileSync(chrome, [
         '--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
-        `--force-device-scale-factor=${scale}`, `--window-size=360,${side ? 120 : 248}`, '--virtual-time-budget=4000',
-        `--screenshot=${out}`, `${page}?s=${scenario}&bare&widths=360&seek=${seek}${side ? '&side' : ''}`,
+        `--force-device-scale-factor=${scale}`, `--window-size=360,${height}`, '--virtual-time-budget=4000',
+        `--screenshot=${out}`, `${page}?s=${scenario}&bare&widths=360&seek=${seek}${query}`,
     ], { stdio: 'ignore' });
 }
 
@@ -30,8 +31,11 @@ for (const [name, seek] of Object.entries(stills)) {
     console.log(`docs/images/${name}.png`);
 }
 // The side layout (layout: side), Bleu
-shoot('docs/images/cote.png', 'bleu', 3000, 2, true);
+shoot('docs/images/cote.png', 'bleu', 3000, 2, 120, '&side');
 console.log('docs/images/cote.png');
+// Unfolded (expandable: true), Rouge: the sun and the battery feed the home, the rest is sold
+shoot('docs/images/deplie.png', 'rouge', 900, 2, 473, '&expand');
+console.log('docs/images/deplie.png');
 
 /** A PNG's chunks: [type, data] */
 function chunks(png) {

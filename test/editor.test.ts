@@ -44,7 +44,7 @@ describe('schema', () => {
             './consumption_entity', './night_hero',
             'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
-            './layout', './cell_1', './cell_2', './cell_3', './cell_4',
+            './layout', './expandable', './cell_1', './cell_2', './cell_3', './cell_4',
             './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
         ]);
@@ -202,6 +202,23 @@ describe('the layout', () => {
         expect(changes.at(-1)).not.toHaveProperty('layout');
         change({ layout: 'side' });
         expect(changes.at(-1)?.layout).toBe('side');
+    });
+});
+
+describe('unfolding', () => {
+    it('is a switch under the layout, off by default (left out of the YAML)', () => {
+        const { form, change, changes } = mount();
+        expect(form.data?.expandable).toBe(false);
+        change({ animate: false });
+        expect(changes.at(-1)).not.toHaveProperty('expandable');
+        change({ expandable: true });
+        expect(changes.at(-1)?.expandable).toBe(true);
+    });
+
+    it('turns a fixed number of rows into auto, so the unfolded flow isn\'t cut', () => {
+        const withRows = { ...MINIMAL, grid_options: { columns: 12, rows: 4 } } as EnergySkyCardConfig;
+        expect((nextConfig(withRows, { ...formData(withRows), expandable: true }) as any).grid_options).toEqual({ columns: 12, rows: 'auto' });
+        expect((nextConfig(withRows, formData(withRows)) as any).grid_options).toEqual({ columns: 12, rows: 4 });
     });
 });
 

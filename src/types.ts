@@ -80,6 +80,8 @@ export interface EnergySkyCardConfig {
     night_hero?: NightHero;
     /** standard (default, 4 rows) or side (2 rows: the cells on the right, icon + value) */
     layout?: CardLayout;
+    /** A tap on the big number unfolds the energy flow (sun, grid, battery, home) under the card */
+    expandable?: boolean;
     /** Up to 4 cells, in order; without it, the built-in cells whose entities are set */
     cells?: CellConfig[];
     forecast_tomorrow_entity?: string;

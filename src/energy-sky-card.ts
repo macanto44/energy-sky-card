@@ -10,6 +10,7 @@ import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { energyPrefs, stubConfig } from './stub';
 import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
+import { FLOW_HEIGHT, WIRES, WIRE_KEYS, flowGeometry, flowNodeEntity, flowView, type NodeKey, type WireKey } from './flow';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The hero's sizes, largest first: it steps down until the card's lines fit */
@@ -19,6 +20,12 @@ export const SIDE_HERO_SIZES = [44, 40, 36] as const;
 /** The side layout's ways to shorten a cell's line, in order: none, short complements, tight form, no complement */
 const SIDE_EXTRAS = [[], ['data-short-extra'], ['data-short-extra', 'data-tight-extra'], ['data-no-extra']] as const;
 const EXTRA_ATTRIBUTES = ['data-short-extra', 'data-tight-extra', 'data-no-extra'] as const;
+/** The flow's nodes and their icons (the battery shows its charge instead, when known) */
+const NODES: [NodeKey, string][] = [['solar', METRIC_ICONS.tomorrow], ['grid', METRIC_ICONS.grid], ['battery', METRIC_ICONS.battery], ['home', METRIC_ICONS.consumption]];
+/** A ring's circumference: r = 17 in a 40 × 40 box */
+const RING = 2 * Math.PI * 17;
+/** The wires a missing node takes away with it */
+const WIRES_OF: Record<'grid' | 'battery', WireKey[]> = { grid: ['sg', 'gh', 'gb', 'bg'], battery: ['sb', 'bh', 'gb', 'bg'] };
 
 /** A config error, in the page's language (French or English) */
 function configError(fr: string, en: string): Error {
@@ -78,6 +85,9 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     for (const [name, value] of lists) {
         if (!isStringList(value)) throw configError(`${name} doit être une liste`, `${name} must be a list`);
     }
+    if (c.expandable !== undefined && typeof c.expandable !== 'boolean') {
+        throw configError('expandable doit valoir true ou false', 'expandable must be true or false');
+    }
     if (c.animate !== undefined && typeof c.animate !== 'boolean') {
         throw configError('animate doit valoir true ou false', 'animate must be true or false');
     }
@@ -109,6 +119,15 @@ interface Refs {
     context: HTMLElement;
     contextFull: HTMLElement;
     contextShort: HTMLElement;
+    /** The unfolding part (expandable: true) */
+    flow?: {
+        panel: HTMLElement;
+        box: HTMLElement;
+        svg: SVGSVGElement;
+        keyframes: HTMLStyleElement;
+        wires: Map<WireKey, { g: SVGGElement; paths: SVGPathElement[] }>;
+        nodes: Map<NodeKey, { el: HTMLElement; label: HTMLElement; value: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }>;
+    };
     metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; extraShort: HTMLElement; valueTight: HTMLElement; extraTight: HTMLElement; valueBare: HTMLElement }>;
 }
 
@@ -125,6 +144,10 @@ export class EnergySkyCard extends HTMLElement {
     private cellTargets = new Map<string, { entity?: string; tap?: ActionConfig }>();
     private resizeObserver?: ResizeObserver;
     private readyFrame?: number;
+    /** Unfolded (expandable: true): the flow shows under the card */
+    private open = false;
+    /** The width the flow's geometry was last drawn for */
+    private flowWidth = 0;
 
     constructor() {
         super();
@@ -134,6 +157,8 @@ export class EnergySkyCard extends HTMLElement {
     setConfig(config: EnergySkyCardConfig): void {
         this.config = validateConfig(config);
         this.build();
+        this.open = false;
+        this.removeAttribute('data-expanded');
         this.renderedKey = '';
         this.removeAttribute('data-ready');
         this.motion.setAnimate(this.config.animate !== false);
@@ -153,6 +178,22 @@ export class EnergySkyCard extends HTMLElement {
         this.resizeObserver?.disconnect();
         if (this.readyFrame !== undefined) cancelAnimationFrame(this.readyFrame);
         this.readyFrame = undefined;
+    }
+
+    /** Whether the energy flow is unfolded (expandable: true only) */
+    get expanded(): boolean {
+        return this.open;
+    }
+
+    set expanded(open: boolean) {
+        const next = open && this.config?.expandable === true;
+        if (next === this.open && this.hasAttribute('data-expanded') === next) return;
+        this.open = next;
+        this.toggleAttribute('data-expanded', next);
+        const flow = this.refs?.flow;
+        if (flow) flow.panel.hidden = !next;
+        if (this.config?.expandable) this.refs?.heroValue.parentElement?.setAttribute('aria-expanded', String(next));
+        this.fit();
     }
 
     /** The side layout: the cells listed on the hero's right */
@@ -184,6 +225,8 @@ export class EnergySkyCard extends HTMLElement {
         const cells = configuredCells(config);
         if (this.side) this.setAttribute('data-layout', 'side');
         else this.removeAttribute('data-layout');
+        this.toggleAttribute('data-expandable', config.expandable === true);
+        this.flowWidth = 0;
         this.root.innerHTML = `
             <style>${CARD_CSS}</style>
             <ha-card>
@@ -194,16 +237,19 @@ export class EnergySkyCard extends HTMLElement {
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
                     <div class="context line" hidden><span class="context-full"></span><span class="context-short"></span></div>
+                    ${config.expandable ? '<i class="grabber" aria-hidden="true"></i>' : ''}
                     <div class="grid">${cells.map(cell => `
                         <div class="metric" data-metric="${cell.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
                             <div class="value line"><span class="value-main"></span><span class="extra extra-full"></span><span class="extra extra-short"></span><span class="value-tight"></span><span class="extra extra-tight"></span><span class="value-bare"></span></div>
                         </div>`).join('')}</div>
                 </div>
+                ${config.expandable ? flowMarkup() : ''}
             </ha-card>`;
         const q = (sel: string, parent: ParentNode = this.root) => parent.querySelector(sel) as HTMLElement;
         this.refs = {
             card: q('ha-card'),
+            flow: config.expandable ? this.flowRefs() : undefined,
             heroValue: q('.hero-value'),
             heroUnit: q('.hero-unit'),
             context: q('.context'),
@@ -225,7 +271,28 @@ export class EnergySkyCard extends HTMLElement {
             if (tap) return [[cell.key, { entity, tap }]];
             return opensEntity && entity ? [[cell.key, { entity }]] : [];
         }));
+        if (config.expandable) {
+            const hero = this.refs.heroValue.parentElement as HTMLElement;
+            for (const el of [hero, this.refs.context, this.refs.flow!.panel]) {
+                el.dataset.cellTarget = '';
+                el.dataset.targetKey = 'toggle';
+            }
+            hero.setAttribute('role', 'button');
+            hero.tabIndex = 0;
+            hero.setAttribute('aria-controls', 'esc-flow');
+            hero.setAttribute('aria-expanded', 'false');
+            for (const [key] of NODES) {
+                const entity = flowNodeEntity(config, key);
+                if (!entity) continue;
+                this.cellTargets.set(`node:${key}`, { entity });
+                const el = this.refs.flow!.nodes.get(key)!.el;
+                el.dataset.cellTarget = '';
+                el.setAttribute('role', 'button');
+                el.tabIndex = 0;
+            }
+        }
         for (const [key, target] of this.cellTargets) {
+            if (key.startsWith('node:')) continue;
             const el = q(`[data-metric="${key}"]`);
             el.dataset.cellTarget = '';
             if (target.tap?.action === 'none') continue;
@@ -249,7 +316,10 @@ export class EnergySkyCard extends HTMLElement {
      */
     private actionsFor(path: EventTarget[]): ActionsConfig {
         const cell = path.find((t): t is HTMLElement => t instanceof HTMLElement && t.dataset.cellTarget !== undefined);
-        const target = cell ? this.cellTargets.get(cell.dataset.metric ?? '') : undefined;
+        // The big number, its line and the unfolded panel fold and unfold; hold and double tap stay the card's
+        if (cell?.dataset.targetKey === 'toggle') return { ...this.actions, toggle: () => { this.expanded = !this.open; } };
+        const key = cell?.dataset.node ? `node:${cell.dataset.node}` : cell?.dataset.metric ?? '';
+        const target = cell ? this.cellTargets.get(key) : undefined;
         if (!target) return this.actions;
         const { tap_action: _cardTap, ...rest } = this.actions;
         return { ...rest, entity: target.entity ?? this.actions.entity, ...(target.tap ? { tap_action: target.tap } : {}) };
@@ -270,7 +340,74 @@ export class EnergySkyCard extends HTMLElement {
     fit(): void {
         this.fitLayout();
         this.fitExtras();
+        this.layoutFlow();
         this.clearText();
+    }
+
+    /** The flow's wires and comets, for the panel's width (redrawn only when it changes) */
+    private layoutFlow(): void {
+        const flow = this.refs?.flow;
+        if (!flow || flow.panel.hidden) return;
+        const width = Math.round(flow.box.clientWidth);
+        if (!width || width === this.flowWidth) return;
+        this.flowWidth = width;
+        const geometry = flowGeometry(width);
+        flow.svg.setAttribute('viewBox', `0 0 ${width} ${FLOW_HEIGHT}`);
+        flow.box.style.setProperty('--esc-node-w', `${geometry.nodeWidth}px`);
+        flow.box.style.setProperty('--esc-centre-w', `${geometry.centreWidth}px`);
+        flow.box.toggleAttribute('data-narrow', geometry.nodeWidth < 112);
+        for (const [key, wire] of flow.wires) for (const path of wire.paths) path.setAttribute('d', geometry.paths[key]);
+        flow.keyframes.textContent = geometry.keyframes;
+    }
+
+    /** The flow panel's elements, once built */
+    private flowRefs(): NonNullable<Refs['flow']> {
+        const q = <T extends Element = HTMLElement>(sel: string, parent: ParentNode = this.root) => parent.querySelector(sel) as unknown as T;
+        return {
+            panel: q('.panel'),
+            box: q('.flow'),
+            svg: q<SVGSVGElement>('.wires'),
+            keyframes: q<HTMLStyleElement>('style.flow-keyframes'),
+            wires: new Map(WIRE_KEYS.map(key => {
+                const g = q<SVGGElement>(`[data-wire="${key}"]`);
+                return [key, { g, paths: [...g.querySelectorAll('path')] }];
+            })),
+            nodes: new Map(NODES.map(([key]) => {
+                const el = q(`[data-node="${key}"]`);
+                return [key, { el, label: q('.nlab', el), value: q('.nval', el), centre: q('.centre', el), segs: [...el.querySelectorAll<SVGCircleElement>('.seg')] }];
+            })),
+        };
+    }
+
+    /** The flow's numbers, rings and wires, in place */
+    private updateFlow(): void {
+        const flow = this.refs?.flow;
+        if (!flow) return;
+        const view = flowView(this.config!, this._hass!);
+        for (const [key, node] of flow.nodes) {
+            const v = view.nodes[key];
+            if (node.el.hidden === v.present) node.el.hidden = !v.present;
+            setText(node.label, v.label);
+            setText(node.value, v.value);
+            setText(node.centre, v.centre ?? '');
+            node.el.toggleAttribute('data-centre', v.centre !== undefined);
+            let offset = 0;
+            node.segs.forEach((seg, i) => {
+                const part = v.ring[i];
+                const length = part ? Math.max(RING * part[0] - (v.ring.length > 1 ? 3 : 0), 0) : 0;
+                setAttr(seg, 'stroke-dasharray', `${length.toFixed(1)} ${RING.toFixed(1)}`);
+                setAttr(seg, 'stroke-dashoffset', (-offset).toFixed(1));
+                // Too short to read as an arc (its round caps would make a dot): not drawn
+                setAttr(seg, 'data-source', part && length >= 1.5 ? part[1] : '');
+                if (part) offset += RING * part[0];
+            });
+        }
+        const off = new Set<WireKey>();
+        for (const node of ['grid', 'battery'] as const) if (!view.nodes[node].present) for (const w of WIRES_OF[node]) off.add(w);
+        for (const [key, wire] of flow.wires) {
+            setAttr(wire.g, 'data-level', String(view.levels[key]));
+            setAttr(wire.g, 'data-off', off.has(key) ? '' : null);
+        }
     }
 
     /** Where text sits: the visible words and icons, and the hairline above the grid */
@@ -399,6 +536,7 @@ export class EnergySkyCard extends HTMLElement {
             el.value.parentElement!.toggleAttribute('data-bare', !!metric.bare);
             if (metric.icon && el.icon.getAttribute('icon') !== metric.icon) el.icon.setAttribute('icon', metric.icon);
         }
+        this.updateFlow();
         // A longer hero ("12,3 kW" after "8 W") or metric may not fit any more
         if (before !== this.fitSensitiveText()) this.fit();
     }
@@ -429,6 +567,8 @@ export class EnergySkyCard extends HTMLElement {
 
     /** Sections view: full width, four rows (248 px), never under three; the side layout two rows (120 px) */
     getGridOptions() {
+        // Unfolding changes the card's height: the grid lets the card set it
+        if (this.config?.expandable) return { columns: 12, rows: 'auto' as const, min_columns: 6 };
         return this.side
             ? { columns: 12, rows: 2, min_columns: 6, min_rows: 2 }
             : { columns: 12, rows: 4, min_columns: 6, min_rows: 3 };
@@ -459,6 +599,25 @@ function cloudsMarkup(): string {
     return CLOUDS.map(c =>
         `<div class="drift" style="animation-duration:${c.period}s;animation-delay:-${c.delay}s"><i class="cloud" style="width:${c.width}%;height:${c.height}%;top:${c.top}%;left:${(100 - c.width) / 2}%"></i></div>`,
     ).join('');
+}
+
+/** The flow's markup: the wires (SVG, drawn for the width by layoutFlow) under the four nodes (HTML) */
+function flowMarkup(): string {
+    const comets = [1, 2, 3].map(n => `<g class="comet c${n}"><circle cx="-8" r="1.3" opacity="0.25"></circle><circle cx="-4" r="1.8" opacity="0.5"></circle><circle r="2.5"></circle></g>`).join('');
+    const wires = WIRE_KEYS.map(key => `<g class="wire ${WIRES[key]}" data-wire="${key}" data-level="0"><path class="glow"></path><path class="line"></path>${comets}</g>`).join('');
+    const nodes = NODES.map(([key, icon]) => `
+        <div class="node" data-node="${key}">
+            <span class="disc"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17"></circle>${'<circle class="seg" cx="20" cy="20" r="17"></circle>'.repeat(3)}</svg><ha-icon icon="${icon}"></ha-icon><span class="centre"></span></span>
+            <span class="ntext"><span class="nlab line"></span><span class="nval line"></span></span>
+        </div>`).join('');
+    return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${wires}</svg>${nodes}</div></div>`;
+}
+
+/** Set an attribute only when it changed (null removes it) */
+function setAttr(el: Element, name: string, value: string | null): void {
+    if (value === null) {
+        if (el.hasAttribute(name)) el.removeAttribute(name);
+    } else if (el.getAttribute(name) !== value) el.setAttribute(name, value);
 }
 
 /** Write text only when it changed, so an unchanged node isn't touched */

@@ -10,9 +10,9 @@ Une carte de tableau de bord Home Assistant qui affiche la production solaire, l
 | **Jour Rouge** | **Nuit** |
 | ![Jour Rouge](docs/images/rouge.png) | ![Nuit, animée : les étoiles scintillent, une étoile filante passe](docs/images/nuit-anim.png) |
 
-| Format côté (`layout: side`), 2 rangées |
-|---|
-| ![Format côté : le grand chiffre à gauche, les cases à droite en icône + valeur](docs/images/cote.png) |
+| Format côté (`layout: side`), 2 rangées | Dépliée (`expandable: true`) |
+|---|---|
+| ![Format côté : le grand chiffre à gauche, les cases à droite en icône + valeur](docs/images/cote.png) | ![Carte dépliée : le flux d'énergie entre solaire, réseau, batterie et maison](docs/images/deplie.png) |
 
 ## Ce que montre la carte
 
@@ -93,6 +93,7 @@ tap_action:
 | `forecast_tomorrow_entity` | — | Prévision de production pour demain (kWh). |
 | `consumption_entity` | — | Consommation de la maison (W). Pour la case « Consommation » et `night_hero`. |
 | `night_hero` | `production` | Ce que montre le grand chiffre la nuit : `production`, `consumption` (il faut `consumption_entity`) ou `battery` (il faut `battery.soc_entity`). La ligne du dessous dit alors ce que c'est : « Consommation · 7,2 kWh produits ». |
+| `expandable` | `false` | `true` : toucher le grand chiffre ou sa ligne déplie le flux d'énergie sous la carte (voir « Déplier »). Aussi dans le bloc Cases de l'éditeur. |
 | `layout` | `standard` | `standard` : les cases sous le grand chiffre (4 rangées). `side` : les cases à droite, une ligne chacune, l'icône à la place du nom (2 rangées, voir « Taille »). Aussi dans le bloc Cases de l'éditeur. |
 | `cells` | automatique | Les cases du bas, 4 au plus, dans l'ordre (voir plus bas). Sans elle : Batterie, Réseau, Tension, Prévu demain, selon les entités renseignées. |
 | `tariff_color_entity` | — | Couleur tarifaire du jour (`Bleu`, `Blanc`, `Rouge`). Inconnue : Bleu. |
@@ -153,6 +154,16 @@ template:
 ```
 
 puis `soc_reached_entities: [binary_sensor.battery_target_reached]`. Si votre installation a déjà un interrupteur qui bloque la charge à un certain niveau, mettez-le directement.
+
+### Déplier : le flux d'énergie
+
+Avec `expandable: true`, toucher le grand chiffre ou la ligne du dessous déplie la carte (dans les deux formats) et montre où va l'énergie en ce moment : le soleil à gauche, la maison à droite, le réseau en haut, la batterie en bas. Toucher la partie dépliée la replie.
+
+- La couleur dit d'où vient l'énergie (doré : solaire, menthe : batterie, bleu glacier : réseau) ; plus la puissance est forte, plus le fil est épais et plus les comètes sont nombreuses et rapides. Un fil sans courant est un pointillé.
+- Chaque élément montre sa puissance avec le signe de la carte : Réseau négatif quand vous vendez, Batterie négative en décharge. Les anneaux : la production rapportée à `production_max`, la charge de la batterie (au centre), la part de chaque source pour la maison.
+- Toucher un élément ouvre son entité. La maison vient de `consumption_entity`, ou se calcule (solaire + réseau − charge de la batterie) ; sans capteur, la toucher n'ouvre rien. Sans batterie ou sans réseau, l'élément disparaît avec ses fils.
+- Le reste de la carte garde son `tap_action` ; l'appui long et le double appui restent ceux de la carte, sur le grand chiffre aussi.
+- La carte règle sa hauteur elle-même : dans la vue sections, sa hauteur passe à « auto » (l'éditeur le fait en cochant l'option). Les comètes s'arrêtent carte repliée, hors écran, et avec `animate: false` ou « mouvement réduit ».
 
 ### Ouvrir un pop-up Bubble Card
 
@@ -227,6 +238,7 @@ Use the visual editor (everything but the palettes) or YAML. The options are tho
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast (kWh). |
 | `consumption_entity` | — | The home's power use (W), for the Consumption cell and `night_hero`. |
 | `night_hero` | `production` | What the big number shows at night: `production`, `consumption` or `battery`; the line below names it ("Consumption · 7.2 kWh produced"). |
+| `expandable` | `false` | `true`: a tap on the big number or its line unfolds the energy flow under the card, in both layouts: the sun on the left, the home on the right, the grid above, the battery below; colours by source, thicker and busier wires with more power, the card's signs (grid negative when selling, battery negative when discharging); a tap on a node opens its entity, a tap on the unfolded part folds it. The rest of the card keeps its `tap_action`, hold and double tap stay the card's. The card sets its own height (rows "auto" in the sections view; the editor sets it). |
 | `layout` | `standard` | `standard`: the cells under the big number (4 rows). `side`: the cells on its right, one line each, the icon standing for the name (2 rows, 120 px; the sky is the gradient's lower part and the halo stays above the big number, so the contrast holds). Also in the editor's Cells block. |
 | `cells` | automatic | Up to 4 bottom cells, in order: `battery`, `grid`, `voltage`, `tomorrow`, `consumption`, or a free cell `{ entity, name, icon }` for any entity (powers read in W / kW, anything else as Home Assistant formats it). Each cell can take its own `tap_action` (a built-in one is then written `{ type: grid, tap_action: … }`), also set in the editor's Cells block; without one, a tap opens the cell's entity, unless the card has a `tap_action`. |
 | `tariff_color_entity` | — | Today's tariff colour (`Bleu`, `Blanc`, `Rouge`); unknown is Bleu. |

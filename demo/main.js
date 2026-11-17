@@ -1,4 +1,4 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, h=…, bare, probe, seek)
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand, h=…, bare, probe, seek)
 import { ATTRIBUTES, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
@@ -6,16 +6,18 @@ const lang = params.get('lang') || 'fr';
 const root = document.getElementById('cards');
 // ?side: the side layout, in a 2-row cell (120 px) unless h says otherwise
 const side = params.has('side');
-const height = params.get('h') || (side ? '120' : '');
+// ?expand: expandable cards, unfolded (they set their own height)
+const expand = params.has('expand');
+const height = expand ? '' : params.get('h') || (side ? '120' : '');
 if (params.has('bare')) document.body.classList.add('bare');
 for (const [name, overrides] of Object.entries(SCENARIOS)) {
   if (only && !only.split(',').includes(name)) continue;
   const widths = (params.get('widths') || '360,304').split(',').map(Number);
   for (const width of widths) {
     const fig = document.createElement('figure');
-    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : ''}"></div>`;
+    fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : expand ? ';height:auto' : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}) });
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { expandable: true } : {}) });
     const states = {};
     let t = 0;
     for (const [id, state] of Object.entries(overrides)) {
@@ -24,6 +26,7 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     }
     card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' } };
     fig.querySelector('.cell').appendChild(card);
+    if (expand) card.expanded = true;
     root.appendChild(fig);
   }
 }
@@ -45,6 +48,7 @@ if (params.has('probe')) {
       const anims = card.shadowRoot.querySelector('ha-card').getAnimations({ subtree: true });
       const running = anims.filter(a => a.playState === 'running').length;
       const paused = anims.filter(a => a.playState === 'paused').length;
+      const comets = anims.filter(a => a.playState === 'running' && a.effect?.target?.classList?.contains('comet')).length;
       const lines = [...card.shadowRoot.querySelectorAll('.line')].filter(l => !l.hidden);
       const overflow = lines.filter(l => l.scrollWidth > l.clientWidth + 1).length;
       const content = card.shadowRoot.querySelector('.content');
@@ -57,7 +61,7 @@ if (params.has('probe')) {
         .filter(el => !el.hidden).map(el => el.getBoundingClientRect());
       const hits = dots.filter(d => texts.some(t => d.left < t.right && d.right > t.left && d.top < t.bottom && d.bottom > t.top)).length;
       const quarters = new Set(dots.map(d => `${(d.left + d.right) / 2 > box.left + box.width / 2 ? 'r' : 'l'}${(d.top + d.bottom) / 2 > box.top + box.height / 2 ? 'b' : 't'}`)).size;
-      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? (side ? 44 : 56)} short=${card.hasAttribute('data-no-extra') ? 3 : card.hasAttribute('data-tight-extra') ? 2 : card.hasAttribute('data-short-extra') ? 1 : 0} dots=${dots.length} hits=${hits} quarters=${quarters}`;
+      return `${card.closest('figure').querySelector('figcaption').textContent} | mode=${card.dataset.mode} motion=${card.dataset.motion} running=${running} paused=${paused} overflow=${overflow} tall=${tall} hero=${card.getAttribute('data-hero') ?? (side ? 44 : 56)} short=${card.hasAttribute('data-no-extra') ? 3 : card.hasAttribute('data-tight-extra') ? 2 : card.hasAttribute('data-short-extra') ? 1 : 0} dots=${dots.length} hits=${hits} quarters=${quarters} comets=${comets}`;
     });
     const pre = document.createElement('pre');
     pre.id = 'probe';
