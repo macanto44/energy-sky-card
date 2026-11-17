@@ -25,12 +25,12 @@ export interface SchemaItem {
 
 const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
-        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases',
+        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition',
         production_entity: 'Puissance solaire (W, additionnées)',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
         flow: 'Flux d\'énergie', flow_none: 'Aucun', flow_tap: 'Déplier en touchant le grand chiffre', flow_always: 'Toujours visible',
-        layout: 'Disposition', layout_standard: 'Standard : les cases sous le chiffre (4 rangées)', layout_side: 'Côté : icône + valeur à droite (2 rangées)',
+        layout: 'Format', layout_standard: 'Standard : les cases sous le chiffre (4 rangées)', layout_side: 'Côté : icône + valeur à droite (2 rangées)',
         cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)', cell_tap_action: 'Appui sur la case',
         kind_none: 'Aucune', kind_battery: 'Batterie', kind_grid: 'Réseau', kind_voltage: 'Tension', kind_tomorrow: 'Prévu demain',
         kind_consumption: 'Consommation', kind_custom: 'Libre (une entité au choix)',
@@ -44,12 +44,12 @@ const LABELS: Record<Lang, Record<string, string>> = {
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
-        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells',
+        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout',
         production_entity: 'Solar power (W, summed)',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
         flow: 'Energy flow', flow_none: 'None', flow_tap: 'Unfold on a tap on the big number', flow_always: 'Always shown',
-        layout: 'Layout', layout_standard: 'Standard: the cells under the number (4 rows)', layout_side: 'Side: icon + value on the right (2 rows)',
+        layout: 'Format', layout_standard: 'Standard: the cells under the number (4 rows)', layout_side: 'Side: icon + value on the right (2 rows)',
         cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)', cell_tap_action: 'Tap on the cell',
         kind_none: 'None', kind_battery: 'Battery', kind_grid: 'Grid', kind_voltage: 'Voltage', kind_tomorrow: 'Tomorrow',
         kind_consumption: 'Consumption', kind_custom: 'Free (any entity)',
@@ -159,12 +159,15 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             ],
         },
         {
-            name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
+            name: '', type: 'expandable', flatten: true, title: t('display'), icon: 'mdi:page-layout-body',
             schema: [
                 { name: 'layout', selector: { select: { mode: 'list', options: (['standard', 'side'] as const).map(value => ({ value, label: t(`layout_${value}`) })) } } },
                 { name: 'flow', selector: { select: { mode: 'list', options: (['none', 'tap', 'always'] as const).map(value => ({ value, label: t(`flow_${value}`) })) } } },
-                ...cellFields(lang, data),
             ],
+        },
+        {
+            name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
+            schema: cellFields(lang, data),
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('tariff'), icon: 'mdi:palette-outline',

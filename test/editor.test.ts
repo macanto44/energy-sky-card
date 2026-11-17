@@ -35,8 +35,8 @@ const fields = (schema: SchemaItem[]) => schema.flatMap(block => (block.schema ?
 
 describe('schema', () => {
     it('has the blocks of the brief, in order', () => {
-        expect(editorSchema('fr').map(b => b.title)).toEqual(['Production', 'Batterie', 'Réseau', 'Cases', 'Tarif et ciel', 'Actions']);
-        expect(editorSchema('en').map(b => b.title)).toEqual(['Production', 'Battery', 'Grid', 'Cells', 'Tariff and sky', 'Actions']);
+        expect(editorSchema('fr').map(b => b.title)).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Tarif et ciel', 'Actions']);
+        expect(editorSchema('en').map(b => b.title)).toEqual(['Production', 'Battery', 'Grid', 'Layout', 'Cells', 'Tariff and sky', 'Actions']);
     });
 
     it('covers every option except the palettes, with nested battery and grid', () => {
@@ -175,10 +175,12 @@ describe('the 0.2 options', () => {
 });
 
 describe('the layout', () => {
-    it('offers standard and side at the top of the Cells block, standard by default (left out of the YAML)', () => {
-        const cells = editorSchema('fr').find(b => b.title === 'Cases')!;
-        expect(cells.schema?.[0].name).toBe('layout');
-        expect((cells.schema?.[0].selector as any).select.options.map((o: { value: string }) => o.value)).toEqual(['standard', 'side']);
+    it('offers standard and side in a Layout block of its own, before Cells, standard by default (left out of the YAML)', () => {
+        const display = editorSchema('fr').find(b => b.title === 'Disposition')!;
+        expect(display.schema?.map(f => f.name)).toEqual(['layout', 'flow']);
+        expect(editorLabel('fr', 'layout')).toBe('Format');
+        expect((display.schema?.[0].selector as any).select.options.map((o: { value: string }) => o.value)).toEqual(['standard', 'side']);
+        expect(editorSchema('fr').find(b => b.title === 'Cases')!.schema?.[0].name).toBe('cell_1');
         const { form, change, changes } = mount();
         expect(form.data?.layout).toBe('standard');
         change({ animate: false });
@@ -221,9 +223,9 @@ describe('help under the layout fields', () => {
 
 describe('the energy flow', () => {
     it('offers none, on a tap or always, under the layout; none by default (left out of the YAML)', () => {
-        const cells = editorSchema('fr').find(b => b.title === 'Cases')!;
-        expect(cells.schema?.[1].name).toBe('flow');
-        expect((cells.schema?.[1].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
+        const display = editorSchema('fr').find(b => b.title === 'Disposition')!;
+        expect(display.schema?.[1].name).toBe('flow');
+        expect((display.schema?.[1].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
         const { form, change, changes } = mount();
         expect(form.data?.flow).toBe('none');
         change({ animate: false });

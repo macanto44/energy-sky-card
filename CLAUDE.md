@@ -47,7 +47,7 @@ src/
 ├── stars.ts                 # Seeded night sky over the whole card: stars (10 × 6 jittered grid), 3 shooting stars; coveredBy
 ├── styles/card.ts           # The card's CSS (typography of brief §5.2, sky layers)
 ├── energy-sky-card.ts       # The card: setConfig, hass, DOM built once, text updated in place
-└── energy-sky-card-editor.ts# Editor bundle: ha-form schema in 5 blocks, config cleaning (palettes are YAML-only)
+└── energy-sky-card-editor.ts# Editor bundle: ha-form schema in 7 blocks (Production, Battery, Grid, Layout, Cells, Tariff and sky, Actions), config cleaning (palettes are YAML-only)
 test/
 ├── setup.ts                 # jsdom stubs (matchMedia)
 ├── helpers.ts               # makeHass, the real config (brief §7), annex B readings; mountCard, $, press / tap, actionsOf, measure / unmeasure (fake layout)

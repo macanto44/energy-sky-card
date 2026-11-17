@@ -120,7 +120,7 @@ To update, overwrite both files and raise the `?v=` in the resource URL so brows
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
 2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Cells** (layout, energy flow, and the four cells), **Tariff and sky**, and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, and the energy flow), **Cells** (the four cells and their taps), **Tariff and sky**, and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
