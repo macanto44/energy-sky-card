@@ -7,7 +7,7 @@ import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
 import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
-import { DEFAULT_PRODUCTION_MAX, FLOW_COLOURS } from './sky';
+import { DEFAULT_PRODUCTION_MAX, DEFAULT_SOLID_COLOR, FLOW_COLOURS } from './sky';
 import type { CellConfig, CellKind, ConsumerConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The parts of ha-form's schema the editor uses */
@@ -25,7 +25,7 @@ export interface SchemaItem {
 
 const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
-        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}', consumer_threshold: 'Seuil d\'affichage',
+        production: 'Production', battery: 'Batterie', grid: 'Réseau', sky: 'Ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}', consumer_threshold: 'Seuil d\'affichage',
         production_entity: 'Puissance solaire (W, additionnées)',
         stale_after: 'Valeur figée après',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
@@ -41,12 +41,14 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', temperature_entity: 'Température', soc_reached_entities: 'SOC atteint',
         voltage_entity: 'Tension (V)', outage_entity: 'Alarme de coupure', outage_states: 'États de coupure',
         tariff_color_entity: 'Couleur tarifaire (Bleu / Blanc / Rouge)', sun_entity: 'Soleil',
+        background: 'Fond', background_tempo: 'Tempo : la couleur du jour', background_solid: 'Neutre : une couleur', background_weather: 'Météo',
+        background_color: 'Couleur du fond', weather_entity: 'Entité météo',
         power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
-        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}', consumer_threshold: 'Display threshold',
+        production: 'Production', battery: 'Battery', grid: 'Grid', sky: 'Sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}', consumer_threshold: 'Display threshold',
         production_entity: 'Solar power (W, summed)',
         stale_after: 'Stale after',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
@@ -62,6 +64,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Charge (%)', power_entity: 'Power (W)', temperature_entity: 'Temperature', soc_reached_entities: 'SOC reached',
         voltage_entity: 'Voltage (V)', outage_entity: 'Outage alarm', outage_states: 'Outage states',
         tariff_color_entity: 'Tariff colour (Bleu / Blanc / Rouge)', sun_entity: 'Sun',
+        background: 'Background', background_tempo: 'Tempo: today\'s colour', background_solid: 'Solid: one colour', background_weather: 'Weather',
+        background_color: 'Background colour', weather_entity: 'Weather entity',
         power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
         loading: 'Loading the editor…',
@@ -193,9 +197,13 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             schema: consumerFields(data),
         }] : []),
         {
-            name: '', type: 'expandable', flatten: true, title: t('tariff'), icon: 'mdi:palette-outline',
+            name: '', type: 'expandable', flatten: true, title: t('sky'), icon: 'mdi:weather-partly-cloudy',
             schema: [
-                { name: 'tariff_color_entity', selector: sensor() },
+                { name: 'background', selector: { select: { mode: 'list', options: (['tempo', 'solid', 'weather'] as const).map(value => ({ value, label: t(`background_${value}`) })) } } },
+                // The background's own field: the tariff sensor, the colour, or the weather entity
+                ...(data.background === 'solid' ? [{ name: 'background_color', selector: { color_rgb: {} } }]
+                    : data.background === 'weather' ? [{ name: 'weather_entity', selector: { entity: { domain: 'weather' } } }]
+                    : [{ name: 'tariff_color_entity', selector: sensor() }]),
                 { name: 'sun_entity', selector: { entity: { domain: 'sun' } } },
                 { name: 'animate', selector: { boolean: {} } },
             ],
@@ -334,6 +342,8 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         // 0.3.3's expandable: true is flow: tap
         flow: config.flow ?? (config.expandable ? 'tap' : 'none'),
         ...flowColorSlots(config),
+        background: config.background ?? 'tempo',
+        background_color: fromHex(config.background_color ?? DEFAULT_SOLID_COLOR),
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
         ...cellSlots(config),
         ...consumerSlots(config),
@@ -384,10 +394,15 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
         if (b?.invert === false) delete b.invert;
         if (b && !Object.keys(b).length) delete merged[block];
     }
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', layout: 'standard' };
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', layout: 'standard', background: 'tempo' };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }
+    // The solid sky's colour: from the picker's [r, g, b], written only for a solid sky that isn't the default
+    const picked = value.background_color;
+    if (isRgb(picked)) merged.background_color = toHex(picked);
+    if (merged.background !== 'solid' && !previous.background_color) delete merged.background_color;
+    if (merged.background === 'solid' && merged.background_color === DEFAULT_SOLID_COLOR && !previous.background_color) delete merged.background_color;
     // No flow is written as no flow option; expandable (0.3.3) is saved as flow
     if (merged.flow === 'none') delete merged.flow;
     // The colour pickers: written as flow_colors, a colour only when it isn't the default

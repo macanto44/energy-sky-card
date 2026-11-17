@@ -6,7 +6,8 @@ import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey } from './model';
 import { localize } from './localize';
 import { cardLanguage } from './localize';
-import { CLOUDS, computeBackground, isHexColor } from './sky';
+import { CLOUDS, WEATHER, computeBackground, isHexColor } from './sky';
+import { weatherMarkup } from './weather';
 import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { energyPrefs, stubConfig } from './stub';
@@ -44,6 +45,7 @@ const CHOICES: [string, string[]][] = [
     ['night_hero', ['production', 'consumption', 'battery']],
     ['layout', ['standard', 'side']],
     ['flow', ['tap', 'always']],
+    ['background', ['tempo', 'solid', 'weather']],
 ];
 /** Older option names, no longer read, and what replaces them */
 const RENAMED: [string, { fr: string; en: string }][] = [
@@ -114,6 +116,9 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             }
         }
     }
+    if (c.background_color !== undefined && !isHexColor(c.background_color)) {
+        throw configError('background_color : une couleur hexadécimale (#rrggbb)', 'background_color: a hex colour (#rrggbb)');
+    }
     if (c.flow_colors !== undefined) {
         const colours = c.flow_colors as unknown;
         if (!colours || typeof colours !== 'object' || Array.isArray(colours)) {
@@ -183,6 +188,8 @@ export class EnergySkyCard extends HTMLElement {
     private open = false;
     /** The width the flow's geometry was last drawn for */
     private flowWidth = 0;
+    /** The weather drawn in the sky (its WEATHER key), redrawn only when the condition changes */
+    private weatherDrawn = '';
     /** The appliances in the flow (above their threshold), by index: the corners hold these only */
     private shownConsumers: number[] = [];
     /** The last view, its text in full (the fit writes a shorter form when needed) */
@@ -281,6 +288,7 @@ export class EnergySkyCard extends HTMLElement {
             else this.style.removeProperty(variable);
         }
         this.flowWidth = 0;
+        this.weatherDrawn = '';
         this.shownConsumers = [];
         this.fitted = '';
         this.root.innerHTML = `
@@ -289,6 +297,7 @@ export class EnergySkyCard extends HTMLElement {
                 <div class="sky" aria-hidden="true">
                     <div class="layer day"><div class="halo"></div>${cloudsMarkup()}</div>
                     <div class="layer night">${starsMarkup()}</div>
+                    ${config.background === 'weather' ? '<div class="wx"></div>' : ''}
                 </div>
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
@@ -691,7 +700,18 @@ export class EnergySkyCard extends HTMLElement {
         this.dataset.mode = bg.mode;
         this.toggleAttribute('data-producing', bg.producing);
         bg.palette.forEach((colour, i) => card.style.setProperty(`--esc-c${i}`, colour));
+        bg.nightPalette.forEach((colour, i) => card.style.setProperty(`--esc-n${i}`, colour));
         card.style.setProperty('--esc-halo-alpha', String(bg.haloAlpha));
+        this.dataset.sky = bg.sky;
+        // The weather: its clouds, rain, snow, fog or lightning, and how many stars get through at night
+        const look = bg.weather ? WEATHER[bg.weather] : undefined;
+        setAttr(this, 'data-stars', look ? look.stars : null);
+        card.style.setProperty('--esc-cloud-a', String(look ? (bg.mode === 'night' ? look.nightCloudAlpha : look.cloudAlpha) : 0));
+        const wx = this.root.querySelector('.wx');
+        if (wx && bg.weather && bg.weather !== this.weatherDrawn) {
+            this.weatherDrawn = bg.weather;
+            wx.innerHTML = weatherMarkup(bg.weather);
+        }
         // The day / night cross-fade is for changes, not for the first paint
         if (!this.hasAttribute('data-ready') && this.readyFrame === undefined) {
             this.readyFrame = requestAnimationFrame(() => {

@@ -4,6 +4,8 @@ import {
     gradientAt, sideGradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
 } from '../src/sky';
 import { SHOOTING_STARS, coveredBy, generateStars, starReach, starsMarkup } from '../src/stars';
+import { DEFAULT_SOLID_COLOR, FOG_ALPHA, WEATHER, solidPalette, textContrast, weatherKey } from '../src/sky';
+import { weatherMarkup } from '../src/weather';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 
 const bg = (overrides: Record<string, string | number> = {}, config = FULL_CONFIG) =>
@@ -153,6 +155,60 @@ describe('contrast of white text, side layout', () => {
 
     it('would fail with the full gradient: the values reach the card\'s top', () => {
         expect(contrastRatio(WHITE, gradientAt(DEFAULT_PALETTES.Bleu, 0.104))).toBeLessThan(4.5);
+    });
+});
+
+describe('the solid sky', () => {
+    it('keeps a dark enough colour as it is, and darkens a pale one until white text reads at 4.5:1', () => {
+        expect(solidPalette(DEFAULT_SOLID_COLOR)[1]).toBe(DEFAULT_SOLID_COLOR);
+        for (const colour of ['#ffffff', '#c9d3dc', '#ffff00', '#ff0000', '#00ff00', '#3a6b8c', '#000000']) {
+            expect(textContrast(solidPalette(colour)), colour).toBeGreaterThanOrEqual(4.5);
+        }
+        expect(solidPalette('#ffffff')[1]).not.toBe('#ffffff');
+    });
+
+    it('has no halo, and the night stays the night', () => {
+        const b = computeBackground({ ...FULL_CONFIG, background: 'solid', background_color: '#6a4c93' }, makeHass({ ...ANNEX_B, 'sun.sun': 'above_horizon', 'sensor.production_pv': 3000 }));
+        expect(b).toMatchObject({ sky: 'solid', haloAlpha: 0, nightPalette: NIGHT_PALETTE });
+        expect(b.palette[1]).toBe('#6a4c93');
+    });
+});
+
+describe('the weather sky', () => {
+    const bgw = (state: string, extra: Record<string, string | number> = {}) =>
+        computeBackground({ ...FULL_CONFIG, background: 'weather', weather_entity: 'weather.home' }, makeHass({ ...ANNEX_B, 'sun.sun': 'above_horizon', 'sensor.production_pv': 3000, 'weather.home': state, ...extra }));
+
+    it('follows the weather entity, with Home Assistant\'s other conditions drawn as their nearest look', () => {
+        expect(bgw('rainy')).toMatchObject({ sky: 'weather', weather: 'rainy', palette: WEATHER.rainy.day, nightPalette: WEATHER.rainy.night });
+        expect([weatherKey('clear-night'), weatherKey('hail'), weatherKey('windy-variant'), weatherKey('exceptional'), weatherKey('unavailable')]).toEqual(['sunny', 'pouring', 'windy', 'cloudy', 'cloudy']);
+    });
+
+    it('keeps the sun\'s halo for a sunny sky, some clearing or wind only', () => {
+        expect(bgw('sunny').haloAlpha).toBeGreaterThan(0);
+        expect(bgw('partlycloudy').haloAlpha).toBeGreaterThan(0);
+        expect(bgw('cloudy').haloAlpha).toBe(0);
+        expect(bgw('rainy').haloAlpha).toBe(0);
+    });
+
+    for (const [name, look] of Object.entries(WEATHER)) {
+        it(`keeps white text readable on ${name}, with its clouds or fog passing behind it, day and night`, () => {
+            const veil = (alpha: number) => Math.max(alpha, look.fog ? FOG_ALPHA : 0);
+            expect(textContrast(look.day, veil(look.cloudAlpha))).toBeGreaterThanOrEqual(4.5);
+            expect(textContrast(look.night, veil(look.nightCloudAlpha))).toBeGreaterThanOrEqual(4.5);
+            if (look.halo) expect(contrasts(look.day).hero).toBeGreaterThanOrEqual(3);
+        });
+    }
+
+    it('draws what the condition says, the same every time, from constants and numbers only', () => {
+        const rain = weatherMarkup('rainy');
+        expect(rain).toBe(weatherMarkup('rainy'));
+        expect(rain.match(/class="drop"/g)?.length).toBe(WEATHER.rainy.rain);
+        expect(rain.match(/class="cloudband"/g)?.length).toBe(WEATHER.rainy.clouds);
+        expect(weatherMarkup('snowy').match(/class="flake"/g)?.length).toBe(WEATHER.snowy.snow);
+        expect(weatherMarkup('fog').match(/class="fogband"/g)?.length).toBe(4);
+        expect(weatherMarkup('lightning-rainy')).toContain('class="flash"');
+        expect(weatherMarkup('sunny')).toBe('');
+        expect(weatherMarkup('nonsense')).toBe('');
     });
 });
 

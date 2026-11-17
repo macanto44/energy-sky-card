@@ -33,6 +33,9 @@ for (const [name, seek] of Object.entries(stills)) {
 // The side layout (layout: side), Bleu
 shoot('docs/images/cote.png', 'bleu', 3000, 2, 120, '&side');
 console.log('docs/images/cote.png');
+// The weather sky, rain, by day (a still)
+shoot('docs/images/meteo.png', 'bleu', 1500, 2, 248, '&sky=weather&wx=rainy');
+console.log('docs/images/meteo.png');
 // The side layout with its flow always shown and four appliances, at night (a still)
 shoot('docs/images/cote-flux.png', 'nuit', 900, 2, 406, '&side&expand=always&consumers=4', 440);
 console.log('docs/images/cote-flux.png');

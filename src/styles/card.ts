@@ -1,6 +1,6 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
-import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOW_COLOURS, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
+import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOW_COLOURS, FOG_ALPHA, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
 import { FLOW_HEIGHT, MAX_CONSUMERS, NODE_HEIGHT, WIRE_KEYS } from '../flow';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
@@ -42,7 +42,7 @@ ha-card {
     box-sizing: border-box;
     overflow: hidden;
     color: #fff;
-    background: #0b1026;
+    background: var(--esc-n2, #0b1026);
     border: none;
     -webkit-tap-highlight-color: transparent;
 }
@@ -52,7 +52,28 @@ ha-card {
 :host([data-mode="day"]) .layer.day,
 :host([data-mode="night"]) .layer.night { opacity: 1; }
 .layer.day { background: linear-gradient(180deg, var(--esc-c0, #4b90d5) 0%, var(--esc-c1, #2169b0) 60%, var(--esc-c2, #1d4f87) 100%); }
-.layer.night { background: linear-gradient(180deg, #1d2b4d 0%, #0b1026 100%); }
+.layer.night { background: linear-gradient(180deg, var(--esc-n0, #1d2b4d) 0%, var(--esc-n1, #121b36) 60%, var(--esc-n2, #0b1026) 100%); }
+/*
+ * The weather sky (background: weather): cumulus clouds drifting across,
+ * rain, snow, fog bands, a lightning flash; all under the text. Raindrops
+ * and snowflakes only show while they fall (motion on); clouds and fog
+ * rest where they are without motion. The Tempo sky's cloud shadows give
+ * way to the clouds.
+ */
+.wx { position: absolute; inset: 0; overflow: hidden; }
+.cloudband { position: absolute; inset: 0; }
+.cumulus { position: absolute; filter: blur(0.6px); }
+.cumulus g { fill: #f4f7fb; opacity: var(--esc-cloud-a, 0.12); }
+/* The side layout is short: smaller clouds, so one doesn't fill its height */
+:host([data-layout="side"]) .cumulus { transform: scale(0.5); transform-origin: 0 0; }
+.drop { position: absolute; top: 0; width: 1.2px; height: 16px; background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.55)); display: none; }
+.flake { position: absolute; top: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.85); display: none; }
+.fogband { position: absolute; left: -40%; width: 180%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, ${FOG_ALPHA}), rgba(255, 255, 255, 0)); }
+.flash { position: absolute; inset: 0; background: #f4f2ff; opacity: 0; }
+:host([data-sky="weather"]) .drift { display: none; }
+/* At night, the stars get through a clear sky only, or a few between clouds */
+:host([data-stars="none"]) .layer.night .star, :host([data-stars="none"]) .layer.night .shooting { display: none; }
+:host([data-stars="few"]) .layer.night .star:nth-of-type(3n+1), :host([data-stars="few"]) .layer.night .star:nth-of-type(3n+2) { display: none; }
 .halo {
     position: absolute;
     inset: 0;
@@ -112,6 +133,11 @@ ha-card {
     8% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
     100% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
 }
+/* Rain slanting down; snow drifting down, swaying; fog bands breathing to and fro; lightning: two quick flashes in 7 s */
+@keyframes esc-rain { from { transform: translate(0, -30px) rotate(14deg); } to { transform: translate(-70px, 300px) rotate(14deg); } }
+@keyframes esc-snow { 0% { transform: translate(0, -10px); } 25% { transform: translate(9px, 70px); } 50% { transform: translate(-7px, 145px); } 75% { transform: translate(8px, 215px); } 100% { transform: translate(0, 290px); } }
+@keyframes esc-fog { from { transform: translateX(-12%); opacity: 0.7; } to { transform: translateX(12%); opacity: 1; } }
+@keyframes esc-flash { 0%, 60%, 100% { opacity: 0; } 61% { opacity: 0.35; } 62% { opacity: 0.06; } 63.5% { opacity: 0.28; } 66% { opacity: 0; } }
 /* A cloud's band crossing the card, left to right */
 @keyframes esc-drift {
     from { transform: translateX(-110%); }
@@ -124,12 +150,17 @@ ${animated('[data-mode="day"][data-producing]', '.halo', 'animation: esc-breathe
 ${animated('[data-mode="night"]', '.star.twinkle', 'animation: esc-twinkle 2s ease-in-out infinite alternate;')}
 ${animated('[data-mode="night"]', '.shooting', 'animation: esc-shoot var(--esc-shoot-period, 11s) ease-out var(--esc-shoot-delay, 4s) infinite;')}
 ${animated('[data-mode="day"]', '.drift', 'animation: esc-drift 60s linear infinite;')}
+${animated('[data-sky="weather"]', '.cloudband', 'animation: esc-drift 60s linear infinite;')}
+${animated('[data-sky="weather"]', '.drop', 'display: block; animation: esc-rain 0.7s linear infinite;')}
+${animated('[data-sky="weather"]', '.flake', 'display: block; animation: esc-snow 8s linear infinite;')}
+${animated('[data-sky="weather"]', '.fogband', 'animation: esc-fog 18s ease-in-out infinite alternate;')}
+${animated('[data-sky="weather"]', '.flash', 'animation: esc-flash 7s infinite;')}
 /* Day ⇄ night: a 3 s cross-fade, once the first state is painted */
 :host([data-ready]:not([data-motion="off"])) .layer { transition: opacity 3s ease-in-out; }
 /* The flow's comets, along their wire (their keyframes are drawn for the width by layoutFlow), only unfolded */
 ${animated('[data-expanded]', '.wire:not([data-level="0"]) .comet', 'display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow);')}
 @media (prefers-reduced-motion: reduce) {
-    .halo, .star, .shooting, .drift, .layer, .comet { animation: none !important; transition: none !important; }
+    .halo, .star, .shooting, .drift, .layer, .comet, .cloudband, .drop, .flake, .fogband, .flash { animation: none !important; transition: none !important; }
 }
 /* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
 :host([data-compact]) .content { padding: 14px 20px 12px; }
@@ -297,7 +328,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .wire[data-wire="bg"][data-level="0"] { display: none; }
 /* The bridge: where grid ↔ battery passes under sun → home, a gap of the panel's colour */
 .panel { --esc-panel: var(--esc-c2, #1d4f87); }
-:host([data-mode="night"]) .panel { --esc-panel: #0b1026; }
+:host([data-mode="night"]) .panel { --esc-panel: var(--esc-n2, #0b1026); }
 .wire .gap { stroke: var(--esc-panel); stroke-opacity: 1; stroke-width: 10px; stroke-linecap: butt; }
 ${LEVELS.map(([w, d], i) => `.wire[data-level="${i + 1}"] { --esc-w: ${w}px; --esc-dur: ${d}s; }`).join('\n')}
 ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.wire.${k} { color: ${flowColour(k)}; }`).join(' ')}

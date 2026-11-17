@@ -21,9 +21,17 @@ It's free, open source and made for Home Assistant. The card is in French and En
 
 ---
 
-## The sky tells you the tariff.
+## Your sky: the tariff, one colour, or the weather.
 
-By day, the background is a gradient in today's tariff colour, read from a sensor such as the EDF Tempo integration's. A sun halo in the corner grows with your production: faint on a grey morning, bright at noon. After sunset, the sky turns to night, whatever the tariff. Any tariff sensor works: the palettes are keyed by its states, and you can add your own.
+Choose what's behind the numbers (`background`, or **Background** in the editor's Sky section):
+
+- **Tempo** (the default): by day, a gradient in today's tariff colour, read from a sensor such as the EDF Tempo integration's. Any tariff sensor works: the palettes are keyed by its states, and you can add your own.
+- **Solid**: one colour of your choosing. The card draws a gentle gradient from it, and darkens it if need be so the white text always reads.
+- **Weather**: the sky follows a weather entity. Clouds drift across, rain slants down, snow falls, fog breathes, lightning flashes now and then; the wind hurries the clouds. Every weather sky keeps white text readable with its clouds or fog passing behind it.
+
+A sun halo in the corner grows with your production: faint on a grey morning, bright at noon (with the weather sky, when the sun is out). After sunset, the sky turns to night; with the weather, clouds and rain stay, and the stars only shine through a clear sky.
+
+![The card under the weather sky on a rainy day: grey clouds drifting and rain slanting behind the numbers](docs/images/meteo.png)
 
 ## Quiet, not busy.
 
@@ -125,7 +133,7 @@ To update, overwrite both files and raise the `?v=` in the resource URL so brows
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
 2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (with a flow), **Tariff and sky**, and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (with a flow), **Sky** (Tempo, solid or weather, the sun, animations), and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
@@ -369,10 +377,13 @@ Each entry in `cells` is one of:
 
 A cell without its own `tap_action` opens its entity, unless the card has a `tap_action`, which then applies to the whole card.
 
-### Tariff and sky
+### Sky
 
 | Option | Default | Description |
 | --- | --- | --- |
+| `background` | `tempo` | The sky: `tempo` (today's tariff colour), `solid` (`background_color`) or `weather` (`weather_entity`) |
+| `background_color` | `#3a6b8c` | The solid sky's colour (`#rrggbb`); darkened if need be so white text reads at 4.5:1. A colour picker in the editor |
+| `weather_entity` | — | A weather entity, for the weather sky. Its condition (`sunny`, `partlycloudy`, `cloudy`, `rainy`, `pouring`, `lightning`, `lightning-rainy`, `snowy`, `snowy-rainy`, `fog`, `windy`, and their kin) sets the sky; anything else reads as cloudy |
 | `tariff_color_entity` | — | Today's tariff colour, such as `Bleu`, `Blanc` or `Rouge`. An unknown state, or no entity, gives Bleu |
 | `tariff_palettes` | the three Tempo colours | Three colours per tariff state, top to bottom. Replaces or adds palettes. YAML only |
 | `sun_entity` | `sun.sun` | Night when it's `below_horizon` |

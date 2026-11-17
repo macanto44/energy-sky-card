@@ -35,8 +35,8 @@ const fields = (schema: SchemaItem[]) => schema.flatMap(block => (block.schema ?
 
 describe('schema', () => {
     it('has the blocks of the brief, in order', () => {
-        expect(editorSchema('fr').map(b => b.title)).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Tarif et ciel', 'Actions']);
-        expect(editorSchema('en').map(b => b.title)).toEqual(['Production', 'Battery', 'Grid', 'Layout', 'Cells', 'Tariff and sky', 'Actions']);
+        expect(editorSchema('fr').map(b => b.title)).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Ciel', 'Actions']);
+        expect(editorSchema('en').map(b => b.title)).toEqual(['Production', 'Battery', 'Grid', 'Layout', 'Cells', 'Sky', 'Actions']);
     });
 
     it('covers every option except the palettes, with nested battery and grid', () => {
@@ -46,7 +46,7 @@ describe('schema', () => {
             'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './layout', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
-            './tariff_color_entity', './sun_entity', './animate',
+            './background', './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
         ]);
     });
@@ -282,7 +282,7 @@ describe('the appliances', () => {
 
     it('have a block of their own, after Cells, only with a flow', () => {
         expect(titles({ flow: 'none' })).not.toContain('Consommateurs');
-        expect(titles({ flow: 'always' })).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Tarif et ciel', 'Actions']);
+        expect(titles({ flow: 'always' })).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Ciel', 'Actions']);
     });
 
     it('open one slot at a time, with a name, an icon and a tap once the entity is set', () => {
@@ -311,6 +311,33 @@ describe('the appliances', () => {
         expect(changes.at(-1)?.consumers).toEqual([{ entity: 'sensor.boiler', name: 'Chauffe-eau' }, { entity: 'sensor.pool', icon: 'mdi:pool' }]);
         change({ consumer_1_entity: '', consumer_1_name: '', consumer_2_entity: '', consumer_2_icon: '' });
         expect(changes.at(-1)).not.toHaveProperty('consumers');
+    });
+});
+
+describe('the sky', () => {
+    const sky = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Ciel')!.schema!.map(f => f.name);
+
+    it('offers Tempo, solid or weather, then the field that goes with it', () => {
+        expect(sky({ background: 'tempo' })).toEqual(['background', 'tariff_color_entity', 'sun_entity', 'animate']);
+        expect(sky({ background: 'solid' })).toEqual(['background', 'background_color', 'sun_entity', 'animate']);
+        expect(sky({ background: 'weather' })).toEqual(['background', 'weather_entity', 'sun_entity', 'animate']);
+        expect(editorLabel('fr', 'background_weather')).toBe('Météo');
+        expect(editorLabel('en', 'background_solid')).toBe('Solid: one colour');
+    });
+
+    it('keeps Tempo out of the YAML, and writes a picked solid colour as hex', () => {
+        const { form, change, changes } = mount();
+        expect(form.data?.background).toBe('tempo');
+        change({ animate: false });
+        expect(changes.at(-1)).not.toHaveProperty('background');
+        expect(changes.at(-1)).not.toHaveProperty('background_color');
+        change({ background: 'solid' });
+        expect(changes.at(-1)?.background).toBe('solid');
+        expect(changes.at(-1)).not.toHaveProperty('background_color');
+        change({ background: 'solid', background_color: [106, 76, 147] });
+        expect(changes.at(-1)?.background_color).toBe('#6a4c93');
+        change({ background: 'weather', weather_entity: 'weather.home' });
+        expect(changes.at(-1)).toMatchObject({ background: 'weather', weather_entity: 'weather.home' });
     });
 });
 

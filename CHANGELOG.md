@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Three skies to choose from: `background: tempo` (the default, today's tariff colour), `solid` (one colour, `background_color`, darkened if need be so white text reads at 4.5:1) or `weather` (a `weather_entity`'s condition: drifting cumulus clouds, rain, snow, fog, lightning, the wind hurrying the clouds; stars only through a clear night). Every weather sky keeps white text at 4.5:1 with its clouds or fog behind it (tested). In the editor, the « Tarif et ciel » section is now « Ciel » / "Sky": the background, then its own field (tariff sensor, colour picker or weather entity), the sun and animations.
 - A grid outage shows in the energy flow: the Grid node turns red and reads « Coupure » / "Outage", and nothing flows through the grid.
 - Readings gone quiet are flagged: a measure with no report for `stale_after` minutes (30 by default, 0 turns it off; « Valeur figée après » in the editor's Production section) gets a clock instead of its cell's icon, and a dashed border on its flow node, with how long it's been in the title. Read from `last_reported` (Home Assistant 2024.3+): a value that doesn't change isn't flagged, and nothing is without it. Checked again every minute.
 - The energy flow keeps its shape on a wide card: its height follows its width (65 % of it, from 220 to 360 px) instead of a fixed 220 px.

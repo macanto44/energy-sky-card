@@ -100,10 +100,97 @@ export function sideGradientAt(palette: Palette, y: number): Rgb {
     return gradientAt(palette, SIDE_SKY_FROM + (1 - SIDE_SKY_FROM) * y);
 }
 
+/** Where text sits on the card, as fractions of its height (context line to the last value) */
+const TEXT_SPAN = [0.36, 0.5, 0.64, 0.76, 0.86, 0.98];
+const WHITE: Rgb = [1, 1, 1];
+
+/** The weakest white-text contrast where text sits, with a veil of white at `veil` over the sky (a cloud, fog) */
+export function textContrast(palette: Palette, veil = 0): number {
+    return Math.min(...TEXT_SPAN.map(y => contrastRatio(WHITE, composite(gradientAt(palette, y), WHITE, veil))));
+}
+
+const toHex = (c: Rgb) => '#' + c.map(v => Math.round(Math.min(Math.max(v, 0), 1) * 255).toString(16).padStart(2, '0')).join('');
+
+/** The default solid sky: a slate blue */
+export const DEFAULT_SOLID_COLOR = '#3a6b8c';
+
+/**
+ * A sky of one colour: a little lighter at the top, the colour, darker at
+ * the bottom, darkened step by step until white text reads at 4.5:1 where
+ * it sits (a pale colour comes out as its deeper shade).
+ */
+export function solidPalette(colour: string): Palette {
+    let base = hexToRgb(isHexColor(colour) ? colour : DEFAULT_SOLID_COLOR);
+    const build = (c: Rgb): Palette => [toHex(composite(c, WHITE, 0.12)), toHex(c), toHex(composite(c, [0, 0, 0], 0.35))];
+    let palette = build(base);
+    for (let i = 0; i < 40 && textContrast(palette) < 4.6; i++) {
+        base = composite(base, [0, 0, 0], 0.06);
+        palette = build(base);
+    }
+    return palette;
+}
+
+/** What a weather condition looks like: its day and night skies, and what moves over them */
+export interface WeatherLook {
+    day: Palette;
+    night: Palette;
+    /** Cumulus clouds: how many, how opaque by day and at night, and whether the wind hurries them */
+    clouds: number;
+    cloudAlpha: number;
+    nightCloudAlpha: number;
+    windy?: boolean;
+    /** Raindrops and snowflakes: how many */
+    rain: number;
+    snow: number;
+    fog?: boolean;
+    /** Lightning: a brief flash every few seconds */
+    flash?: boolean;
+    /** The sun's halo, by day (production) */
+    halo?: boolean;
+    /** At night: every star, a few through the clouds, or none; shooting stars with any */
+    stars: 'all' | 'few' | 'none';
+}
+
+/** Fog's veil at its densest (the contrast test counts it) */
+export const FOG_ALPHA = 0.12;
+
+/**
+ * The weather skies, by Home Assistant condition. Each day palette is dark
+ * enough for white text with its clouds or fog passing behind it (tested).
+ */
+export const WEATHER: Record<string, WeatherLook> = {
+    sunny: { day: ['#4b90d5', '#2169b0', '#1d4f87'], night: NIGHT_PALETTE, clouds: 0, cloudAlpha: 0, nightCloudAlpha: 0, rain: 0, snow: 0, halo: true, stars: 'all' },
+    partlycloudy: { day: ['#4d78a6', '#2a5b8b', '#20446c'], night: ['#202c47', '#141c31', '#0d1222'], clouds: 3, cloudAlpha: 0.12, nightCloudAlpha: 0.1, rain: 0, snow: 0, halo: true, stars: 'few' },
+    cloudy: { day: ['#647285', '#475567', '#35404f'], night: ['#262c3a', '#1a1f2b', '#11141c'], clouds: 6, cloudAlpha: 0.14, nightCloudAlpha: 0.1, rain: 0, snow: 0, stars: 'none' },
+    rainy: { day: ['#5a6879', '#405062', '#2f3a48'], night: ['#20252f', '#161a22', '#0e1117'], clouds: 5, cloudAlpha: 0.13, nightCloudAlpha: 0.08, rain: 40, snow: 0, stars: 'none' },
+    pouring: { day: ['#4a5664', '#343f4c', '#262e38'], night: ['#1b1f27', '#12151b', '#0b0d11'], clouds: 5, cloudAlpha: 0.11, nightCloudAlpha: 0.06, rain: 80, snow: 0, stars: 'none' },
+    lightning: { day: ['#3e4360', '#2b2f46', '#1e2132'], night: ['#1a1c2a', '#11131e', '#0a0b13'], clouds: 4, cloudAlpha: 0.1, nightCloudAlpha: 0.06, rain: 0, snow: 0, flash: true, stars: 'none' },
+    'lightning-rainy': { day: ['#3e4360', '#2b2f46', '#1e2132'], night: ['#1a1c2a', '#11131e', '#0a0b13'], clouds: 4, cloudAlpha: 0.1, nightCloudAlpha: 0.06, rain: 60, snow: 0, flash: true, stars: 'none' },
+    snowy: { day: ['#67778b', '#4e5e74', '#3d4d60'], night: ['#2a3142', '#1d2331', '#141924'], clouds: 4, cloudAlpha: 0.1, nightCloudAlpha: 0.06, rain: 0, snow: 40, stars: 'none' },
+    'snowy-rainy': { day: ['#67778b', '#4e5e74', '#3d4d60'], night: ['#2a3142', '#1d2331', '#141924'], clouds: 4, cloudAlpha: 0.1, nightCloudAlpha: 0.06, rain: 20, snow: 24, stars: 'none' },
+    fog: { day: ['#6a737c', '#525a64', '#404750'], night: ['#2a2f37', '#1e2229', '#15181d'], clouds: 0, cloudAlpha: 0, nightCloudAlpha: 0, rain: 0, snow: 0, fog: true, stars: 'none' },
+    windy: { day: ['#4c79a7', '#2a5a8b', '#1f446b'], night: ['#1f2b46', '#131b30', '#0c1121'], clouds: 5, cloudAlpha: 0.12, nightCloudAlpha: 0.09, windy: true, rain: 0, snow: 0, halo: true, stars: 'few' },
+};
+
+/** Home Assistant's other conditions, drawn as their nearest look; anything unknown as cloudy */
+const WEATHER_ALIASES: Record<string, string> = { 'clear-night': 'sunny', hail: 'pouring', 'windy-variant': 'windy', exceptional: 'cloudy' };
+
+/** The look's key for a weather entity's state */
+export function weatherKey(state: string | undefined): string {
+    const s = String(state ?? '').toLowerCase();
+    return WEATHER[s] ? s : WEATHER_ALIASES[s] ?? 'cloudy';
+}
+
 export interface Background {
     mode: 'day' | 'night';
-    /** The tariff palette (by day) */
+    /** The sky: tempo, solid or weather */
+    sky: 'tempo' | 'solid' | 'weather';
+    /** The day palette: the tariff's, the solid colour's, the weather's */
     palette: Palette;
+    /** The night palette: the night's, or the weather's at night */
+    nightPalette: Palette;
+    /** With the weather sky: the condition's key in WEATHER */
+    weather?: string;
     /** 0 … 0.55, the halo's opacity: production / production_max × 0.55 */
     haloAlpha: number;
     /** Production above zero: the halo may breathe */
@@ -123,10 +210,22 @@ export function computeBackground(config: EnergySkyCardConfig, hass: HomeAssista
     const production = productionPower(config, hass) ?? 0;
     const max = config.production_max && config.production_max > 0 ? config.production_max : DEFAULT_PRODUCTION_MAX;
     const ratio = Math.min(Math.max(production, 0) / max, 1);
+    const halo = Math.round(ratio * HALO_MAX_ALPHA * 1000) / 1000;
+    const base = { mode: sun === 'below_horizon' ? 'night' as const : 'day' as const, producing: production > 0 };
+    if (config.background === 'solid') {
+        // One calm colour: no halo
+        return { ...base, sky: 'solid', palette: solidPalette(config.background_color ?? DEFAULT_SOLID_COLOR), nightPalette: NIGHT_PALETTE, haloAlpha: 0 };
+    }
+    if (config.background === 'weather') {
+        const weather = weatherKey(hass.states[config.weather_entity ?? '']?.state);
+        const look = WEATHER[weather];
+        return { ...base, sky: 'weather', weather, palette: look.day, nightPalette: look.night, haloAlpha: look.halo ? halo : 0 };
+    }
     return {
-        mode: sun === 'below_horizon' ? 'night' : 'day',
+        ...base,
+        sky: 'tempo',
         palette: tariffPalette(config, config.tariff_color_entity ? hass.states[config.tariff_color_entity]?.state : undefined),
-        haloAlpha: Math.round(ratio * HALO_MAX_ALPHA * 1000) / 1000,
-        producing: production > 0,
+        nightPalette: NIGHT_PALETTE,
+        haloAlpha: halo,
     };
 }

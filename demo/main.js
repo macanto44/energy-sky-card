@@ -1,4 +1,4 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, flowonly, h=…, bare, probe, seek)
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, flowonly, sky=weather&wx=…|sky=solid&color=…, h=…, bare, probe, seek)
 import { ATTRIBUTES, CONSUMERS, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
@@ -10,6 +10,9 @@ const side = params.has('side');
 const expand = params.has('expand');
 const flow = params.get('expand') === 'always' ? 'always' : 'tap';
 // ?consumers=n: the first n appliances in the flow
+// ?sky=weather&wx=rainy (a condition) or ?sky=solid&color=6a4c93: the other skies
+const skyConfig = params.get('sky') === 'weather' ? { background: 'weather', weather_entity: 'weather.home' }
+  : params.get('sky') === 'solid' ? { background: 'solid', ...(params.get('color') ? { background_color: `#${params.get('color')}` } : {}) } : {};
 const consumers = params.has('consumers') ? { consumers: CONSUMERS.slice(0, Number(params.get('consumers')) || 2) } : {};
 const height = expand ? '' : params.get('h') || (side ? '120' : '');
 if (params.has('bare')) document.body.classList.add('bare');
@@ -20,10 +23,10 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     const fig = document.createElement('figure');
     fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : expand ? ';height:auto' : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow, ...consumers } : {}) });
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow, ...consumers } : {}), ...skyConfig });
     const states = {};
     let t = 0;
-    for (const [id, state] of Object.entries(overrides)) {
+    for (const [id, state] of Object.entries({ ...overrides, 'weather.home': params.get('wx') || 'sunny' })) {
       const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
       states[id] = { entity_id: id, state: String(state), attributes: ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
     }

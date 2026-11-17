@@ -132,8 +132,8 @@ describe('the stylesheet', () => {
 
     it('declares animations only when motion is on or paused (never off-screen-and-running, never off)', () => {
         const animated = all.filter(([sel, body]) => /(^|;|\s)animation\s*:\s*esc-/.test(body) && !sel.startsWith('@'));
-        // halo, stars, shooting stars, clouds, and the flow's comets
-        expect(animated.length).toBe(5);
+        // halo, stars, shooting stars, cloud shadows, the flow's dots, and the weather's clouds, rain, snow, fog and lightning
+        expect(animated.length).toBe(10);
         for (const [selector] of animated) {
             for (const part of selector.split(',')) {
                 expect(part).toMatch(/data-motion="(on|paused)"/);
@@ -164,7 +164,8 @@ describe('the stylesheet', () => {
 
     it('animates only opacity and transform', () => {
         const keyframes = CARD_CSS.match(/@keyframes[^{]+\{([\s\S]*?\}\s*)\}/g) ?? [];
-        expect(keyframes.length).toBe(4);
+        // breathe, twinkle, shoot, drift; rain, snow, fog, flash
+        expect(keyframes.length).toBe(8);
         for (const block of keyframes) {
             const props = [...block.matchAll(/([a-z-]+)\s*:/g)].map(m => m[1]);
             for (const prop of props) expect(['opacity', 'transform']).toContain(prop);
@@ -172,7 +173,7 @@ describe('the stylesheet', () => {
     });
 
     it('turns everything off under prefers-reduced-motion, as a second guard', () => {
-        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.drift, \.layer, \.comet \{ animation: none !important; transition: none !important; \}/);
+        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.drift, \.layer, \.comet, \.cloudband, \.drop, \.flake, \.fogband, \.flash \{ animation: none !important; transition: none !important; \}/);
     });
 
     it('cross-fades day and night over 3 s, except when motion is off', () => {

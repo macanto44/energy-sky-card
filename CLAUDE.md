@@ -44,6 +44,7 @@ src/
 ├── actions.ts               # GestureListener: tap / hold / double_tap → hass-action; default tap = more-info
 ├── motion.ts                # data-motion on / paused / off: tab, IntersectionObserver, reduced motion, animate
 ├── flow.ts                  # Pure: the unfolded energy flow: energyFlows (powers → wires), flowView (nodes, rings, levels), flowGeometry (paths, comet keyframes for a width)
+├── weather.ts               # The weather sky's markup for a condition: cumulus clouds (SVG), rain, snow, fog, lightning; seeded
 ├── stars.ts                 # Seeded night sky over the whole card: stars (10 × 6 jittered grid), 3 shooting stars; coveredBy
 ├── styles/card.ts           # The card's CSS (typography of brief §5.2, sky layers)
 ├── energy-sky-card.ts       # The card: setConfig, hass, DOM built once, text updated in place
@@ -108,6 +109,10 @@ test/
 ## Motion
 
 `data-motion` on the host: `on`, `paused` (tab hidden or card off-screen, 100 px margin) or `off` (`animate: false` or `prefers-reduced-motion`). CSS declares animations only under `on` / `paused`; the play state goes through `--esc-play`, because the `animation` shorthand resets a separate `animation-play-state` rule (jsdom can't see that: `npm run test:browser` checks it in Chrome). The halo breathes (3 s alternate = 6 s cycle, opacity ×0.55 ↔ ×1 and 12 % larger at the peak: it breathes down, never above its alpha, to keep the hero's contrast) only by day with production; stars twinkle (2 s alternate = 4 s, opacity ×0.15 ↔ ×1 of the star's own `--esc-o`, scale 0.6 ↔ 1.4) and three shooting stars pass (top right / top left / across the middle, every 11 / 17 / 23 s, each pass the first 8 % of its period) only at night; by day three cloud shadows (dark navy, at most `CLOUD_MAX_ALPHA` 0.2) cross the card (`esc-drift`, a card-wide `.drift` from -110 % to 110 %, 47 / 61 / 73 s): they only darken, so the contrast can only rise (`sky.test.ts` checks it). Stars cover the whole card: `clearText()` (end of `fit()`, and once fonts load) hides each one whose reach (radius at its peak + 3 px) would touch a word, an icon or the hairline; `test:browser` checks none touches text and every quarter has some. Day dots were tried in 0.3.0 and dropped: small bright dots read as stars. The day/night cross-fade (3 s) starts after the first paint (`data-ready`).
+
+### Skies
+
+`background`: `tempo` (default), `solid`, `weather`; `computeBackground` (sky.ts) returns `sky`, the day `palette`, a `nightPalette`, and for the weather its `WEATHER` key. `solidPalette` darkens `background_color` step by step until `textContrast` (white text where it sits, sky.ts) reaches 4.6. `WEATHER` holds each condition's day / night palettes, clouds (count, alpha by day / night, windy), rain, snow, fog, flash, halo and stars (`all` / `few` / `none`); `weatherKey` maps Home Assistant's other conditions (clear-night → sunny, hail → pouring, windy-variant → windy, exceptional / unknown → cloudy). The card sets `data-sky`, `data-stars`, `--esc-n0…2` (the night layer, the card's and the flow panel's night colour) and `--esc-cloud-a`, and redraws `.wx` (weatherMarkup) only when the condition changes. Weather animations (cloudband drift, esc-rain, esc-snow, esc-fog, esc-flash) follow the motion rules; drops and flakes only show while falling. The Tempo sky's cloud shadows (`.drift`) hide under the weather. Side layout: clouds at half size. `sky.test.ts` holds every weather palette to 4.5:1 with its clouds or `FOG_ALPHA` as a white veil, day and night.
 
 ## Palettes and contrast
 

@@ -35,6 +35,7 @@ function settings() {
   return {
     scenario: data.get('s'), layout: data.get('layout'), flow: data.get('flow'),
     consumers: Number(data.get('consumers')), lang: data.get('lang'), width: Number(data.get('width')),
+    sky: data.get('sky'), wx: data.get('wx'), color: data.get('color'),
   };
 }
 
@@ -44,15 +45,19 @@ function render() {
   widthOut.textContent = `${o.width} px`;
   // Appliances need a flow
   for (const input of form.querySelectorAll('input[name="consumers"]')) input.disabled = o.flow === 'none';
+  document.getElementById('weatherset').hidden = o.sky !== 'weather';
+  document.getElementById('colorset').hidden = o.sky !== 'solid';
   const config = {
     ...CONFIG,
     ...(o.layout === 'side' ? { layout: 'side' } : {}),
     ...(o.flow !== 'none' ? { flow: o.flow } : {}),
     ...(o.flow !== 'none' && o.consumers ? { consumers: CONSUMERS.slice(0, o.consumers) } : {}),
+    ...(o.sky === 'solid' ? { background: 'solid', background_color: o.color } : {}),
+    ...(o.sky === 'weather' ? { background: 'weather', weather_entity: 'weather.home' } : {}),
   };
   const states = {};
   let t = 0;
-  for (const [id, state] of Object.entries(SCENARIOS[o.scenario])) {
+  for (const [id, state] of Object.entries({ ...SCENARIOS[o.scenario], 'weather.home': o.wx })) {
     const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
     states[id] = { entity_id: id, state: String(state), attributes: ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
   }

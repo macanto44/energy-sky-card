@@ -55,6 +55,9 @@ export type NightHero = 'production' | 'consumption' | 'battery';
 /** The card's shape: the cells in a grid under the hero (standard), or listed on its right as icon + value (side) */
 export type CardLayout = 'standard' | 'side';
 
+/** The sky behind the card: today's tariff colour, one colour of your own, or the weather */
+export type SkyMode = 'tempo' | 'solid' | 'weather';
+
 /** The energy flow under the card: unfolded by a tap on the big number, or always shown */
 export type FlowMode = 'tap' | 'always';
 
@@ -105,6 +108,12 @@ export interface EnergySkyCardConfig {
     cells?: CellConfig[];
     forecast_tomorrow_entity?: string;
     tariff_color_entity?: string;
+    /** The sky: tempo (default), solid (background_color) or weather (weather_entity) */
+    background?: SkyMode;
+    /** The solid sky's colour (#rrggbb), darkened if need be for white text */
+    background_color?: string;
+    /** A weather entity, for the weather sky */
+    weather_entity?: string;
     tariff_palettes?: Record<string, [string, string, string]>;
     sun_entity?: string;
     animate?: boolean;

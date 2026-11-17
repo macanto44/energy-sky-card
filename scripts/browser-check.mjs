@@ -101,8 +101,18 @@ for (const layout of ['', 'side&']) {
     }
 }
 
+// The weather sky: its rain, clouds and lightning run on screen, nothing overflows, none under reduced motion
+for (const query of ['sky=weather&wx=lightning-rainy', 'side&sky=weather&wx=snowy', 'expand=always&sky=weather&wx=rainy']) {
+    for (const c of probe(`${query}&s=bleu,nuit,extremes`, [], 2800)) {
+        check(c.overflow === '0' && c.tall === '0' && (c.motion !== 'on' || Number(c.running) > 0), `weather ${query} ${c.name}: no overflow, ${c.running} animations running`);
+    }
+}
+for (const c of probe('sky=weather&wx=rainy&s=bleu', ['--force-prefers-reduced-motion'], 1150)) {
+    check(c.motion === 'off' && c.running === '0', `weather rainy ${c.name}, reduced motion: nothing moves`);
+}
+
 // The night sky covers the whole card (a visible star in each quarter) and none touches text
-for (const query of ['lang=fr', 'lang=en', 'h=184', 'side']) {
+for (const query of ['lang=fr', 'lang=en', 'h=184', 'side', 'sky=weather&wx=sunny']) {
     for (const c of probe(query, [], 2400).filter(c => c.mode === 'night')) {
         check(c.hits === '0' && c.quarters === '4', `${query} ${c.name}: ${c.dots} stars in ${c.quarters} quarters, ${c.hits} on text`);
     }

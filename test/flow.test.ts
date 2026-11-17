@@ -430,6 +430,23 @@ describe('the expandable card', () => {
         vi.useRealTimers();
     });
 
+    it('draws the weather sky: its layer, the condition, the stars that get through, the night palette', () => {
+        const { card, $ } = mount({ background: 'weather', weather_entity: 'weather.home' }, { ...DAY, 'weather.home': 'rainy' });
+        expect(card.dataset.sky).toBe('weather');
+        expect(card.getAttribute('data-stars')).toBe('none');
+        expect($('.wx').querySelectorAll('.drop').length).toBe(40);
+        const wx = $('.wx').innerHTML;
+        // The same condition again: not redrawn
+        card.hass = makeHass({ ...DAY, 'weather.home': 'rainy', [PV]: 1234 });
+        expect($('.wx').innerHTML).toBe(wx);
+        card.hass = makeHass({ ...ANNEX_B, 'weather.home': 'clear-night' });
+        expect(card.getAttribute('data-stars')).toBe('all');
+        expect($('.wx').querySelectorAll('.drop').length).toBe(0);
+        expect($('ha-card').style.getPropertyValue('--esc-n0')).toBe('#1d2b4d');
+        expect(() => card.setConfig({ ...FULL_CONFIG, background: 'cloudy' as any })).toThrow(/background: tempo, solid or weather/);
+        expect(() => card.setConfig({ ...FULL_CONFIG, background_color: 'blue' })).toThrow(/background_color/);
+    });
+
     it('rejects more than four appliances, one without an entity, or a bad tap action', () => {
         const { card } = mount();
         const five = Array.from({ length: 5 }, (_, i) => ({ entity: `sensor.x${i}` }));
