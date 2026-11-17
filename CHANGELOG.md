@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.7] — 2026-11-17
+
+No breaking change: the Tempo sky stays the default.
 
 - Three skies to choose from: `background: tempo` (the default, today's tariff colour), `solid` (one colour, `background_color`, darkened if need be so white text reads at 4.5:1) or `weather` (a `weather_entity`'s condition: drifting cumulus clouds, rain, snow, fog, lightning, the wind hurrying the clouds; stars only through a clear night). Every weather sky keeps white text at 4.5:1 with its clouds or fog behind it (tested). In the editor, the « Tarif et ciel » section is now « Ciel » / "Sky": the background, then its own field (tariff sensor, colour picker or weather entity), the sun and animations.
 - A grid outage shows in the energy flow: the Grid node turns red and reads « Coupure » / "Outage", and nothing flows through the grid.

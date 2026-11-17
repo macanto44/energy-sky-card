@@ -121,7 +121,7 @@ In HACS, select **⋮ → Custom repositories**, add `https://github.com/macanto
 1. Download [`energy-sky-card.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card.js) and [`energy-sky-card-editor.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card-editor.js) from the [latest release](https://github.com/macanto44/energy-sky-card/releases/latest).
 2. Copy both to the same folder, for example `/config/www/energy-sky-card/`.
 3. Go to **Settings → Dashboards → ⋮ → Resources → Add resource** and add:
-   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.3.6`
+   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.3.7`
    - Type: **JavaScript module**
 4. Refresh your browser.
 
