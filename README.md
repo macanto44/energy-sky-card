@@ -104,6 +104,10 @@ The card ships as two files that sit in the same folder:
 | `energy-sky-card-editor.js` | The visual editor. It loads the first time you open the card's settings. |
 
 <!-- ha-marketplace:exclude-start -->
+[![Open your Home Assistant instance and open this repository in the Marketplace or HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=macanto44&repository=energy-sky-card&category=plugin)
+
+The button opens the card in your Home Assistant's Marketplace (or HACS, before 2026.11), which offers to add the repository if it doesn't know it yet. Or, by hand:
+
 ### Marketplace (Home Assistant 2026.11 and later)
 
 1. Go to **Settings → Marketplace**, select **⋮ → Add from link** and enter `https://github.com/macanto44/energy-sky-card`, as a **Dashboard**.
