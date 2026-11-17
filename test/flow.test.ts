@@ -3,7 +3,8 @@ import '../src/energy-sky-card';
 import type { EnergySkyCard } from '../src/energy-sky-card';
 import { CARD_NAME } from '../src/constants';
 import { CARD_CSS, FLOW_COLOURS, NODE_GLASS_ALPHA } from '../src/styles/card';
-import { FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS, energyFlows, flowGeometry, flowLevel, flowView } from '../src/flow';
+import { COMPACT_WIDTH, CONSUMER_ICON, FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS, energyFlows, flowGeometry, flowLevel, flowView } from '../src/flow';
+import { entity } from './helpers';
 import { DEFAULT_PALETTES, NIGHT_PALETTE, composite, contrastRatio, hexToRgb, type Rgb } from '../src/sky';
 import { $ as find, ANNEX_B, FULL_CONFIG, actionsOf, makeHass, mountCard, nb, press, tap } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
@@ -168,6 +169,56 @@ describe('flow geometry', () => {
     });
 });
 
+describe('appliances', () => {
+    const CONSUMERS = [
+        { entity: 'sensor.boiler', name: 'Chauffe-eau', icon: 'mdi:water-boiler' },
+        { entity: 'sensor.pool' },
+        { entity: 'sensor.car', icon: 'mdi:car-electric' },
+        { entity: 'sensor.heat' },
+    ];
+    const states = { ...DAY, [PV]: 3200, [GRID]: -400, [BATT]: 500, 'sensor.boiler': 1600, 'sensor.pool': entity('sensor.pool', 500, { friendly_name: 'Pompe piscine', icon: 'mdi:pool' }), 'sensor.car': 0, 'sensor.heat': 'unavailable' };
+
+    it('show their power, their share of the home, and a name and icon of their own, else the entity\'s', () => {
+        const v = flowView({ ...FULL_CONFIG, consumers: CONSUMERS }, makeHass(states));
+        expect(v.consumers.map(c => [c.label, c.icon])).toEqual([
+            ['Chauffe-eau', 'mdi:water-boiler'], ['Pompe piscine', 'mdi:pool'], ['sensor.car', 'mdi:car-electric'], ['sensor.heat', CONSUMER_ICON],
+        ]);
+        expect(v.consumers.map(c => c.value)).toEqual([`1,6${nb}kW`, `500${nb}W`, `0${nb}W`, '—']);
+        // The home takes 2.3 kW (3.2 − 0.4 − 0.5): the boiler is 70 % of it
+        expect(v.consumers[0].share).toBeCloseTo(1.6 / 2.3);
+        expect(v.consumers.map(c => c.level)).toEqual([3, 2, 0, 0]);
+    });
+
+    it('sit as whole nodes, one above and one below the home, when there are two and room', () => {
+        const g = flowGeometry(400, 2);
+        expect(g.consumers.map(c => [c.visible, c.compact, c.below, c.left, c.top, c.width])).toEqual([
+            [true, false, false, 282, 3, 118], [true, false, true, 282, FLOW_HEIGHT - 3 - NODE_HEIGHT, 118],
+        ]);
+        // A straight wire from the home's edge to the node's
+        expect(g.consumers[0].path).toBe('M351,87 L351,49');
+        expect(g.consumers[1].path).toBe('M351,133 L351,171');
+        expect(g.keyframes).toMatch(/@keyframes esc-flow-c0 /);
+    });
+
+    it('turn compact past two, two to a corner, and keep inside the card', () => {
+        const g = flowGeometry(400, 4);
+        expect(g.consumers.every(c => c.visible && c.compact && c.width === COMPACT_WIDTH)).toBe(true);
+        expect(g.consumers.map(c => c.below)).toEqual([false, true, false, true]);
+        for (const c of g.consumers) {
+            expect(c.left).toBeGreaterThanOrEqual(200 + 74);
+            expect(c.left + c.width).toBeLessThanOrEqual(400);
+        }
+        expect(g.consumers[0].left).toBeLessThan(g.consumers[2].left);
+    });
+
+    it('show one to a corner on a phone, the first two', () => {
+        const g = flowGeometry(264, 4);
+        expect(g.consumers.map(c => c.visible)).toEqual([true, true, false, false]);
+        expect(g.consumers[0].compact).toBe(true);
+        expect(flowGeometry(264, 2).consumers.every(c => c.visible && c.compact)).toBe(true);
+    });
+});
+
 describe('the expandable card', () => {
     afterEach(() => { document.body.innerHTML = ''; });
 
@@ -286,6 +337,38 @@ describe('the expandable card', () => {
         expect(card.getGridOptions().rows).toBe('auto');
     });
 
+    it('draws the appliances with their names, opens their entity or runs their own tap', () => {
+        const consumers = [
+            { entity: 'sensor.boiler', name: '<b>Eau</b>', icon: 'mdi:water-boiler' },
+            { entity: 'sensor.pool', tap_action: { action: 'navigate', navigation_path: '/piscine' } },
+        ];
+        const { card, events, $ } = mount({ consumers }, { ...DAY, 'sensor.boiler': 1600, 'sensor.pool': 0 });
+        card.expanded = true;
+        const boiler = $('[data-consumer="0"]');
+        // The name is text, never markup
+        expect(boiler.querySelector('.nlab')!.textContent).toBe('<b>Eau</b>');
+        expect(boiler.querySelector('b')).toBeNull();
+        expect(boiler.getAttribute('title')).toBe('<b>Eau</b>');
+        expect(boiler.getAttribute('aria-label')).toBe(`<b>Eau</b> 1,6${nb}kW`);
+        expect(boiler.querySelector('ha-icon')!.getAttribute('icon')).toBe('mdi:water-boiler');
+        expect($('[data-wire="c0"]').getAttribute('data-level')).toBe('3');
+        expect($('[data-consumer="1"]').hasAttribute('data-idle')).toBe(true);
+        tap(boiler);
+        tap($('[data-consumer="1"]'));
+        expect(events).toEqual([
+            { type: 'hass-more-info', detail: { entityId: 'sensor.boiler' } },
+            { type: 'hass-action', detail: expect.objectContaining({ action: 'tap', config: expect.objectContaining({ tap_action: { action: 'navigate', navigation_path: '/piscine' } }) }) },
+        ]);
+    });
+
+    it('rejects more than four appliances, one without an entity, or a bad tap action', () => {
+        const { card } = mount();
+        const five = Array.from({ length: 5 }, (_, i) => ({ entity: `sensor.x${i}` }));
+        expect(() => card.setConfig({ ...FULL_CONFIG, consumers: five })).toThrow(/at most 4 appliances/);
+        expect(() => card.setConfig({ ...FULL_CONFIG, consumers: [{ name: 'x' } as any] })).toThrow(/needs an entity/);
+        expect(() => card.setConfig({ ...FULL_CONFIG, consumers: [{ entity: 'sensor.x', tap_action: { url_path: 'x' } } as any] })).toThrow(/tap_action needs an action/);
+    });
+
     it('folds again on a new config', () => {
         const { card } = mount();
         card.expanded = true;
@@ -320,7 +403,7 @@ describe('contrast of the flow\'s text', () => {
         });
     }
 
-    it('draws the three sources in their own colours', () => {
-        expect(Object.keys(FLOW_COLOURS)).toEqual(['sun', 'grid', 'batt']);
+    it('draws the three sources and the appliances in their own colours', () => {
+        expect(Object.keys(FLOW_COLOURS)).toEqual(['sun', 'grid', 'batt', 'use']);
     });
 });

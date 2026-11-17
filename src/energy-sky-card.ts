@@ -10,7 +10,7 @@ import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { energyPrefs, stubConfig } from './stub';
 import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
-import { FLOW_HEIGHT, WIRES, WIRE_KEYS, flowGeometry, flowNodeEntity, flowView, type NodeKey, type WireKey } from './flow';
+import { FLOW_HEIGHT, MAX_CONSUMERS, WIRES, WIRE_KEYS, flowGeometry, flowNodeEntity, flowView, type NodeKey, type WireKey } from './flow';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The hero's sizes, largest first: it steps down until the card's lines fit */
@@ -97,6 +97,18 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             }
         }
     }
+    if (c.consumers !== undefined) {
+        if (!Array.isArray(c.consumers) || c.consumers.length > MAX_CONSUMERS) {
+            throw configError(`consumers : une liste de ${MAX_CONSUMERS} appareils au plus`, `consumers: a list of at most ${MAX_CONSUMERS} appliances`);
+        }
+        for (const consumer of c.consumers as unknown[]) {
+            const o = (consumer && typeof consumer === 'object' ? consumer : {}) as { entity?: unknown; tap_action?: unknown };
+            if (typeof o.entity !== 'string' || !o.entity) throw configError('consumers : chaque appareil a une entity', 'consumers: each appliance needs an entity');
+            if (o.tap_action !== undefined && !isAction(o.tap_action)) {
+                throw configError('consumers : tap_action doit avoir une action (more-info, navigate, url…)', 'consumers: tap_action needs an action (more-info, navigate, url…)');
+            }
+        }
+    }
     if (c.tariff_palettes !== undefined) {
         const palettes = c.tariff_palettes as unknown;
         if (!palettes || typeof palettes !== 'object' || Array.isArray(palettes)) {
@@ -112,6 +124,9 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     return (c.expandable === true && c.flow === undefined ? { ...c, flow: 'tap' } : c) as EnergySkyCardConfig;
 }
 
+/** A node of the flow: its pill, texts and ring segments */
+interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }
+
 /** The elements updated in place on every change */
 interface Refs {
     card: HTMLElement;
@@ -126,7 +141,9 @@ interface Refs {
         svg: SVGSVGElement;
         keyframes: HTMLStyleElement;
         wires: Map<WireKey, { g: SVGGElement; paths: SVGPathElement[] }>;
-        nodes: Map<NodeKey, { el: HTMLElement; label: HTMLElement; value: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }>;
+        nodes: Map<NodeKey, FlowNodeRefs>;
+        /** The appliances, in the config's order, with their wire */
+        consumers: (FlowNodeRefs & { icon: HTMLElement; wire: SVGGElement; paths: SVGPathElement[] })[];
     };
     metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement }>;
 }
@@ -253,7 +270,7 @@ export class EnergySkyCard extends HTMLElement {
                             <div class="value line"><span class="value-main"></span><span class="extra"></span></div>
                         </div>`).join('')}</div>
                 </div>
-                ${config.flow ? flowMarkup() : ''}
+                ${config.flow ? flowMarkup(config.consumers?.length ?? 0) : ''}
             </ha-card>`;
         const q = (sel: string, parent: ParentNode = this.root) => find(parent, sel);
         this.refs = {
@@ -302,9 +319,19 @@ export class EnergySkyCard extends HTMLElement {
                 el.setAttribute('role', 'button');
                 el.tabIndex = 0;
             }
+            // An appliance opens its entity, or runs its own tap action
+            (config.consumers ?? []).forEach((consumer, i) => {
+                const tap = isAction(consumer.tap_action) ? consumer.tap_action : undefined;
+                this.cellTargets.set(`consumer:${i}`, { entity: consumer.entity, tap });
+                const el = this.refs!.flow!.consumers[i].el;
+                el.dataset.cellTarget = '';
+                if (tap?.action === 'none') return;
+                el.setAttribute('role', 'button');
+                el.tabIndex = 0;
+            });
         }
         for (const [key, target] of this.cellTargets) {
-            if (key.startsWith('node:')) continue;
+            if (key.includes(':')) continue;
             const el = q(`[data-metric="${key}"]`);
             el.dataset.cellTarget = '';
             if (target.tap?.action === 'none') continue;
@@ -330,7 +357,7 @@ export class EnergySkyCard extends HTMLElement {
         const cell = path.find((t): t is HTMLElement => t instanceof HTMLElement && t.dataset.cellTarget !== undefined);
         // The big number, its line and the unfolded panel fold and unfold; hold and double tap stay the card's
         if (cell?.dataset.targetKey === 'toggle') return { ...this.actions, toggle: () => { this.expanded = !this.open; } };
-        const key = cell?.dataset.node ? `node:${cell.dataset.node}` : cell?.dataset.metric ?? '';
+        const key = cell?.dataset.node ? `node:${cell.dataset.node}` : cell?.dataset.consumer ? `consumer:${cell.dataset.consumer}` : cell?.dataset.metric ?? '';
         const target = cell ? this.cellTargets.get(key) : undefined;
         if (!target) return this.actions;
         const { tap_action: _cardTap, ...rest } = this.actions;
@@ -351,12 +378,21 @@ export class EnergySkyCard extends HTMLElement {
         const width = Math.round(flow.box.clientWidth);
         if (!width || width === this.flowWidth) return;
         this.flowWidth = width;
-        const geometry = flowGeometry(width);
+        const geometry = flowGeometry(width, flow.consumers.length);
         flow.svg.setAttribute('viewBox', `0 0 ${width} ${FLOW_HEIGHT}`);
         flow.box.style.setProperty('--esc-node-w', `${geometry.nodeWidth}px`);
         flow.box.style.setProperty('--esc-centre-w', `${geometry.centreWidth}px`);
         flow.box.toggleAttribute('data-narrow', geometry.nodeWidth < 112);
         for (const [key, wire] of flow.wires) for (const path of wire.paths) path.setAttribute('d', geometry.paths[key]);
+        flow.box.toggleAttribute('data-compact', geometry.consumers.some(c => c.compact));
+        geometry.consumers.forEach((place, i) => {
+            const { el, wire, paths } = flow.consumers[i];
+            el.hidden = !place.visible;
+            setAttr(wire, 'data-off', place.visible ? null : '');
+            el.dataset.side = place.below ? 'below' : 'above';
+            Object.assign(el.style, { left: `${place.left}px`, top: `${place.top}px`, width: `${place.width}px` });
+            for (const path of paths) path.setAttribute('d', place.path);
+        });
         flow.keyframes.textContent = geometry.keyframes;
     }
 
@@ -372,10 +408,11 @@ export class EnergySkyCard extends HTMLElement {
                 const g = q<SVGGElement>(`[data-wire="${key}"]`);
                 return [key, { g, paths: [...g.querySelectorAll('path')] }];
             })),
-            nodes: new Map(NODES.map(([key]) => {
-                const el = q(`[data-node="${key}"]`);
-                return [key, { el, label: q('.nlab', el), value: q('.nval', el), centre: q('.centre', el), segs: [...el.querySelectorAll<SVGCircleElement>('.seg')] }];
-            })),
+            nodes: new Map(NODES.map(([key]) => [key, nodeRefs(q(`[data-node="${key}"]`))])),
+            consumers: [...this.root.querySelectorAll<HTMLElement>('[data-consumer]')].map((el, i) => {
+                const wire = q<SVGGElement>(`[data-wire="c${i}"]`);
+                return { ...nodeRefs(el), icon: q('ha-icon', el), wire, paths: [...wire.querySelectorAll('path')] };
+            }),
         };
     }
 
@@ -391,17 +428,21 @@ export class EnergySkyCard extends HTMLElement {
             setText(node.value, v.value);
             setText(node.centre, v.centre ?? '');
             node.el.toggleAttribute('data-centre', v.centre !== undefined);
-            let offset = 0;
-            node.segs.forEach((seg, i) => {
-                const part = v.ring[i];
-                const length = part ? Math.max(RING * part[0] - (v.ring.length > 1 ? 3 : 0), 0) : 0;
-                setAttr(seg, 'stroke-dasharray', `${length.toFixed(1)} ${RING.toFixed(1)}`);
-                setAttr(seg, 'stroke-dashoffset', (-offset).toFixed(1));
-                // Too short to read as an arc (its round caps would make a dot): not drawn
-                setAttr(seg, 'data-source', part && length >= 1.5 ? part[1] : '');
-                if (part) offset += RING * part[0];
-            });
+            drawRing(node.segs, v.ring);
         }
+        view.consumers.forEach((v, i) => {
+            const node = flow.consumers[i];
+            if (!node) return;
+            // The name is the user's: text and attributes only
+            setText(node.label, v.label);
+            setAttr(node.el, 'title', v.label);
+            setAttr(node.el, 'aria-label', `${v.label} ${v.value}`);
+            setText(node.value, v.value);
+            setAttr(node.icon, 'icon', v.icon);
+            node.el.toggleAttribute('data-idle', v.level === 0);
+            drawRing(node.segs, [[v.share, 'use']]);
+            setAttr(node.wire, 'data-level', String(v.level));
+        });
         for (const [key, wire] of flow.wires) {
             setAttr(wire.g, 'data-level', String(view.levels[key]));
             setAttr(wire.g, 'data-off', view.off.includes(key) ? '' : null);
@@ -603,17 +644,40 @@ function cloudsMarkup(): string {
 }
 
 /** The flow's markup: the wires (SVG, drawn for the width by layoutFlow) under the four nodes (HTML) */
-function flowMarkup(): string {
+function flowMarkup(consumers: number): string {
     const comets = [1, 2, 3].map(n => `<g class="comet c${n}"><circle cx="-8" r="1.3" opacity="0.25"></circle><circle cx="-4" r="1.8" opacity="0.5"></circle><circle r="2.5"></circle></g>`).join('');
     // The grid ↔ battery link first: it passes under the sun → home wire, which a gap of the panel's colour bridges over it
     const order: WireKey[] = ['gb', 'bg', ...WIRE_KEYS.filter(k => k !== 'gb' && k !== 'bg')];
     const wires = order.map(key => `<g class="wire ${WIRES[key]}" data-wire="${key}" data-level="0">${key === 'sh' ? '<path class="gap"></path>' : ''}<path class="glow"></path><path class="line"></path>${comets}</g>`).join('');
-    const nodes = NODES.map(([key, icon]) => `
-        <div class="node" data-node="${key}">
-            <span class="disc"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17"></circle>${'<circle class="seg" cx="20" cy="20" r="17"></circle>'.repeat(3)}</svg><ha-icon icon="${icon}"></ha-icon><span class="centre"></span></span>
+    // The appliances' wires, from the home, under the rest
+    const uses = Array.from({ length: consumers }, (_, i) => `<g class="wire use" data-wire="c${i}" data-level="0"><path class="glow"></path><path class="line"></path>${comets}</g>`).join('');
+    const node = (attrs: string, icon: string) => `
+        <div class="node" ${attrs}>
+            <span class="disc"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17"></circle>${'<circle class="seg" cx="20" cy="20" r="17"></circle>'.repeat(3)}</svg><ha-icon${icon ? ` icon="${icon}"` : ''}></ha-icon><span class="centre"></span></span>
             <span class="ntext"><span class="nlab line"></span><span class="nval line"></span></span>
-        </div>`).join('');
-    return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${wires}</svg>${nodes}</div></div>`;
+        </div>`;
+    const nodes = NODES.map(([key, icon]) => node(`data-node="${key}"`, icon)).join('')
+        + Array.from({ length: consumers }, (_, i) => node(`data-consumer="${i}"`, '')).join('');
+    return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${uses}${wires}</svg>${nodes}</div></div>`;
+}
+
+/** A flow node's text and ring elements */
+function nodeRefs(el: HTMLElement): FlowNodeRefs {
+    return { el, label: find(el, '.nlab'), value: find(el, '.nval'), centre: find(el, '.centre'), segs: [...el.querySelectorAll<SVGCircleElement>('.seg')] };
+}
+
+/** A node's ring: its segments around the disc, each a share of the circle in its source's colour */
+function drawRing(segs: SVGCircleElement[], ring: [number, string][]): void {
+    let offset = 0;
+    segs.forEach((seg, i) => {
+        const part = ring[i];
+        const length = part ? Math.max(RING * part[0] - (ring.length > 1 ? 3 : 0), 0) : 0;
+        setAttr(seg, 'stroke-dasharray', `${length.toFixed(1)} ${RING.toFixed(1)}`);
+        setAttr(seg, 'stroke-dashoffset', (-offset).toFixed(1));
+        // Too short to read as an arc (its round caps would make a dot): not drawn
+        setAttr(seg, 'data-source', part && length >= 1.5 ? part[1] : '');
+        if (part) offset += RING * part[0];
+    });
 }
 
 /** An element the card built (it is there: the markup is the card's own) */

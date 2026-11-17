@@ -16,7 +16,17 @@ const base = {
   'sensor.soc': 25, 'sensor.bat_power': 0, 'sensor.bat_temp': 18.4, 'input_boolean.soc_reached': 'off',
   'sensor.grid': 748, 'sensor.voltage': 233.98, 'sensor.gridlost': 'no_alarm',
   'sensor.tomorrow': 12.56, 'sensor.tempo': 'Bleu', 'sun.sun': 'below_horizon',
+  // Appliances (?consumers=n)
+  'sensor.boiler': 1600, 'sensor.pool': 500, 'sensor.car': 0, 'sensor.heat_pump': 12345,
 };
+
+/** The appliances ?consumers=n adds, the first n */
+export const CONSUMERS = [
+  { entity: 'sensor.boiler', name: 'Chauffe-eau', icon: 'mdi:water-boiler' },
+  { entity: 'sensor.pool', name: 'Piscine', icon: 'mdi:pool' },
+  { entity: 'sensor.car', name: 'Voiture', icon: 'mdi:car-electric' },
+  { entity: 'sensor.heat_pump', name: 'Pompe à chaleur', icon: 'mdi:heat-pump-outline' },
+];
 
 /** Entity attributes, where a reading needs its unit */
 export const ATTRIBUTES = { 'sensor.heat_pump_temp': { unit_of_measurement: '°C' }, 'sensor.bat_temp': { unit_of_measurement: '°C' } };

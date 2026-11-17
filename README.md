@@ -65,6 +65,7 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 - **The flows add up like your meters.** What you sell comes from the sun first, then the battery. What charges the battery comes from the sun first, then the grid. The home gets the rest. A battery below its idle threshold moves nothing.
 - **Each node** shows its power with the card's signs (grid negative when selling, battery negative when discharging) and a ring: production against your maximum, the battery's charge (with the percentage in the middle), and the share of each source in what your home uses.
 - **Tap a node** to open its entity.
+- **Your appliances**, up to four (a water heater, a pool pump, a car charger…), sit around the home: the first above it, the second below, then in turn. Each shows its power, a ring with its share of what the home uses, and a lilac wire from the home that busies up with its power. One or two get a whole node with their name when the card is wide enough; more, or on a phone, they turn compact (the icon in its ring and the power; the name on hover and for screen readers), and a phone shows the first two. Tap one to open its entity, or give it a `tap_action` of its own.
 
 With `flow: tap`, the rest of the card keeps its own tap action, so a menu or a pop-up you open from the card still works; with `flow: always`, the big number keeps it too. Hold and double tap stay the card's everywhere.
 
@@ -120,7 +121,7 @@ To update, overwrite both files and raise the `?v=` in the resource URL so brows
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
 2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, and the energy flow), **Cells** (the four cells and their taps), **Tariff and sky**, and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (with a flow), **Tariff and sky**, and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
@@ -179,6 +180,30 @@ tariff_color_entity: sensor.edf_tempo_couleur_aujourd_hui
 hold_action:
   action: navigate
   navigation_path: /energy
+```
+
+### Your appliances in the flow
+
+Up to four, around the home, with the flow shown:
+
+```yaml
+type: custom:energy-sky-card
+production_entity: sensor.solar_power
+flow: always
+consumption_entity: sensor.home_power
+consumers:
+  - entity: sensor.water_heater_power
+    name: Water heater
+    icon: mdi:water-boiler
+  - entity: sensor.pool_pump_power
+    name: Pool
+    icon: mdi:pool
+  - entity: sensor.ev_charger_power
+    name: Car
+    icon: mdi:car-electric
+    tap_action:
+      action: navigate
+      navigation_path: /car
 ```
 
 ### Your own cells
@@ -297,6 +322,7 @@ All under `grid:`.
 | --- | --- | --- |
 | `layout` | `standard` | `standard`: the cells under the big number, four rows (248 px). `side`: the cells on the right, one line each, the icon standing for the name, two rows (120 px) |
 | `flow` | none | The energy flow under the card: `tap` (unfolded by a tap on the big number or its line) or `always` (always shown). See [The energy flow](#the-energy-flow). 0.3.3's `expandable: true` still reads as `flow: tap` |
+| `consumers` | — | Up to four appliances in the energy flow, around the home (needs `flow`): each `{ entity, name, icon, tap_action }`, the entity a power sensor. `name` and `icon` default to the entity's. See [The energy flow](#the-energy-flow) |
 | `cells` | automatic | Up to four cells, in order. Without it: Battery, Grid, Voltage and Tomorrow, those whose entities are set. See below |
 
 Each entry in `cells` is one of:

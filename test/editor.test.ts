@@ -193,7 +193,7 @@ describe('the layout', () => {
 describe('English and French', () => {
     it('labels every field and block, and offers every help, in both languages', () => {
         for (const lang of ['fr', 'en'] as const) {
-            const data = { cell_1: 'custom', cell_2: 'battery' };
+            const data = { cell_1: 'custom', cell_2: 'battery', flow: 'tap', consumer_1_entity: 'sensor.boiler' };
             for (const block of editorSchema(lang, data)) {
                 expect(block.title).toBeTruthy();
                 for (const field of block.schema ?? []) {
@@ -250,6 +250,34 @@ describe('the energy flow', () => {
         const withRows = { ...MINIMAL, grid_options: { columns: 12, rows: 4 } } as EnergySkyCardConfig;
         expect((nextConfig(withRows, { ...formData(withRows), flow: 'always' }) as any).grid_options).toEqual({ columns: 12, rows: 'auto' });
         expect((nextConfig(withRows, formData(withRows)) as any).grid_options).toEqual({ columns: 12, rows: 4 });
+    });
+});
+
+describe('the appliances', () => {
+    const titles = (data: Record<string, unknown>) => editorSchema('fr', data).map(b => b.title);
+    const block = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Consommateurs')?.schema?.map(f => f.name);
+
+    it('have a block of their own, after Cells, only with a flow', () => {
+        expect(titles({ flow: 'none' })).not.toContain('Consommateurs');
+        expect(titles({ flow: 'always' })).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Tarif et ciel', 'Actions']);
+    });
+
+    it('open one slot at a time, with a name, an icon and a tap once the entity is set', () => {
+        expect(block({ flow: 'tap' })).toEqual(['consumer_1_entity']);
+        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_tap_action', 'consumer_2_entity']);
+        expect(editorLabel('fr', 'consumer_2_entity')).toBe('Appareil 2');
+        expect(editorLabel('en', 'consumer_2_name')).toBe('Name (optional)');
+        expect(editorHelper('fr', 'consumer_1_entity')).toMatch(/quatre au plus/);
+    });
+
+    it('save as a consumers list, and leave it out when emptied', () => {
+        const { change, changes } = mount({ ...MINIMAL, flow: 'always' });
+        change({ consumer_1_entity: 'sensor.boiler', consumer_1_name: 'Chauffe-eau' });
+        expect(changes.at(-1)?.consumers).toEqual([{ entity: 'sensor.boiler', name: 'Chauffe-eau' }]);
+        change({ consumer_2_entity: 'sensor.pool', consumer_2_icon: 'mdi:pool' });
+        expect(changes.at(-1)?.consumers).toEqual([{ entity: 'sensor.boiler', name: 'Chauffe-eau' }, { entity: 'sensor.pool', icon: 'mdi:pool' }]);
+        change({ consumer_1_entity: '', consumer_1_name: '', consumer_2_entity: '', consumer_2_icon: '' });
+        expect(changes.at(-1)).not.toHaveProperty('consumers');
     });
 });
 

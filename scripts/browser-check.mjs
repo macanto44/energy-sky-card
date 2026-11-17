@@ -92,6 +92,15 @@ for (const layout of ['', 'side&']) {
 }
 for (const c of probe('expand&s=bleu&widths=360', ['--force-prefers-reduced-motion'], 1400)) check(c.comets === '0' && c.running === '0', `unfolded ${c.name}, reduced motion: no comet`);
 
+// Appliances in the flow (2 and 4), both layouts: nothing overflows, a phone shows the first two
+for (const layout of ['', 'side&']) {
+    for (const n of [2, 4]) {
+        for (const c of probe(`${layout}expand=always&consumers=${n}&s=bleu,extremes,nuit`, [], 2800)) {
+            check(c.overflow === '0' && c.tall === '0', `${n} appliances ${layout ? 'side ' : ''}${c.name}: no overflow`);
+        }
+    }
+}
+
 // The night sky covers the whole card (a visible star in each quarter) and none touches text
 for (const query of ['lang=fr', 'lang=en', 'h=184', 'side']) {
     for (const c of probe(query, [], 2400).filter(c => c.mode === 'night')) {

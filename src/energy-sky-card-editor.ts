@@ -5,10 +5,10 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, cellKind, defaultCells, isBuiltinObject, isCustom } from './model';
+import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
-import type { CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
+import type { CellConfig, CellKind, ConsumerConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 
 /** The parts of ha-form's schema the editor uses */
 export interface SchemaItem {
@@ -25,7 +25,7 @@ export interface SchemaItem {
 
 const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
-        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition',
+        production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}',
         production_entity: 'Puissance solaire (W, additionnées)',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
@@ -44,7 +44,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
-        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout',
+        production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}',
         production_entity: 'Solar power (W, summed)',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
@@ -65,6 +65,9 @@ const LABELS: Record<Lang, Record<string, string>> = {
 };
 
 export function editorLabel(lang: Lang, key: string): string {
+    // An appliance's slot: its entity is labelled with its number, the rest like a cell's
+    const consumer = /^consumer_(\d)_(entity|name|icon|tap_action)$/.exec(key);
+    if (consumer) return consumer[2] === 'entity' ? LABELS[lang].consumer.replace('{n}', consumer[1]) : LABELS[lang][`cell_${consumer[2]}`];
     const slot = /^cell_(\d)(?:_(entity|name|icon|tap_action))?$/.exec(key);
     if (slot) return slot[2] ? LABELS[lang][`cell_${slot[2]}`] : LABELS[lang].cell.replace('{n}', slot[1]);
     return LABELS[lang][key] ?? key;
@@ -81,6 +84,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         battery_invert: 'À cocher si votre capteur est positif en décharge : la carte attend une valeur positive en charge.',
         grid_invert: 'À cocher si votre capteur est positif quand vous vendez : la carte attend une valeur positive à l\'achat.',
         flow: 'Le flux entre solaire, réseau, batterie et maison, sous la carte ; toucher un élément ouvre son entité. « Déplier en touchant » : toucher le grand chiffre ou sa ligne le montre ou le cache, le reste de la carte garde son « Appui ».',
+        consumers: 'Un capteur de puissance (W) par appareil, quatre au plus : le premier au-dessus de « Maison », le deuxième en dessous, puis on alterne.',
+        consumer_tap_action: 'Par défaut : ouvre l\'entité de l\'appareil.',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
     },
     en: {
@@ -92,6 +97,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         battery_invert: 'Tick if your sensor is positive when discharging: the card expects positive when charging.',
         grid_invert: 'Tick if your sensor is positive when exporting: the card expects positive when importing.',
         flow: 'The flow between solar, grid, battery and home, under the card; a tap on a node opens its entity. "Unfold on a tap": a tap on the big number or its line shows or hides it, the rest of the card keeps its Tap.',
+        consumers: 'One power sensor (W) per appliance, four at most: the first above the home, the second below, then in turn.',
+        consumer_tap_action: 'By default: opens the appliance\'s entity.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
     },
 };
@@ -99,6 +106,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
 /** The helper under a field; in a block, the block's name tells the two invert fields apart */
 export function editorHelper(lang: Lang, key: string, block?: string): string | undefined {
     if (/^cell_\d_tap_action$/.test(key)) return HELPERS[lang].cell_tap_action;
+    if (/^consumer_\d_tap_action$/.test(key)) return HELPERS[lang].consumer_tap_action;
+    if (key === 'consumer_1_entity') return HELPERS[lang].consumers;
     return HELPERS[lang][block && key === 'invert' ? `${block}_invert` : key];
 }
 
@@ -169,6 +178,11 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
             name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
             schema: cellFields(lang, data),
         },
+        // The appliances, with a flow only
+        ...(data.flow === 'tap' || data.flow === 'always' ? [{
+            name: '', type: 'expandable' as const, flatten: true, title: t('consumers'), icon: 'mdi:power-plug-outline',
+            schema: consumerFields(data),
+        }] : []),
         {
             name: '', type: 'expandable', flatten: true, title: t('tariff'), icon: 'mdi:palette-outline',
             schema: [
@@ -188,6 +202,48 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
     ];
 }
 
+
+/** The appliances' slots: an entity each, its name, icon and tap once it has one; a slot shows once the previous one is filled */
+function consumerFields(data: Record<string, unknown>): SchemaItem[] {
+    const fields: SchemaItem[] = [];
+    for (let n = 1; n <= MAX_CONSUMERS; n++) {
+        if (n > 1 && !data[`consumer_${n - 1}_entity`]) break;
+        fields.push({ name: `consumer_${n}_entity`, selector: sensor({ device_class: 'power' }) });
+        if (data[`consumer_${n}_entity`]) {
+            fields.push(
+                { name: `consumer_${n}_name`, selector: { text: {} } },
+                { name: `consumer_${n}_icon`, selector: { icon: {} } },
+                { name: `consumer_${n}_tap_action`, selector: { ui_action: {} } },
+            );
+        }
+    }
+    return fields;
+}
+
+/** The appliances as the form's slots */
+function consumerSlots(config: EnergySkyCardConfig): Record<string, unknown> {
+    return Object.fromEntries((config.consumers ?? []).flatMap((c, i) => [
+        [`consumer_${i + 1}_entity`, c.entity], [`consumer_${i + 1}_name`, c.name], [`consumer_${i + 1}_icon`, c.icon], [`consumer_${i + 1}_tap_action`, c.tap_action],
+    ]));
+}
+
+/** Back from the slots to a consumers list (an appliance needs its entity) */
+function consumersFromSlots(value: Record<string, unknown>): ConsumerConfig[] {
+    const consumers: ConsumerConfig[] = [];
+    for (let n = 1; n <= MAX_CONSUMERS; n++) {
+        const entity = value[`consumer_${n}_entity`];
+        if (typeof entity !== 'string' || !entity) continue;
+        const consumer: ConsumerConfig = { entity };
+        for (const field of ['name', 'icon'] as const) {
+            const v = value[`consumer_${n}_${field}`];
+            if (typeof v === 'string' && v) consumer[field] = v;
+        }
+        const tap = value[`consumer_${n}_tap_action`];
+        if (isAction(tap)) consumer.tap_action = tap;
+        consumers.push(consumer);
+    }
+    return consumers;
+}
 
 /** The cells as the form's slots: cell_1 … cell_4, and the free cells' entity, name and icon */
 function cellSlots(config: EnergySkyCardConfig): Record<string, unknown> {
@@ -231,7 +287,10 @@ function cellsFromSlots(value: Record<string, unknown>): CellConfig[] {
     return cells;
 }
 
-const SLOT_KEY = /^cell_\d(_|$)/;
+/** The form's slot fields, cells' and appliances', which the config writes as lists */
+const SLOT_KEY = /^(cell|consumer)_\d(_|$)/;
+const CELL_SLOT = /^cell_\d(_|$)/;
+const CONSUMER_SLOT = /^consumer_\d_/;
 
 /** What the form shows for the config: defaults filled in where YAML left them out, the cells as slots */
 export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
@@ -247,6 +306,7 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         flow: config.flow ?? (config.expandable ? 'tap' : 'none'),
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
         ...cellSlots(config),
+        ...consumerSlots(config),
     };
 }
 
@@ -277,7 +337,12 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
     // One production sensor stays a plain string in YAML
     if (Array.isArray(merged.production_entity) && merged.production_entity.length === 1) merged.production_entity = merged.production_entity[0];
     // Cells: written only when they differ from what the card would pick by itself
-    if (Object.keys(value).some(key => SLOT_KEY.test(key))) {
+    if (Object.keys(value).some(key => CONSUMER_SLOT.test(key))) {
+        const consumers = consumersFromSlots(value);
+        if (consumers.length) merged.consumers = consumers;
+        else delete merged.consumers;
+    }
+    if (Object.keys(value).some(key => CELL_SLOT.test(key))) {
         const cells = cellsFromSlots(value);
         const auto = previous.cells === undefined && JSON.stringify(cells) === JSON.stringify(defaultCells(previous));
         if (auto) delete merged.cells;

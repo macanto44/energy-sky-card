@@ -22,6 +22,8 @@ export const METRIC_ICONS: Record<CellKind, string> = {
 export const CUSTOM_CELL_ICON = 'mdi:gauge';
 export const CELL_KINDS = Object.keys(METRIC_ICONS) as CellKind[];
 export const MAX_CELLS = 4;
+/** Appliances in the energy flow, at most */
+export const MAX_CONSUMERS = 4;
 
 export interface MetricView {
     key: MetricKey;
@@ -157,6 +159,7 @@ export function trackedEntities(config: EnergySkyCardConfig): string[] {
         ...productionEntities(config),
         config.consumption_entity,
         ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
+        ...(config.consumers ?? []).map(c => c.entity),
         ...(config.daily_production_entities ?? []),
         config.battery?.soc_entity, config.battery?.power_entity, config.battery?.temperature_entity, ...(config.battery?.soc_reached_entities ?? []),
         config.grid?.power_entity, config.grid?.voltage_entity, config.grid?.outage_entity,

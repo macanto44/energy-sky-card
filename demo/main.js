@@ -1,5 +1,5 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand, h=…, bare, probe, seek)
-import { ATTRIBUTES, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, h=…, bare, probe, seek)
+import { ATTRIBUTES, CONSUMERS, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
 const lang = params.get('lang') || 'fr';
@@ -9,6 +9,8 @@ const side = params.has('side');
 // ?expand: the flow on a tap, unfolded; ?expand=always: the flow always shown (both set their own height)
 const expand = params.has('expand');
 const flow = params.get('expand') === 'always' ? 'always' : 'tap';
+// ?consumers=n: the first n appliances in the flow
+const consumers = params.has('consumers') ? { consumers: CONSUMERS.slice(0, Number(params.get('consumers')) || 2) } : {};
 const height = expand ? '' : params.get('h') || (side ? '120' : '');
 if (params.has('bare')) document.body.classList.add('bare');
 for (const [name, overrides] of Object.entries(SCENARIOS)) {
@@ -18,7 +20,7 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     const fig = document.createElement('figure');
     fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : expand ? ';height:auto' : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow } : {}) });
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow, ...consumers } : {}) });
     const states = {};
     let t = 0;
     for (const [id, state] of Object.entries(overrides)) {

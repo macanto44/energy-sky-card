@@ -1,7 +1,7 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
 import { CLOUD_MAX_ALPHA, CLOUD_RGB, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
-import { FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS } from '../flow';
+import { FLOW_HEIGHT, MAX_CONSUMERS, NODE_HEIGHT, WIRE_KEYS } from '../flow';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
 const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
@@ -9,7 +9,7 @@ const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
 const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90d5) ${pct(1 - SIDE_SKY_FROM / 0.6)}, var(--esc-c1, #2169b0)) 0%, var(--esc-c1, #2169b0) ${pct((0.6 - SIDE_SKY_FROM) / (1 - SIDE_SKY_FROM))}, var(--esc-c2, #1d4f87) 100%)`;
 const SIDE_HALO_AT = `${SIDE_HALO.x}px ${SIDE_HALO.y}px`;
 /** The flow's colours, by where the energy comes from */
-export const FLOW_COLOURS = { sun: '#ffd68c', grid: '#cfe0ff', batt: '#9ef0c8' } as const;
+export const FLOW_COLOURS = { sun: '#ffd68c', grid: '#cfe0ff', batt: '#9ef0c8', use: '#f4d9ff' } as const;
 /** The node's glass: white over the sky at this opacity at most (the contrast test uses it) */
 export const NODE_GLASS_ALPHA = 0.14;
 /** Per level: the wire's width (px) and one comet's trip (s) */
@@ -296,7 +296,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .wire .gap { stroke: var(--esc-panel); stroke-opacity: 1; stroke-width: 10px; stroke-linecap: butt; }
 ${LEVELS.map(([w, d], i) => `.wire[data-level="${i + 1}"] { --esc-w: ${w}px; --esc-dur: ${d}s; }`).join('\n')}
 ${Object.entries(FLOW_COLOURS).map(([k, c]) => `.wire.${k} { color: ${c}; }`).join(' ')}
-${WIRE_KEYS.map(k => `.wire[data-wire="${k}"] { --esc-flow: esc-flow-${k}; }`).join(' ')}
+${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].map(k => `.wire[data-wire="${k}"] { --esc-flow: esc-flow-${k}; }`).join(' ')}
 /* Comets: none without motion; one at level 1, two at 2, three above, evenly spaced */
 .comet { display: none; }
 .comet circle { fill: currentColor; }
@@ -345,4 +345,14 @@ ${Object.entries(FLOW_COLOURS).map(([k, c]) => `.seg[data-source="${k}"] { strok
 .flow[data-narrow] .node { gap: 6px; padding: 0 8px 0 5px; }
 .flow[data-narrow] .disc { width: 32px; height: 32px; }
 .flow[data-narrow] .ring { width: 38px; height: 38px; }
+/* An appliance at rest: its disc dims, its text stays readable */
+.node[data-idle] .disc { opacity: 0.55; }
+/* Compact appliances (more than two, or a narrow corner): the icon in its ring and the power; the name on hover (title) and for screen readers (aria-label) */
+.flow[data-compact] .node[data-consumer] { flex-direction: column; justify-content: flex-start; gap: 3px; padding: 0; border: none; background: none; border-radius: 0; }
+.flow[data-compact] .node[data-consumer][data-side="below"] { flex-direction: column-reverse; }
+.flow[data-compact] .node[data-consumer] .disc { width: 30px; height: 30px; }
+.flow[data-compact] .node[data-consumer] .ring { width: 36px; height: 36px; }
+.flow[data-compact] .node[data-consumer] .ntext { align-items: center; max-width: 100%; }
+.flow[data-compact] .node[data-consumer] .nlab { display: none; }
+.flow[data-compact] .node[data-consumer] .nval { font-size: 11.5px; font-weight: 600; line-height: 13px; }
 `;

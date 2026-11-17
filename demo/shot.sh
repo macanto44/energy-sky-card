@@ -6,5 +6,5 @@ OUT="${1:-demo.png}"
 QUERY="${2:-}"
 exec "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
   --hide-scrollbars --allow-file-access-from-files --force-device-scale-factor=2 \
-  --window-size=720,1150 --virtual-time-budget=4000 \
+  --window-size=${WINW:-720},1150 --virtual-time-budget=4000 \
   --screenshot="$OUT" "file://$PWD/demo/index.html?$QUERY" 2>/dev/null

@@ -2,7 +2,7 @@
 // the grid, the battery and the home. Pure: powers → flows → what each node
 // and wire shows, and the drawing's geometry for a width.
 
-import { DEFAULT_POWER_THRESHOLD, batteryPower, gridPower, productionEntities, productionPower } from './model';
+import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, gridPower, productionEntities, productionPower } from './model';
 import { formatPercent, formatPower } from './format';
 import { localize, numberLocale } from './localize';
 import { numericState, powerW } from './utils';
@@ -92,8 +92,22 @@ export function flowNodeEntity(config: EnergySkyCardConfig, node: NodeKey): stri
     }
 }
 
+/** An appliance beside the home */
+export interface ConsumerView {
+    label: string;
+    icon: string;
+    value: string;
+    /** Its share of the home's power, 0 … 1 (its ring) */
+    share: number;
+    level: 0 | 1 | 2 | 3 | 4;
+}
+
+export { MAX_CONSUMERS };
+export const CONSUMER_ICON = 'mdi:power-plug-outline';
+
 export interface FlowView {
     nodes: Record<NodeKey, NodeView>;
+    consumers: ConsumerView[];
     levels: Record<WireKey, 0 | 1 | 2 | 3 | 4>;
     /** Wires not drawn: one of their nodes is missing */
     off: WireKey[];
@@ -137,6 +151,18 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
                 ring: total > 0 ? (['sun', 'batt', 'grid'] as const).filter(s => into[s] > 0).map(s => [into[s] / total, s]) : [],
             },
         },
+        consumers: (config.consumers ?? []).slice(0, MAX_CONSUMERS).map(c => {
+            const entity = hass.states[c.entity];
+            const power = pos(powerW(entity));
+            const own = (key: string) => typeof entity?.attributes[key] === 'string' ? entity.attributes[key] as string : undefined;
+            return {
+                label: c.name || own('friendly_name') || c.entity,
+                icon: c.icon || own('icon') || CONSUMER_ICON,
+                value: formatPower(powerW(entity), loc),
+                share: flows.home ? Math.min(power / flows.home, 1) : 0,
+                level: flowLevel(power),
+            };
+        }),
         levels,
         off: WIRE_KEYS.filter(k => !WIRE_ENDS[k].every(present)),
     };
@@ -153,9 +179,27 @@ export interface FlowGeometry {
     /** The grid's and the battery's (alone on their rows: wider, while the curves keep some length) */
     centreWidth: number;
     paths: Record<WireKey, string>;
-    /** One @keyframes per wire, esc-flow-<key>: a comet along it (transform only) */
+    /** The appliances, in the config's order */
+    consumers: ConsumerPlace[];
+    /** One @keyframes per wire, esc-flow-<key> (esc-flow-c<n> for an appliance's): a comet along it (transform only) */
     keyframes: string;
 }
+
+/** Where an appliance sits: a whole node, or compact (its icon and power) when there are more than two or little room */
+export interface ConsumerPlace {
+    /** Shown: a phone's narrow corners hold one each */
+    visible: boolean;
+    compact: boolean;
+    below: boolean;
+    left: number;
+    top: number;
+    width: number;
+    /** Its wire, from the home */
+    path: string;
+}
+
+/** A compact appliance's width */
+export const COMPACT_WIDTH = 46;
 
 type Pt = [number, number];
 
@@ -185,7 +229,7 @@ export const WIRE_INSET = 27;
  * stays inside, between the rows: the four corners are left free. The
  * grid ↔ battery link runs straight down the middle.
  */
-export function flowGeometry(width: number): FlowGeometry {
+export function flowGeometry(width: number, consumers = 0): FlowGeometry {
     const W = Math.max(width, 160);
     const nodeWidth = Math.round(Math.min(Math.max((W - 48) / 2, 96), 128));
     const centreWidth = Math.round(Math.min(nodeWidth + 20, W - nodeWidth - 32));
@@ -199,7 +243,7 @@ export function flowGeometry(width: number): FlowGeometry {
         const k = (to[1] - from[1]) / 2;
         return [from, [[from[0], from[1] + k], [to[0], to[1] - k]], to];
     };
-    const segs: Record<WireKey, Seg> = {
+    const segs: Record<string, Seg> = {
         sh: [[nodeWidth, mid], null, [W - nodeWidth, mid]],
         sg: s([sunIn, mid - r], [centreLeft, top + r]),
         gh: s([centreRight, top + r], [homeIn, mid - r]),
@@ -208,10 +252,37 @@ export function flowGeometry(width: number): FlowGeometry {
         gb: [[cx, top + r], null, [cx, bottom - r]],
         bg: [[cx, bottom - r], null, [cx, top + r]],
     };
-    const paths = {} as Record<WireKey, string>;
+    // The appliances, in the corners right of the grid (above the home) and of the battery (below)
+    const corner = W - (cx + chalf) - 8;
+    const compact = consumers > 2 || corner < 110;
+    const perSide = compact && corner < 100 ? 1 : 2;
+    const places: ConsumerPlace[] = [];
+    for (let i = 0; i < consumers; i++) {
+        const below = i % 2 === 1, rank = Math.floor(i / 2);
+        const onSide = Math.min(below ? Math.floor(consumers / 2) : Math.ceil(consumers / 2), perSide);
+        const rowTop = below ? FLOW_HEIGHT - 3 - NODE_HEIGHT : 3;
+        const homeEdge = below ? mid + r : mid - r, nodeEdge = below ? rowTop : rowTop + NODE_HEIGHT;
+        if (rank >= perSide) {
+            places.push({ visible: false, compact, below, left: 0, top: rowTop, width: 0, path: '' });
+            continue;
+        }
+        let left: number, w: number;
+        if (compact) {
+            const slot = corner / onSide, centre = W - corner + slot * (rank + 0.5) + 4;
+            w = COMPACT_WIDTH;
+            left = centre - w / 2;
+            segs[`c${i}`] = s([W - nodeWidth / 2 + (onSide > 1 ? (rank - 0.5) * 30 : 10), homeEdge], [centre, nodeEdge]);
+        } else {
+            w = Math.min(nodeWidth, corner);
+            left = W - w;
+            const x = left + w / 2 + 10;
+            segs[`c${i}`] = [[x, homeEdge], null, [x, nodeEdge]];
+        }
+        places.push({ visible: true, compact, below, left: r1(left), top: rowTop, width: r1(w), path: '' });
+    }
+    const paths = {} as Record<string, string>;
     let keyframes = '';
-    for (const key of WIRE_KEYS) {
-        const seg = segs[key];
+    for (const [key, seg] of Object.entries(segs)) {
         const [p0, c, p1] = seg;
         paths[key] = c ? `M${pt(p0)} C${pt(c[0])} ${pt(c[1])} ${pt(p1)}` : `M${pt(p0)} L${pt(p1)}`;
         const steps = c ? SAMPLES : 1;
@@ -225,5 +296,6 @@ export function flowGeometry(width: number): FlowGeometry {
         frames.push('10%, 90% { opacity: 1; }');
         keyframes += `@keyframes esc-flow-${key} { ${frames.join(' ')} }\n`;
     }
-    return { nodeWidth, centreWidth, paths, keyframes };
+    places.forEach((place, i) => { place.path = paths[`c${i}`] ?? ''; });
+    return { nodeWidth, centreWidth, paths: paths as Record<WireKey, string>, consumers: places, keyframes };
 }

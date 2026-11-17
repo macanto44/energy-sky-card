@@ -39,6 +39,14 @@ export interface CustomCell {
 
 export type CellConfig = CellKind | BuiltinCell | CustomCell;
 
+/** An appliance in the energy flow, beside the home: its power, its own name, icon and tap action */
+export interface ConsumerConfig {
+    entity: string;
+    name?: string;
+    icon?: string;
+    tap_action?: Record<string, unknown>;
+}
+
 /** What the hero shows at night: production (0 W, the default), the home's consumption, or the battery */
 export type NightHero = 'production' | 'consumption' | 'battery';
 
@@ -83,6 +91,8 @@ export interface EnergySkyCardConfig {
     flow?: FlowMode;
     /** 0.3.3's name of flow: tap, still read */
     expandable?: boolean;
+    /** Up to 4 appliances in the flow, around the home: the first above, the second below, and so on */
+    consumers?: ConsumerConfig[];
     /** Up to 4 cells, in order; without it, the built-in cells whose entities are set */
     cells?: CellConfig[];
     forecast_tomorrow_entity?: string;
