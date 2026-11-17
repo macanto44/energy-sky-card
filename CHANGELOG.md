@@ -1,12 +1,42 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.4] — 2026-11-17
 
-- **Breaking:** the older option names are no longer read: top-level `power_threshold` (use `battery.power_threshold`), `battery.lock_entities` (use `battery.soc_reached_entities`) and `cell_tap` (give each cell its own `tap_action`). A card that still has one shows an error that says what to use instead.
-- Internal: one text per cell instead of stacked forms hidden by CSS, one fit for both layouts, table-driven validation, shared test helpers. Nothing changes on screen.
+### ⚠️ Breaking changes
+
+Three older option names are no longer read. **If your card still uses one, it shows an error after the update** until you rename it:
+
+| Removed | Use instead |
+| --- | --- |
+| `power_threshold` (top level) | `battery.power_threshold` |
+| `battery.lock_entities` | `battery.soc_reached_entities` |
+| `cell_tap` | a `tap_action` on each cell (`{ type: grid, tap_action: … }`) |
+
+The error names the option to use, in French or English. To update, edit the card in YAML:
+
+```yaml
+# Before
+power_threshold: 20
+battery:
+  soc_entity: sensor.battery_soc
+  lock_entities:
+    - input_boolean.battery_target_reached
+
+# After
+battery:
+  soc_entity: sensor.battery_soc
+  power_threshold: 20
+  soc_reached_entities:
+    - input_boolean.battery_target_reached
+```
+
+If you last saved the card from the visual editor, it may already use the new names: nothing to do then.
+
+### Changes
 
 - The unfolded flow's outer wires now run inside: each joins the edges that face each other (the sun's top to the grid's bottom, the battery's top to the home's bottom…) with an S curve between the rows, leaving the four corners free. The flow is 20 px taller, so the curves have room.
 - Editor: no help under Layout, and a shorter one under the unfolding switch.
+- Internal: one text per cell instead of stacked forms hidden by CSS, one fit for both layouts, table-driven validation, shared test helpers. Nothing changes on screen.
 
 ## [0.3.3] — 2026-11-17
 
