@@ -2,7 +2,7 @@
 
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
-import { CARD_CSS } from './styles/card';
+import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, configuredCells, metricForm, productionEntities, trackedEntities, type CardView, type MetricKey } from './model';
 import { cardLanguage } from './localize';
 import { CLOUDS, computeBackground, isHexColor } from './sky';
@@ -50,6 +50,10 @@ const RENAMED: [string, { fr: string; en: string }][] = [
     ['battery.lock_entities', { fr: 'utilisez battery.soc_reached_entities', en: 'use battery.soc_reached_entities' }],
     ['cell_tap', { fr: 'chaque case prend son propre tap_action', en: 'each cell takes its own tap_action' }],
 ];
+/** flow_colors' keys, and the CSS variable each sets */
+const FLOW_COLOR_KEYS: Record<string, string> = {
+    solar: FLOW_COLOUR_VARS.sun, grid: FLOW_COLOUR_VARS.grid, battery: FLOW_COLOUR_VARS.batt, consumption: FLOW_COLOUR_VARS.use,
+};
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
@@ -106,6 +110,17 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             if (typeof o.entity !== 'string' || !o.entity) throw configError('consumers : chaque appareil a une entity', 'consumers: each appliance needs an entity');
             if (o.tap_action !== undefined && !isAction(o.tap_action)) {
                 throw configError('consumers : tap_action doit avoir une action (more-info, navigate, url…)', 'consumers: tap_action needs an action (more-info, navigate, url…)');
+            }
+        }
+    }
+    if (c.flow_colors !== undefined) {
+        const colours = c.flow_colors as unknown;
+        if (!colours || typeof colours !== 'object' || Array.isArray(colours)) {
+            throw configError('flow_colors : solar, grid, battery et consumption, chacun une couleur', 'flow_colors: solar, grid, battery and consumption, each a colour');
+        }
+        for (const [name, colour] of Object.entries(colours)) {
+            if (!(name in FLOW_COLOR_KEYS) || typeof colour !== 'string' || !colour) {
+                throw configError(`flow_colors.${name} : solar, grid, battery ou consumption, une couleur CSS`, `flow_colors.${name}: solar, grid, battery or consumption, a CSS colour`);
             }
         }
     }
@@ -253,6 +268,12 @@ export class EnergySkyCard extends HTMLElement {
         if (this.side) this.setAttribute('data-layout', 'side');
         else this.removeAttribute('data-layout');
         setAttr(this, 'data-flow', config.flow ?? null);
+        // flow_colors: this card's, over the theme's and the defaults
+        for (const [key, variable] of Object.entries(FLOW_COLOR_KEYS)) {
+            const colour = config.flow_colors?.[key as keyof NonNullable<EnergySkyCardConfig['flow_colors']>];
+            if (colour) this.style.setProperty(variable, colour);
+            else this.style.removeProperty(variable);
+        }
         this.flowWidth = 0;
         this.shownConsumers = [];
         this.fitted = '';

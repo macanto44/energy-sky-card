@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- The flow's colours follow your theme: `--energy-sky-card-solar`, `-grid`, `-battery` and `-consumption` in a Home Assistant theme set them for every card, and `flow_colors` (YAML) for one.
+- README: pictures in English, the energy flow animated, the side layout with its flow and appliances; a live demo on GitHub Pages.
 - The energy flow's moving dots are single beads (the size of the old comets' head), without their trail.
 - An appliance below 10 W stays out of the energy flow, and the others take its place. `consumer_threshold` (« Seuil d'affichage » in the editor's Appliances block) sets the power; `0` always shows them.
 

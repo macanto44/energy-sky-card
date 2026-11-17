@@ -17,15 +17,15 @@ const base = {
   'sensor.grid': 748, 'sensor.voltage': 233.98, 'sensor.gridlost': 'no_alarm',
   'sensor.tomorrow': 12.56, 'sensor.tempo': 'Bleu', 'sun.sun': 'below_horizon',
   // Appliances (?consumers=n)
-  'sensor.boiler': 1600, 'sensor.pool': 500, 'sensor.car': 0, 'sensor.heat_pump': 12345,
+  'sensor.boiler': 1600, 'sensor.pool': 500, 'sensor.car': 0, 'sensor.heat_pump': 300,
 };
 
 /** The appliances ?consumers=n adds, the first n */
 export const CONSUMERS = [
-  { entity: 'sensor.boiler', name: 'Chauffe-eau', icon: 'mdi:water-boiler' },
-  { entity: 'sensor.pool', name: 'Piscine', icon: 'mdi:pool' },
-  { entity: 'sensor.car', name: 'Voiture', icon: 'mdi:car-electric' },
-  { entity: 'sensor.heat_pump', name: 'Pompe à chaleur', icon: 'mdi:heat-pump-outline' },
+  { entity: 'sensor.boiler', name: 'Boiler', icon: 'mdi:water-boiler' },
+  { entity: 'sensor.pool', name: 'Pool', icon: 'mdi:pool' },
+  { entity: 'sensor.car', name: 'Car', icon: 'mdi:car-electric' },
+  { entity: 'sensor.heat_pump', name: 'Heat pump', icon: 'mdi:heat-pump-outline' },
 ];
 
 /** Entity attributes, where a reading needs its unit */
@@ -47,7 +47,7 @@ export const SCENARIOS = {
   bleu: { ...base, 'sun.sun': 'above_horizon', 'sensor.production_pv': 3249, 'sensor.sofar_jour': 5.1, 'sensor.cabanon_jour': 2.14, 'sensor.soc': 78, 'sensor.bat_power': 900, 'sensor.grid': -1830 },
   blanc: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Blanc', 'sensor.production_pv': 860, 'sensor.sofar_jour': 1.4, 'sensor.cabanon_jour': 0.3, 'sensor.soc': 100, 'input_boolean.soc_reached': 'on', 'sensor.grid': 5, 'sensor.bat_temp': 'unavailable' },
   rouge: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 5980, 'sensor.sofar_jour': 18.7, 'sensor.cabanon_jour': 3.2, 'sensor.soc': 64, 'sensor.bat_power': -2300, 'sensor.grid': -3450 },
-  extremes: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 12345, 'sensor.sofar_jour': 98.7, 'sensor.cabanon_jour': 24.6, 'sensor.soc': 100, 'sensor.bat_power': -4321, 'sensor.bat_temp': -12.6, 'input_boolean.soc_reached': 'on', 'sensor.grid': -12345, 'sensor.voltage': 252.4, 'sensor.tomorrow': 123.45 },
+  extremes: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 12345, 'sensor.sofar_jour': 98.7, 'sensor.cabanon_jour': 24.6, 'sensor.soc': 100, 'sensor.bat_power': -4321, 'sensor.bat_temp': -12.6, 'input_boolean.soc_reached': 'on', 'sensor.grid': -12345, 'sensor.voltage': 252.4, 'sensor.tomorrow': 123.45, 'sensor.heat_pump': 12345 },
   // 0.2 options (config below): night, consumption as the hero, a free cell with a long name
   options: { ...base, 'sensor.home': 1870, 'sensor.sofar_jour': 18.7, 'sensor.cabanon_jour': 3.2, 'sensor.heat_pump_temp': 48.6 },
   // Off-peak, at night: the grid charges the battery and feeds the home

@@ -15,9 +15,9 @@
 
 Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a background that tells you something too: the colour of today's electricity tariff by day (EDF Tempo's Bleu, Blanc and Rouge days), a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
 
-It's free, open source and made for Home Assistant. The card is in French and English.
+It's free, open source and made for Home Assistant. The card is in French and English. You can [try it live](https://macanto44.github.io/energy-sky-card/) in your browser first, on sample readings.
 
-[Install](#install) · [Set up](#set-up) · [Examples](#examples) · [Options](#options) · [Troubleshooting](#troubleshooting)
+[Live demo](https://macanto44.github.io/energy-sky-card/) · [Install](#install) · [Set up](#set-up) · [Examples](#examples) · [Options](#options) · [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -57,7 +57,7 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 - `flow: always`: the flow is always there, under the card.
 
 
-![The unfolded card on a Rouge day: the sun sends 6.0 kW to the home and the grid, the battery feeds the home with 2.3 kW](docs/images/deplie.png)
+![The energy flow on a Rouge day, animated: the sun sends 6.0 kW to the home and 3.5 kW to the grid, the battery feeds the home with 2.3 kW, the home feeds a 1.6 kW boiler and a 500 W pool pump](docs/images/flux-anim.png)
 
 - **The colour says where the energy comes from**: gold for the sun, mint for the battery, ice blue for the grid. Energy you sell stays gold on its way to the grid.
 - **The wire says how much**: the more power, the thicker the wire and the more and faster the dots that run along it. An idle wire is a faint dotted line.
@@ -66,6 +66,8 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 - **Each node** shows its power with the card's signs (grid negative when selling, battery negative when discharging) and a ring: production against your maximum, the battery's charge (with the percentage in the middle), and the share of each source in what your home uses.
 - **Tap a node** to open its entity.
 - **Your appliances**, up to four (a water heater, a pool pump, a car charger…), sit around the home: the first above it, the second below, then in turn. Each shows its power, a ring with its share of what the home uses, and a lilac wire from the home that busies up with its power. One or two get a whole node with their name when the card is wide enough; more, or on a phone, they turn compact (the icon in its ring and the power; the name on hover and for screen readers), and a phone shows the first two. Tap one to open its entity, or give it a `tap_action` of its own. An appliance below 10 W (`consumer_threshold`) stays out of the flow, and the others move up.
+
+![The side layout at night with its flow always shown: the grid feeds the home, which feeds a boiler, a heat pump and a pool pump](docs/images/cote-flux.png)
 
 With `flow: tap`, the rest of the card keeps its own tap action, so a menu or a pop-up you open from the card still works; with `flow: always`, the big number keeps it too. Hold and double tap stay the card's everywhere.
 
@@ -276,6 +278,30 @@ tariff_palettes:
 
 Keep your colours dark enough for white text: the defaults are a little darker at the top than they could be, so that the values keep a 4.5:1 contrast.
 
+### The flow's colours
+
+The flow's wires and rings take one colour per source. Change them for one card with `flow_colors` (any CSS colour, a theme variable too):
+
+```yaml
+flow_colors:
+  solar: '#ffb300'
+  grid: '#90caf9'
+  battery: '#a5d6a7'
+  consumption: var(--accent-color)
+```
+
+Or for every card, in your Home Assistant theme:
+
+```yaml
+my_theme:
+  energy-sky-card-solar: '#ffb300'
+  energy-sky-card-grid: '#90caf9'
+  energy-sky-card-battery: '#a5d6a7'
+  energy-sky-card-consumption: '#f48fb1'
+```
+
+A card's `flow_colors` wins over the theme. The text stays white on the card's own sky, whatever the theme.
+
 ## Options
 
 `type: custom:energy-sky-card`
@@ -348,6 +374,7 @@ A cell without its own `tap_action` opens its entity, unless the card has a `tap
 | `tariff_palettes` | the three Tempo colours | Three colours per tariff state, top to bottom. Replaces or adds palettes. YAML only |
 | `sun_entity` | `sun.sun` | Night when it's `below_horizon` |
 | `animate` | `true` | `false` turns every animation off |
+| `flow_colors` | gold, ice blue, mint, lilac | The flow's colours: `solar`, `grid`, `battery`, `consumption`, each any CSS colour. A theme can set them for every card. See [The flow's colours](#the-flows-colours). YAML only |
 
 ### Actions
 

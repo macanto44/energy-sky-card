@@ -1,4 +1,4 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, h=…, bare, probe, seek)
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, flowonly, h=…, bare, probe, seek)
 import { ATTRIBUTES, CONSUMERS, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
@@ -30,6 +30,12 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' } };
     fig.querySelector('.cell').appendChild(card);
     if (expand) card.expanded = true;
+    // ?flowonly: the flow alone, without the top of the card (the README's animation)
+    if (params.has('flowonly')) {
+      const style = document.createElement('style');
+      style.textContent = '.content, .sky { display: none; } .panel { border-top: none; }';
+      card.shadowRoot.appendChild(style);
+    }
     root.appendChild(fig);
   }
 }

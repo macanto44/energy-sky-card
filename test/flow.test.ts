@@ -432,7 +432,20 @@ describe('contrast of the flow\'s text', () => {
         });
     }
 
-    it('draws the three sources and the appliances in their own colours', () => {
+    it('draws the three sources and the appliances in their own colours, which a theme or flow_colors can change', () => {
         expect(Object.keys(FLOW_COLOURS)).toEqual(['sun', 'grid', 'batt', 'use']);
+        expect(CARD_CSS).toContain('.wire.sun { color: var(--energy-sky-card-solar, #ffd68c); }');
+        expect(CARD_CSS).toContain('.seg[data-source="use"] { stroke: var(--energy-sky-card-consumption, #f4d9ff); }');
+    });
+
+    it('takes this card\'s flow_colors on its host, and drops them with a new config', () => {
+        const card = mountCard({ ...FULL_CONFIG, flow: 'always', flow_colors: { solar: '#ffaa00', consumption: 'var(--accent-color)' } }, DAY);
+        expect(card.style.getPropertyValue('--energy-sky-card-solar')).toBe('#ffaa00');
+        expect(card.style.getPropertyValue('--energy-sky-card-consumption')).toBe('var(--accent-color)');
+        expect(card.style.getPropertyValue('--energy-sky-card-grid')).toBe('');
+        card.setConfig({ ...FULL_CONFIG, flow: 'always' });
+        expect(card.style.getPropertyValue('--energy-sky-card-solar')).toBe('');
+        expect(() => card.setConfig({ ...FULL_CONFIG, flow_colors: { sun: '#fff' } as any })).toThrow(/flow_colors.sun/);
+        expect(() => card.setConfig({ ...FULL_CONFIG, flow_colors: { grid: 3 } as any })).toThrow(/flow_colors.grid/);
     });
 });

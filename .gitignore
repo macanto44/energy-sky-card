@@ -4,3 +4,6 @@ dist/
 .DS_Store
 # Working brief: kept local (holds household details)
 BRIEF-*.md
+
+# Local logs written into this folder by other tools (not the card)
+releve_*.csv

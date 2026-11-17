@@ -1,6 +1,6 @@
 // The README's pictures, from the built card in the local demo (headless Chrome):
-// docs/images/{bleu,blanc,rouge}.png, docs/images/cote.png (the side layout), docs/images/deplie.png
-// (unfolded, the energy flow), and docs/images/nuit-anim.png, an
+// docs/images/{bleu,blanc,rouge}.png, docs/images/cote.png (the side layout), docs/images/cote-flux.png
+// (side, with the flow and four appliances), docs/images/flux-anim.png (the flow, animated), and docs/images/nuit-anim.png, an
 // animated PNG of the night sky (4 s, looping: the twinkle's cycle), 2 × like the stills.
 // Usage: npm run build && npm run screenshots   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
@@ -15,12 +15,12 @@ if (!chrome) throw new Error('No Chrome found (set CHROME=…)');
 const page = `file://${resolve('demo/index.html')}`;
 const work = mkdtempSync(join(tmpdir(), 'esc-shots-'));
 
-/** One card, 360 px wide, `height` tall (query: the demo's options), frozen at `seek` ms, at `scale` × */
-function shoot(out, scenario, seek, scale = 2, height = 248, query = '') {
+/** One card, `width` × `height` (query: the demo's options), frozen at `seek` ms, at `scale` × */
+function shoot(out, scenario, seek, scale = 2, height = 248, query = '', width = 360) {
     execFileSync(chrome, [
         '--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
-        `--force-device-scale-factor=${scale}`, `--window-size=360,${height}`, '--virtual-time-budget=4000',
-        `--screenshot=${out}`, `${page}?s=${scenario}&bare&widths=360&seek=${seek}${query}`,
+        `--force-device-scale-factor=${scale}`, `--window-size=${width},${height}`, '--virtual-time-budget=4000',
+        `--screenshot=${out}`, `${page}?s=${scenario}&bare&lang=en&widths=${width}&seek=${seek}${query}`,
     ], { stdio: 'ignore' });
 }
 
@@ -33,9 +33,9 @@ for (const [name, seek] of Object.entries(stills)) {
 // The side layout (layout: side), Bleu
 shoot('docs/images/cote.png', 'bleu', 3000, 2, 120, '&side');
 console.log('docs/images/cote.png');
-// Unfolded (expandable: true), Rouge: the sun and the battery feed the home, the rest is sold
-shoot('docs/images/deplie.png', 'rouge', 900, 2, 493, '&expand');
-console.log('docs/images/deplie.png');
+// The side layout with its flow always shown and four appliances, at night (a still)
+shoot('docs/images/cote-flux.png', 'nuit', 900, 2, 369, '&side&expand=always&consumers=4', 440);
+console.log('docs/images/cote-flux.png');
 
 /** A PNG's chunks: [type, data] */
 function chunks(png) {
@@ -94,4 +94,15 @@ for (let t = START; t < START + LENGTH; t += DELAY) {
 const anim = apng(frames, DELAY);
 writeFileSync('docs/images/nuit-anim.png', anim);
 console.log(`docs/images/nuit-anim.png: ${frames.length} frames, ${(anim.length / 1024).toFixed(0)} KB`);
+
+// The energy flow alone (the stills show the rest), with two appliances, on a Rouge day: 4 s, 1.5 ×, 100 ms a frame
+const flowFrames = [];
+for (let t = 1000; t < 5000; t += DELAY) {
+    const f = join(work, `g${flowFrames.length}.png`);
+    shoot(f, 'rouge', t, 1.5, 245, '&expand=always&consumers=2&flowonly', 440);
+    flowFrames.push(f);
+}
+const flowAnim = apng(flowFrames, DELAY);
+writeFileSync('docs/images/flux-anim.png', flowAnim);
+console.log(`docs/images/flux-anim.png: ${flowFrames.length} frames, ${(flowAnim.length / 1024).toFixed(0)} KB`);
 rmSync(work, { recursive: true });

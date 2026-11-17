@@ -93,6 +93,8 @@ export interface EnergySkyCardConfig {
     expandable?: boolean;
     /** Up to 4 appliances in the flow, around the home: the first above, the second below, and so on */
     consumers?: ConsumerConfig[];
+    /** The flow's colours, any CSS colour; a theme can set them for every card (--energy-sky-card-solar…) */
+    flow_colors?: { solar?: string; grid?: string; battery?: string; consumption?: string };
     /** Below this power (W) an appliance leaves the flow (10 by default; 0 keeps them all) */
     consumer_threshold?: number;
     /** Up to 4 cells, in order; without it, the built-in cells whose entities are set */

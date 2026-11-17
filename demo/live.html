@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Energy Sky Card, live demo</title>
+<meta name="description" content="Try Energy Sky Card, a Home Assistant dashboard card for solar, battery and grid, on sample readings.">
+<style>
+  /* A dashboard-dark page: the card is the colour; the controls stay quiet around it */
+  :root {
+    --bg: #111418; --panel: #1b1f26; --line: #2c323c; --fg: #e8ebf0; --muted: #9aa3b2; --accent: #ffd68c;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-left, 0px)) 56px max(16px, env(safe-area-inset-right, 0px)); }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 24px; }
+  h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  header a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  header a:hover, header a:focus-visible { text-decoration: underline; }
+  .layout { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 32px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  .controls { display: grid; gap: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  legend { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding: 0; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .seg span { display: inline-block; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); font-size: 13.5px; color: var(--fg); cursor: pointer; }
+  .seg input:checked + span { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .range { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stage { min-width: 0; display: grid; gap: 20px; justify-items: start; }
+  .cell { max-width: 100%; }
+  .hint { font-size: 13.5px; color: var(--muted); margin: 0; }
+  pre { margin: 0; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; overflow-x: auto; font: 12.5px/1.55 var(--mono); color: #cfd6e2; }
+  .yamlhead { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+  .yamlhead h2 { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .yamlhead button { font: inherit; font-size: 13px; background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+  .yamlhead button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
+  footer a { color: var(--muted); }
+</style>
+<script type="module">
+  // Stand-ins for Home Assistant's elements (the demo runs outside Home Assistant)
+  import { ICONS } from './icons.js';
+  customElements.define('ha-card', class extends HTMLElement {
+    connectedCallback() { this.style.display = 'block'; this.style.borderRadius = '12px'; }
+  });
+  customElements.define('ha-icon', class extends HTMLElement {
+    static get observedAttributes() { return ['icon']; }
+    connectedCallback() { this.draw(); }
+    attributeChangedCallback() { this.draw(); }
+    draw() {
+      const d = ICONS[this.getAttribute('icon')] ?? '';
+      this.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%"><path fill="currentColor" d="${d}"/></svg>`;
+    }
+  });
+  const s = document.createElement('script');
+  s.src = '../energy-sky-card.js';
+  s.onload = () => import('./live.js');
+  document.head.appendChild(s);
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Energy Sky Card <span>live demo</span></h1>
+    <a href="https://github.com/macanto44/energy-sky-card">Install it from GitHub →</a>
+  </header>
+  <div class="layout">
+    <form class="controls" id="controls" aria-label="Demo settings">
+      <fieldset><legend>Moment</legend><div class="seg" data-name="s">
+        <label><input type="radio" name="s" value="bleu" checked><span>Bleu day</span></label>
+        <label><input type="radio" name="s" value="blanc"><span>Blanc day</span></label>
+        <label><input type="radio" name="s" value="rouge"><span>Rouge day</span></label>
+        <label><input type="radio" name="s" value="nuit"><span>Night</span></label>
+        <label><input type="radio" name="s" value="charge"><span>Off-peak charge</span></label>
+        <label><input type="radio" name="s" value="coupure"><span>Outage</span></label>
+      </div></fieldset>
+      <fieldset><legend>Layout</legend><div class="seg">
+        <label><input type="radio" name="layout" value="standard" checked><span>Standard</span></label>
+        <label><input type="radio" name="layout" value="side"><span>Side</span></label>
+      </div></fieldset>
+      <fieldset><legend>Energy flow</legend><div class="seg">
+        <label><input type="radio" name="flow" value="none"><span>None</span></label>
+        <label><input type="radio" name="flow" value="tap"><span>On a tap</span></label>
+        <label><input type="radio" name="flow" value="always" checked><span>Always</span></label>
+      </div></fieldset>
+      <fieldset><legend>Appliances</legend><div class="seg">
+        <label><input type="radio" name="consumers" value="0"><span>None</span></label>
+        <label><input type="radio" name="consumers" value="2" checked><span>Two</span></label>
+        <label><input type="radio" name="consumers" value="4"><span>Four</span></label>
+      </div></fieldset>
+      <fieldset><legend>Language</legend><div class="seg">
+        <label><input type="radio" name="lang" value="en" checked><span>English</span></label>
+        <label><input type="radio" name="lang" value="fr"><span>Français</span></label>
+      </div></fieldset>
+      <fieldset><legend><label for="width">Card width</label></legend>
+        <input type="range" id="width" name="width" min="304" max="560" step="8" value="440">
+        <div class="range"><span>phone</span><output for="width" id="widthout">440 px</output><span>wide</span></div>
+      </fieldset>
+    </form>
+    <div class="stage">
+      <div class="cell" id="cell"></div>
+      <p class="hint" id="hint"></p>
+      <div class="yamlhead"><h2>The card's YAML</h2><button type="button" id="copy">Copy</button></div>
+      <pre id="yaml" aria-label="The card's configuration in YAML"></pre>
+    </div>
+  </div>
+  <footer>Sample readings, no Home Assistant needed. The sky follows the moment: the tariff colour by day, stars at night. Icons: Material Design Icons (Apache 2.0).</footer>
+</div>
+</body>
+</html>

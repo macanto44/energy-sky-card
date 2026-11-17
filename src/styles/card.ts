@@ -10,6 +10,12 @@ const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90
 const SIDE_HALO_AT = `${SIDE_HALO.x}px ${SIDE_HALO.y}px`;
 /** The flow's colours, by where the energy comes from */
 export const FLOW_COLOURS = { sun: '#ffd68c', grid: '#cfe0ff', batt: '#9ef0c8', use: '#f4d9ff' } as const;
+/**
+ * Each colour's CSS variable: a Home Assistant theme sets it for every card,
+ * flow_colors in the config for one (on the host). The default otherwise.
+ */
+export const FLOW_COLOUR_VARS = { sun: '--energy-sky-card-solar', grid: '--energy-sky-card-grid', batt: '--energy-sky-card-battery', use: '--energy-sky-card-consumption' } as const;
+const flowColour = (k: keyof typeof FLOW_COLOURS) => `var(${FLOW_COLOUR_VARS[k]}, ${FLOW_COLOURS[k]})`;
 /** The node's glass: white over the sky at this opacity at most (the contrast test uses it) */
 export const NODE_GLASS_ALPHA = 0.14;
 /** Per level: the wire's width (px) and one comet's trip (s) */
@@ -295,7 +301,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 :host([data-mode="night"]) .panel { --esc-panel: #0b1026; }
 .wire .gap { stroke: var(--esc-panel); stroke-opacity: 1; stroke-width: 10px; stroke-linecap: butt; }
 ${LEVELS.map(([w, d], i) => `.wire[data-level="${i + 1}"] { --esc-w: ${w}px; --esc-dur: ${d}s; }`).join('\n')}
-${Object.entries(FLOW_COLOURS).map(([k, c]) => `.wire.${k} { color: ${c}; }`).join(' ')}
+${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.wire.${k} { color: ${flowColour(k)}; }`).join(' ')}
 ${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].map(k => `.wire[data-wire="${k}"] { --esc-flow: esc-flow-${k}; }`).join(' ')}
 /* Comets: none without motion; one at level 1, two at 2, three above, evenly spaced */
 .comet { display: none; }
@@ -333,7 +339,7 @@ ${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].ma
 .ring .track { stroke: rgba(255, 255, 255, 0.14); }
 .seg { stroke-linecap: round; }
 .seg:not([data-source]), .seg[data-source=""] { display: none; }
-${Object.entries(FLOW_COLOURS).map(([k, c]) => `.seg[data-source="${k}"] { stroke: ${c}; }`).join(' ')}
+${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[data-source="${k}"] { stroke: ${flowColour(k)}; }`).join(' ')}
 .disc ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; display: inline-flex; }
 .centre { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .node[data-centre] .disc ha-icon, .node:not([data-centre]) .centre { display: none; }
