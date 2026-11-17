@@ -2,7 +2,7 @@
 // the grid, the battery and the home. Pure: powers → flows → what each node
 // and wire shows, and the drawing's geometry for a width.
 
-import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, gridPower, productionEntities, productionPower } from './model';
+import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, gridOutage, gridPower, productionEntities, productionPower } from './model';
 import { formatPercent, formatPower } from './format';
 import { localize, numberLocale } from './localize';
 import { numericState, powerW } from './utils';
@@ -77,9 +77,11 @@ export interface NodeView {
     label: string;
     value: string;
     /** Ring segments around the icon, as fractions of the circle, each with its colour's source */
-    ring: [number, Source][];
+    ring: [number, Source | 'alert'][];
     /** Text in the disc instead of the icon (the battery's charge) */
     centre?: string;
+    /** Something's wrong: the grid is down */
+    alert?: boolean;
 }
 
 /** The entity a node opens: the first production sensor, grid power, battery power (else its charge), consumption */
@@ -120,7 +122,9 @@ export interface FlowView {
 export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): FlowView {
     const loc = numberLocale(hass);
     const solar = productionPower(config, hass);
-    const grid = gridPower(config, hass);
+    // A grid outage moves nothing through the grid, whatever its sensor says
+    const outage = gridOutage(config, hass);
+    const grid = outage ? 0 : gridPower(config, hass);
     const measured = batteryPower(config, hass);
     // A battery idling within its threshold (no arrow in its cell) moves no energy either
     const threshold = config.battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
@@ -141,8 +145,9 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
                 ring: [[Math.min(pos(solar) / max, 1), 'sun']],
             },
             grid: {
-                present: present('grid'), label: localize(loc.lang, 'grid'), value: formatPower(grid, loc),
-                ring: [],
+                present: present('grid'), label: localize(loc.lang, 'grid'),
+                value: outage ? localize(loc.lang, 'outage') : formatPower(grid, loc),
+                ring: outage ? [[1, 'alert']] : [], alert: outage,
             },
             battery: {
                 present: present('battery'), label: localize(loc.lang, 'battery'),

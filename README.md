@@ -42,6 +42,7 @@ The halo breathes slowly while the panels produce, and cloud shadows drift acros
   - **Any entity you like**, with your own name and icon.
 - At night, the big number can show your **home's consumption** or the **battery's charge** instead of a production of zero.
 - A reading that isn't available shows `—`, never `unknown` or `NaN`.
+- **Something wrong shows**: during a grid outage the flow's Grid node turns red and reads `Outage`, with nothing flowing through the grid. A reading that has gone quiet (no report from its integration for 30 minutes) is flagged: its cell's icon turns to a clock, its flow node's border to dashes, and both say how long it's been.
 
 ## Two shapes.
 
@@ -316,6 +317,7 @@ A card's `flow_colors` wins over the theme. The text stays white on the card's o
 | `daily_production_entities` | — | Daily energy meters, in kWh (Wh and MWh are converted), added up for the `kWh produced` line. An unavailable one is left out; with none available, the line reads `— kWh produced`. Without them, no line |
 | `forecast_tomorrow_entity` | — | Tomorrow's production forecast, in kWh, for the Tomorrow cell |
 | `consumption_entity` | — | Your home's power use, in W, for the Consumption cell, `night_hero` and the Home node. Without it, the flow works out the home from the other readings |
+| `stale_after` | `30` | Minutes without a new reading before a measure is flagged as stale (its cell's icon turns to a clock). Read from `last_reported` (Home Assistant 2024.3+), so a value that simply doesn't change, like a battery idling at 0 W, isn't flagged. `0` turns it off |
 | `night_hero` | `production` | What the big number shows below the horizon: `production`, `consumption` (needs `consumption_entity`) or `battery` (the charge; needs `battery.soc_entity`). The line under it then names it: `Consumption · 7.2 kWh produced` |
 
 ### Battery
@@ -424,6 +426,9 @@ Your browser is using a cached copy. For a manual install, raise the `?v=` in th
 
 **The grid or battery goes the wrong way**
 The card expects grid power positive when buying and battery power positive when charging. Set `grid.invert: true` or `battery.invert: true`, or tick **Flip the sensor's sign** in the editor.
+
+**A cell shows a clock instead of its icon**
+Its sensor hasn't reported anything for `stale_after` minutes (30 by default): the integration may be down. Hover or tap it to see how long. Raise `stale_after`, or set `0` to turn this off.
 
 **The battery arrow flickers between ↑ and ↓**
 Raise `battery.power_threshold` above your battery's standby power.

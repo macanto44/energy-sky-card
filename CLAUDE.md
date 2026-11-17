@@ -81,6 +81,8 @@ test/
 
 ## Behaviour notes
 
+- Outage: `gridOutage` makes `flowView` treat the grid as 0 W and its node `alert` (`data-alert`: red border, `alert` ring, value « Coupure »).
+- Stale readings: `staleReadings` (model.ts) lists the measures (powers, charge, temperature, voltage, free cells, appliances) whose `last_reported` is `stale_after` minutes old (`DEFAULT_STALE_MINUTES` 30; 0 off). Never `last_updated`: it only moves on a change, so an idle 0 W would look stale; without `last_reported`, nothing is flagged. `markStale` (each update, and every minute by `staleTimer` while connected): a cell's `ha-icon` becomes `mdi:clock-alert-outline` (its own icon kept in `data-icon`), `data-stale` and a title with the age; a flow node gets `data-stale` (dashed border) and the title.
 - An unavailable daily sensor is left out of the sum; with none available the line reads "— kWh produits".
 - The battery complement « · SOC atteint » shows when any `battery.soc_reached_entities` entity is on; nothing otherwise. The older names (`battery.lock_entities`, top-level `power_threshold`, `cell_tap`) are gone: `validateConfig` rejects them with the name that replaces them (`RENAMED`).
 - `battery.temperature_entity`: the temperature follows the charge in the battery value (« 78 % ↑ · 24 °C », the sensor's unit, rounded); left out without a reading.

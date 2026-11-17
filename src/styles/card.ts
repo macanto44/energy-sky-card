@@ -352,6 +352,11 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 .flow[data-narrow] .ring { width: 38px; height: 38px; }
 /* An appliance at rest: its disc dims, its text stays readable */
 .node[data-idle] .disc { opacity: 0.55; }
+/* The grid down: a red ring and border, its value reads « Coupure » */
+.node[data-alert] { border-color: rgba(255, 138, 128, 0.9); }
+.seg[data-source="alert"] { stroke: #ff8a80; }
+/* A reading gone quiet: a dashed border (a cell's icon turns to a clock instead) */
+.node[data-stale] { border-style: dashed; }
 /* Compact appliances (more than two, or a narrow corner): the icon in its ring and the power; the name on hover (title) and for screen readers (aria-label) */
 .flow[data-compact] .node[data-consumer] { flex-direction: column; justify-content: flex-start; gap: 3px; padding: 0; border: none; background: none; border-radius: 0; }
 .flow[data-compact] .node[data-consumer][data-side="below"] { flex-direction: column-reverse; }

@@ -3,7 +3,8 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
-import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, configuredCells, metricForm, productionEntities, trackedEntities, type CardView, type MetricKey } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey } from './model';
+import { localize } from './localize';
 import { cardLanguage } from './localize';
 import { CLOUDS, computeBackground, isHexColor } from './sky';
 import { coveredBy, starsMarkup, type Box } from './stars';
@@ -57,7 +58,7 @@ const FLOW_COLOR_KEYS: Record<string, string> = {
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
-    [['production_max', 'battery.power_threshold', 'consumer_threshold'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
+    [['production_max', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
 ];
 
 export function validateConfig(config: unknown): EnergySkyCardConfig {
@@ -160,7 +161,7 @@ interface Refs {
         /** The appliances, in the config's order, with their wire */
         consumers: (FlowNodeRefs & { icon: HTMLElement; wire: SVGGElement; paths: SVGPathElement[] })[];
     };
-    metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement }>;
+    metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; entity?: string }>;
 }
 
 export class EnergySkyCard extends HTMLElement {
@@ -176,6 +177,8 @@ export class EnergySkyCard extends HTMLElement {
     private cellTargets = new Map<string, { entity?: string; tap?: ActionConfig }>();
     private resizeObserver?: ResizeObserver;
     private readyFrame?: number;
+    /** Checks every minute for readings gone quiet (time passes without a hass update) */
+    private staleTimer?: ReturnType<typeof setInterval>;
     /** Unfolded: the flow shows under the card (always with flow: always) */
     private open = false;
     /** The width the flow's geometry was last drawn for */
@@ -209,6 +212,7 @@ export class EnergySkyCard extends HTMLElement {
 
     connectedCallback(): void {
         this.motion.start();
+        this.staleTimer ??= setInterval(() => this.markStale(), 60_000);
         if (this.refs && this.resizeObserver) this.resizeObserver.observe(this.refs.card);
         this.fit();
         // Text measured before the fonts load is narrower or wider than it will be
@@ -217,6 +221,8 @@ export class EnergySkyCard extends HTMLElement {
 
     disconnectedCallback(): void {
         this.motion.stop();
+        clearInterval(this.staleTimer);
+        this.staleTimer = undefined;
         this.resizeObserver?.disconnect();
         if (this.readyFrame !== undefined) cancelAnimationFrame(this.readyFrame);
         this.readyFrame = undefined;
@@ -309,7 +315,7 @@ export class EnergySkyCard extends HTMLElement {
                 const icon = q('ha-icon', el);
                 // Set as an attribute, never in markup: a free cell's icon comes from the config
                 icon.setAttribute('icon', cell.kind === 'custom' ? cell.custom!.icon || CUSTOM_CELL_ICON : METRIC_ICONS[cell.kind]);
-                return [cell.key, { el, icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra', el) }];
+                return [cell.key, { el, icon, label: q('.label-text', el), value: q('.value-main', el), extra: q('.extra', el), entity: cellEntity(config, cell) }];
             })),
         };
         this.actions = readActions(config, productionEntities(config)[0]);
@@ -459,6 +465,7 @@ export class EnergySkyCard extends HTMLElement {
             setText(node.value, v.value);
             setText(node.centre, v.centre ?? '');
             node.el.toggleAttribute('data-centre', v.centre !== undefined);
+            node.el.toggleAttribute('data-alert', !!v.alert);
             drawRing(node.segs, v.ring);
         }
         view.consumers.forEach((v, i) => {
@@ -625,12 +632,56 @@ export class EnergySkyCard extends HTMLElement {
         this.writeForms(this.form);
         this.writeContext(this.shortContext);
         this.updateFlow();
+        this.markStale();
         // A longer hero ("12,3 kW" after "8 W") or line may not fit any more
         const fitted = JSON.stringify([view.hero, view.context, view.metrics.map(m => [m.value, m.extra, m.tight, m.bare])]);
         if (fitted !== this.fitted) {
             this.fitted = fitted;
             this.fit();
         }
+    }
+
+    /**
+     * Readings gone quiet (staleReadings): a cell's icon turns to a clock and
+     * a flow node's border to dashes, each saying how long ago in its title.
+     * Run on each update and every minute.
+     */
+    private markStale(): void {
+        if (!this.config || !this.refs || !this._hass) return;
+        const stale = staleReadings(this.config, this._hass);
+        const lang = cardLanguage(this._hass);
+        const age = (minutes: number) => minutes < 120 ? `${minutes} min` : `${Math.floor(minutes / 60)} h`;
+        const note = (id: string | undefined) => {
+            const minutes = id === undefined ? undefined : stale.get(id);
+            return minutes === undefined ? undefined : localize(lang, 'stale', { age: age(minutes) });
+        };
+        for (const metric of this.view?.metrics ?? []) {
+            const el = this.refs.metrics.get(metric.key);
+            if (!el) continue;
+            const text = note(el.entity);
+            el.el.toggleAttribute('data-stale', !!text);
+            // The icon tells, the title says how long; in side the title is the cell's name
+            const icon = text ? 'mdi:clock-alert-outline' : metric.icon ?? el.icon.dataset.icon;
+            if (!el.icon.dataset.icon) el.icon.dataset.icon = el.icon.getAttribute('icon') ?? '';
+            if (icon && el.icon.getAttribute('icon') !== icon) el.icon.setAttribute('icon', icon);
+            const title = [this.side ? metric.label : '', text ?? ''].filter(Boolean).join(' · ');
+            setAttr(el.el, 'title', title || null);
+        }
+        const flow = this.refs.flow;
+        if (!flow) return;
+        for (const [key, node] of flow.nodes) {
+            const text = note(flowNodeEntity(this.config, key));
+            node.el.toggleAttribute('data-stale', !!text);
+            setAttr(node.el, 'title', text ?? null);
+        }
+        (this.config.consumers ?? []).forEach((consumer, i) => {
+            const node = flow.consumers[i];
+            if (!node) return;
+            const text = note(consumer.entity);
+            node.el.toggleAttribute('data-stale', !!text);
+            const name = node.label.textContent ?? '';
+            setAttr(node.el, 'title', text ? `${name} · ${text}` : name);
+        });
     }
 
     /** The background: day or night, the tariff colours, the halo's strength */

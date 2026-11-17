@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import '../src/energy-sky-card';
 import type { EnergySkyCard } from '../src/energy-sky-card';
 import { CARD_NAME } from '../src/constants';
@@ -104,6 +104,14 @@ describe('flow view', () => {
         expect(v.levels).toMatchObject({ gb: 3, gh: 2, sb: 0, sh: 0 });
         expect(v.nodes.home.value).toBe(`600${nb}W`);
         expect(v.nodes.home.ring).toEqual([[1, 'grid']]);
+    });
+
+    it('shows a grid outage on its node, and moves nothing through the grid', () => {
+        const v = view({ [PV]: 0, [GRID]: 748, [BATT]: -900, 'sensor.victron_vebus_alarm_gridlost_227': 'alarm' });
+        expect(v.nodes.grid).toMatchObject({ value: 'Coupure', alert: true, ring: [[1, 'alert']] });
+        expect(v.levels.gh).toBe(0);
+        expect(v.levels.bh).toBe(2);
+        expect(view({ [GRID]: 748 }).nodes.grid.alert).toBe(false);
     });
 
     it('leaves out a grid or a battery the card doesn\'t have', () => {
@@ -394,6 +402,32 @@ describe('the expandable card', () => {
         expect($('[data-consumer="0"]').dataset.side).toBe('above');
         expect($('[data-consumer="1"]').dataset.side).toBe('below');
         unmeasure();
+    });
+
+    it('marks the outage and the readings gone quiet, and checks again every minute', () => {
+        vi.useFakeTimers();
+        const now = Date.UTC(2026, 10, 17, 12, 0);
+        vi.setSystemTime(now);
+        const at = (minutesAgo: number) => new Date(now - minutesAgo * 60000).toISOString();
+        const states = { ...DAY, 'sensor.victron_vebus_alarm_gridlost_227': 'alarm',
+            [GRID]: { entity_id: GRID, state: '748', attributes: {}, last_changed: at(20), last_updated: at(20), last_reported: at(20) } };
+        const { card, $ } = mount({}, states as any);
+        card.expanded = true;
+        expect($('[data-node="grid"]').hasAttribute('data-alert')).toBe(true);
+        expect($('[data-node="grid"] .nval').textContent).toBe('Coupure');
+        // 20 min: fresh; 35 min: stale, in the grid's cell and node
+        expect($('[data-metric="grid"]').hasAttribute('data-stale')).toBe(false);
+        vi.advanceTimersByTime(15 * 60000);
+        expect($('[data-metric="grid"]').hasAttribute('data-stale')).toBe(true);
+        expect($('[data-metric="grid"] ha-icon').getAttribute('icon')).toBe('mdi:clock-alert-outline');
+        expect($('[data-metric="grid"]').getAttribute('title')).toBe('Pas de nouvelle valeur depuis 35 min');
+        expect($('[data-node="grid"]').hasAttribute('data-stale')).toBe(true);
+        // A new report: the cell gets its own icon back
+        card.hass = makeHass({ ...states, [GRID]: { entity_id: GRID, state: '750', attributes: {}, last_changed: at(0), last_updated: new Date(now + 15 * 60000).toISOString(), last_reported: new Date(now + 15 * 60000).toISOString() } } as any);
+        expect($('[data-metric="grid"]').hasAttribute('data-stale')).toBe(false);
+        expect($('[data-metric="grid"] ha-icon').getAttribute('icon')).toBe('mdi:transmission-tower');
+        expect($('[data-metric="grid"]').hasAttribute('title')).toBe(false);
+        vi.useRealTimers();
     });
 
     it('rejects more than four appliances, one without an entity, or a bad tap action', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildView, configuredMetrics, dailyProduction, direction, metricForm, trackedEntities } from '../src/model';
+import { buildView, configuredMetrics, dailyProduction, direction, metricForm, staleReadings, trackedEntities } from '../src/model';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -25,6 +25,33 @@ describe('the prototype readings (annex B)', () => {
         expect(metric(v, 'grid').label).toBe('Grid');
         expect(metric(v, 'voltage').label).toBe('Voltage');
         expect(metric(v, 'battery').extra).toBe('');
+    });
+});
+
+describe('stale readings', () => {
+    const NOW = Date.UTC(2026, 10, 17, 12, 0);
+    const reported = (id: string, minutesAgo: number | undefined, state: string | number = 1) =>
+        ({ entity_id: id, state: String(state), attributes: {}, last_changed: '', last_updated: '', ...(minutesAgo === undefined ? {} : { last_reported: new Date(NOW - minutesAgo * 60000).toISOString() }) });
+    const hass = (states: Record<string, ReturnType<typeof reported>>) => makeHass(states);
+
+    it('flags a measure with no report for 30 minutes, with its age', () => {
+        const h = hass({ 'sensor.victrongrid_ac_l1_power31': reported('sensor.victrongrid_ac_l1_power31', 42), 'sensor.production_pv': reported('sensor.production_pv', 5) });
+        expect(staleReadings(FULL_CONFIG, h, NOW)).toEqual(new Map([['sensor.victrongrid_ac_l1_power31', 42]]));
+    });
+
+    it('never flags without last_reported: last_updated only moves on a change', () => {
+        expect(staleReadings(FULL_CONFIG, hass({ 'sensor.production_pv': reported('sensor.production_pv', undefined) }), NOW).size).toBe(0);
+    });
+
+    it('follows stale_after, and 0 turns it off', () => {
+        const h = hass({ 'sensor.production_pv': reported('sensor.production_pv', 12) });
+        expect(staleReadings({ ...FULL_CONFIG, stale_after: 10 }, h, NOW).get('sensor.production_pv')).toBe(12);
+        expect(staleReadings({ ...FULL_CONFIG, stale_after: 0 }, hass({ 'sensor.production_pv': reported('sensor.production_pv', 999) }), NOW).size).toBe(0);
+    });
+
+    it('looks at measures only, not the tariff, the sun or the forecast', () => {
+        const h = hass({ 'sun.sun': reported('sun.sun', 600), 'sensor.edf_tempo_couleur_aujourd_hui': reported('sensor.edf_tempo_couleur_aujourd_hui', 600), 'sensor.energy_production_tomorrow_2': reported('sensor.energy_production_tomorrow_2', 600) });
+        expect(staleReadings(FULL_CONFIG, h, NOW).size).toBe(0);
     });
 });
 

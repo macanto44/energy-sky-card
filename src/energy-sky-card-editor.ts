@@ -27,6 +27,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
     fr: {
         production: 'Production', battery: 'Batterie', grid: 'Réseau', tariff: 'Tarif et ciel', actions: 'Actions', cells: 'Cases', display: 'Disposition', consumers: 'Consommateurs', consumer: 'Appareil {n}', consumer_threshold: 'Seuil d\'affichage',
         production_entity: 'Puissance solaire (W, additionnées)',
+        stale_after: 'Valeur figée après',
         consumption_entity: 'Consommation de la maison (W)', night_hero: 'Grand chiffre la nuit',
         invert: 'Inverser le signe du capteur',
         flow_color_solar: 'Couleur du solaire', flow_color_grid: 'Couleur du réseau', flow_color_battery: 'Couleur de la batterie', flow_color_consumption: 'Couleur des appareils',
@@ -47,6 +48,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
     en: {
         production: 'Production', battery: 'Battery', grid: 'Grid', tariff: 'Tariff and sky', actions: 'Actions', cells: 'Cells', display: 'Layout', consumers: 'Appliances', consumer: 'Appliance {n}', consumer_threshold: 'Display threshold',
         production_entity: 'Solar power (W, summed)',
+        stale_after: 'Stale after',
         consumption_entity: 'Home consumption (W)', night_hero: 'Big number at night',
         invert: 'Flip the sensor\'s sign',
         flow_color_solar: 'Solar colour', flow_color_grid: 'Grid colour', flow_color_battery: 'Battery colour', flow_color_consumption: 'Appliances colour',
@@ -79,6 +81,7 @@ export function editorLabel(lang: Lang, key: string): string {
 const HELPERS: Record<Lang, Record<string, string>> = {
     fr: {
         soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
+        stale_after: 'Une mesure sans nouvelle valeur depuis ce délai est signalée : l\'icône de sa case devient une horloge. 30 min si vide ; 0 désactive.',
         power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓. 20 W si vide.',
         production_entity: 'Plusieurs capteurs (micro-onduleurs, onduleur de chaîne…) sont additionnés.',
         night_hero: 'Après le coucher du soleil, la production est nulle : le grand chiffre peut montrer autre chose. Il faut la consommation de la maison ou la charge de la batterie renseignée.',
@@ -92,6 +95,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
+        stale_after: 'A reading with nothing new for this long is flagged: its cell\'s icon turns to a clock. 30 min when empty; 0 turns it off.',
         power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow. 20 W when empty.',
         production_entity: 'Several sensors (micro-inverters, string inverter…) are summed.',
         night_hero: 'After sunset production is zero: the big number can show something else. Needs the home consumption or the battery charge set.',
@@ -146,6 +150,7 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
                 { name: 'forecast_tomorrow_entity', selector: sensor() },
                 { name: 'consumption_entity', selector: sensor({ device_class: 'power' }) },
                 { name: 'night_hero', selector: { select: { mode: 'dropdown', options: heroOptions } } },
+                { name: 'stale_after', selector: { number: { min: 0, max: 1440, step: 1, mode: 'box', unit_of_measurement: 'min' } } },
             ],
         },
         {

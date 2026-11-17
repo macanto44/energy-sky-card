@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- A grid outage shows in the energy flow: the Grid node turns red and reads « Coupure » / "Outage", and nothing flows through the grid.
+- Readings gone quiet are flagged: a measure with no report for `stale_after` minutes (30 by default, 0 turns it off; « Valeur figée après » in the editor's Production section) gets a clock instead of its cell's icon, and a dashed border on its flow node, with how long it's been in the title. Read from `last_reported` (Home Assistant 2024.3+): a value that doesn't change isn't flagged, and nothing is without it. Checked again every minute.
 - The energy flow keeps its shape on a wide card: its height follows its width (65 % of it, from 220 to 360 px) instead of a fixed 220 px.
 - The flow's colours can be picked in the editor's Layout section (one colour picker per source, shown with a flow); a colour set back to its default leaves the YAML, and a theme variable set in YAML is kept.
 - Editor: no help under the energy flow choice.

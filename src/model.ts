@@ -143,6 +143,38 @@ export function productionPower(config: EnergySkyCardConfig, hass: HomeAssistant
 const signed = (value: number | undefined, invert: boolean | undefined) =>
     value === undefined || !invert ? value : -value;
 
+/** Minutes without a reading before a value is stale, unless stale_after says otherwise */
+export const DEFAULT_STALE_MINUTES = 30;
+
+/**
+ * The readings that have gone quiet: no report for stale_after minutes,
+ * read from last_reported (Home Assistant 2024.3+), which moves with every
+ * reading, even an unchanged one. last_updated only moves on a change, so
+ * a battery idling at 0 W would look stale: without last_reported, nothing
+ * is flagged. Only measures count (powers, charge, temperature, voltage,
+ * free cells), not the tariff, the sun, the forecast or on / off switches.
+ * Each with how long ago it last reported, in minutes.
+ */
+export function staleReadings(config: EnergySkyCardConfig, hass: HomeAssistant, now = Date.now()): Map<string, number> {
+    const minutes = config.stale_after ?? DEFAULT_STALE_MINUTES;
+    const stale = new Map<string, number>();
+    if (!(minutes > 0)) return stale;
+    const ids = [
+        ...productionEntities(config), config.consumption_entity,
+        config.battery?.soc_entity, config.battery?.power_entity, config.battery?.temperature_entity,
+        config.grid?.power_entity, config.grid?.voltage_entity,
+        ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
+        ...(config.consumers ?? []).map(c => c.entity),
+    ];
+    for (const id of ids) {
+        const reported = Date.parse(hass.states[id ?? '']?.last_reported ?? '');
+        if (!Number.isFinite(reported)) continue;
+        const age = (now - reported) / 60000;
+        if (age >= minutes) stale.set(id!, Math.floor(age));
+    }
+    return stale;
+}
+
 /** Grid power in W, positive when importing (the sensor's sign flipped with grid.invert) */
 export function gridPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
     return signed(powerW(hass.states[config.grid?.power_entity ?? '']), config.grid?.invert);
