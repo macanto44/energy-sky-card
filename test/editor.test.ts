@@ -42,7 +42,7 @@ describe('schema', () => {
     it('covers every option except the palettes, with nested battery and grid', () => {
         expect(fields(editorSchema('fr'))).toEqual([
             './production_entity', './production_threshold', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
-            './stale_after',
+            './smoothing', './stale_after',
             'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './layout', './night_hero', './flow', './cell_1', './cell_2', './cell_3', './cell_4',

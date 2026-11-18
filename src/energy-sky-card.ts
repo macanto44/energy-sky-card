@@ -10,6 +10,7 @@ import { CLOUDS, WEATHER, computeBackground, isHexColor } from './sky';
 import { weatherMarkup } from './weather';
 import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
+import { Smoother, smoothedEntities } from './smoothing';
 import { energyPrefs, stubConfig } from './stub';
 import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
 import { FLOW_HEIGHT, MAX_CONSUMERS, WIRES, WIRE_KEYS, flowGeometry, flowNodeEntity, flowView, type NodeKey, type WireKey } from './flow';
@@ -60,7 +61,7 @@ const FLOW_COLOR_KEYS: Record<string, string> = {
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
-    [['production_max', 'production_threshold', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
+    [['production_max', 'production_threshold', 'smoothing', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
 ];
 
 export function validateConfig(config: unknown): EnergySkyCardConfig {
@@ -184,6 +185,12 @@ export class EnergySkyCard extends HTMLElement {
     private readyFrame?: number;
     /** Checks every minute for readings gone quiet (time passes without a hass update) */
     private staleTimer?: ReturnType<typeof setInterval>;
+    /** smoothing: the powers' averages, the entities averaged, and a tick while connected so the average moves on between readings */
+    private smoother?: Smoother;
+    private smoothIds: string[] = [];
+    private smoothTimer?: ReturnType<typeof setInterval>;
+    /** The hass the card shows: smoothed powers with smoothing, else hass itself */
+    private shown?: HomeAssistant;
     /** Unfolded: the flow shows under the card (always with flow: always) */
     private open = false;
     /** The width the flow's geometry was last drawn for */
@@ -214,12 +221,27 @@ export class EnergySkyCard extends HTMLElement {
         this.renderedKey = '';
         this.removeAttribute('data-ready');
         this.motion.setAnimate(this.config.animate !== false);
+        const smoothing = this.config.smoothing ?? 0;
+        this.smoother = smoothing > 0 ? new Smoother(smoothing * 1000) : undefined;
+        this.smoothIds = this.smoother ? smoothedEntities(this.config) : [];
+        this.syncSmoothTimer();
         if (this._hass) this.update();
+    }
+
+    /** One tick a second while connected and smoothing */
+    private syncSmoothTimer(): void {
+        const want = !!this.smoother && this.isConnected;
+        if (want && !this.smoothTimer) this.smoothTimer = setInterval(() => this.update(), 1000);
+        if (!want && this.smoothTimer) {
+            clearInterval(this.smoothTimer);
+            this.smoothTimer = undefined;
+        }
     }
 
     connectedCallback(): void {
         this.motion.start();
         this.staleTimer ??= setInterval(() => this.markStale(), 60_000);
+        this.syncSmoothTimer();
         if (this.refs && this.resizeObserver) this.resizeObserver.observe(this.refs.card);
         this.fit();
         // Text measured before the fonts load is narrower or wider than it will be
@@ -230,6 +252,7 @@ export class EnergySkyCard extends HTMLElement {
         this.motion.stop();
         clearInterval(this.staleTimer);
         this.staleTimer = undefined;
+        this.syncSmoothTimer();
         this.resizeObserver?.disconnect();
         if (this.readyFrame !== undefined) cancelAnimationFrame(this.readyFrame);
         this.readyFrame = undefined;
@@ -466,7 +489,7 @@ export class EnergySkyCard extends HTMLElement {
     private updateFlow(): void {
         const flow = this.refs?.flow;
         if (!flow) return;
-        const view = flowView(this.config!, this._hass!);
+        const view = flowView(this.config!, this.shown ?? this._hass!);
         for (const [key, node] of flow.nodes) {
             const v = view.nodes[key];
             if (node.el.hidden === v.present) node.el.hidden = !v.present;
@@ -620,11 +643,20 @@ export class EnergySkyCard extends HTMLElement {
     /** Re-render only when a tracked entity changed; update the text in place */
     private update(): void {
         if (!this.config || !this.refs || !this._hass) return;
-        const key = this.stateKey(this._hass);
+        let shown = this._hass;
+        let key = this.stateKey(this._hass);
+        if (this.smoother) {
+            const now = Date.now();
+            this.smoother.record(this._hass, this.smoothIds, now);
+            shown = this.smoother.smoothed(this._hass, this.smoothIds, now);
+            // The averages move between readings: render when what they show changes
+            key += '|' + this.smoothIds.map(id => Number(shown.states[id]?.state).toPrecision(3)).join('|');
+        }
         if (key === this.renderedKey) return;
         this.renderedKey = key;
+        this.shown = shown;
 
-        const view = this.view = buildView(this.config, this._hass);
+        const view = this.view = buildView(this.config, shown);
         const refs = this.refs;
         this.paintSky();
         setText(refs.heroValue, view.hero.value);
@@ -695,7 +727,7 @@ export class EnergySkyCard extends HTMLElement {
 
     /** The background: day or night, the tariff colours, the halo's strength */
     private paintSky(): void {
-        const bg = computeBackground(this.config!, this._hass!);
+        const bg = computeBackground(this.config!, this.shown ?? this._hass!);
         const card = this.refs!.card;
         this.dataset.mode = bg.mode;
         this.toggleAttribute('data-producing', bg.producing);

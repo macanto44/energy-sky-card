@@ -316,6 +316,7 @@ A card's `flow_colors` wins over the theme. The text stays white on the card's o
 | Option | Default | Description |
 | --- | --- | --- |
 | `production_entity` | **required** | Solar power now, in W (kW and MW are converted). One entity, or a list that is added up. An unavailable one is left out of the sum |
+| `smoothing` | `0` | Seconds: the powers shown (big number, cells, flow, halo) are each sensor's average over this long, so passing clouds don't make the numbers jump. `0` shows readings as they come |
 | `production_threshold` | — | Below this power, in W, the production reads 0: a charge controller drawing a few watts on the solar line no longer shows as production. No threshold by default |
 | `production_max` | `6000` | The power, in W, at which the sun halo is at its brightest. Also the full circle of the Sun node's ring |
 | `daily_production_entities` | — | Daily energy meters, in kWh (Wh and MWh are converted), added up for the `kWh produced` line. An unavailable one is left out; with none available, the line reads `— kWh produced`. Without them, no line |
@@ -454,6 +455,9 @@ Without `consumption_entity`, the card works out the home's power from the other
 
 **The weather sky looks cloudy whatever the weather**
 The card reads the `weather_entity`'s state. A state it doesn't know (or `unavailable`) shows as cloudy: check the entity's state in **Developer tools → States**.
+
+**The numbers jump when clouds pass**
+Set `smoothing` (**Power smoothing** in the Production section) to 10 or 20 seconds. If the home's consumption jumps most, set `consumption_entity` too: without it, the card works it out from sensors that don't all report at the same moment.
 
 **The sky shows, but nothing moves**
 Check reduced motion in your system settings, then `animate`. The halo only breathes by day while the panels produce.
