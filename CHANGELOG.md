@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.8] — 2026-11-18
+
+No breaking change.
 
 - `smoothing` (seconds, « Lissage des puissances » in the editor's Production section): the powers shown (the big number, the cells, the flow, the halo) are each sensor's time-weighted average over that long, so passing clouds don't make the numbers jump; the card moves the average on every second between readings. Off (`0`) by default.
 - `production_threshold`: below this power (W), the production reads 0, in the big number, the halo and the flow (a charge controller's standby draw on the solar line, say). No threshold by default; in the editor's Production section.
