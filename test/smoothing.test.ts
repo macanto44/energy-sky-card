@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Smoother, smoothedEntities } from '../src/smoothing';
+import { REFRESH_MS, Smoother, smoothedEntities } from '../src/smoothing';
 import { validateConfig } from '../src/energy-sky-card';
 import { $, ANNEX_B, FULL_CONFIG, entity, makeHass, mountCard } from './helpers';
 
@@ -45,6 +45,24 @@ describe('the smoother', () => {
         expect(smoothed.states['sensor.pv'].state).toBe('500');
         expect(smoothed.states['sensor.pv'].attributes).toEqual({ unit_of_measurement: 'W' });
         expect(hass.states['sensor.pv'].state).toBe('1000');
+    });
+
+    it('holds the averages shown between refreshes, however often hass comes', () => {
+        const s = new Smoother(10_000);
+        s.record(hassWith(1000), ['sensor.pv'], 0);
+        expect(s.smoothed(hassWith(1000), ['sensor.pv'], 0).states['sensor.pv'].state).toBe('1000');
+        // A new reading, then many updates within the refresh: the number holds
+        for (let t = 1_000; t < REFRESH_MS; t += 250) {
+            s.record(hassWith(0), ['sensor.pv'], 1_000);
+            expect(s.smoothed(hassWith(0), ['sensor.pv'], t).states['sensor.pv'].state).toBe('1000');
+        }
+        // 1 s at 1000 W, 4 s at 0 W
+        expect(s.smoothed(hassWith(0), ['sensor.pv'], REFRESH_MS).states['sensor.pv'].state).toBe('200');
+        // Unavailable: its own state at once; back: its reading at once
+        s.record(hassWith('unavailable'), ['sensor.pv'], 6_000);
+        expect(s.smoothed(hassWith('unavailable'), ['sensor.pv'], 6_000).states['sensor.pv'].state).toBe('unavailable');
+        s.record(hassWith(300), ['sensor.pv'], 7_000);
+        expect(s.smoothed(hassWith(300), ['sensor.pv'], 7_000).states['sensor.pv'].state).toBe('300');
     });
 
     it('smooths the powers only: production, home, battery, grid, appliances', () => {

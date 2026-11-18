@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- `smoothing`: the averages shown are worked out every 5 s (or every window, if shorter) and hold in between. They were redone on every Home Assistant update, several times a second, so the numbers crept towards each new reading as if they lagged.
+
 ## [0.3.8] — 2026-11-18
 
 No breaking change.
