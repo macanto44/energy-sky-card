@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The card is in the Marketplace / HACS default list: search for « Energy Sky Card », no custom repository to add.
+
 ## [0.3.9] — 2026-11-18
 
 No breaking change.

@@ -21,5 +21,5 @@ Ideas to improve Energy Sky Card, by priority (written after 0.3.0, 2026-11-15).
 
 ## Reach
 
-9. [ ] **HACS default list.** Submit to `hacs/default` so the card can be found without adding a custom repository (the HACS validation already passes). Then a post on the Home Assistant forum (Dashboards & Frontend) with the GIF.
+9. [x] **HACS default list** (2026-11-19, hacs/default#14400: the card is found without adding a custom repository). Still open: a post on the Home Assistant forum (Dashboards & Frontend) with the GIF.
 10. [ ] **Beyond France.** Tempo is EDF's: generic palettes for peak / off-peak or a dynamic tariff would open the card to other countries. That would loosen the « French and English only » rule, which today is about strings.

@@ -3,7 +3,7 @@
 **Your solar power, under your own sky.**
 
 [![GitHub Release](https://img.shields.io/github/v/release/macanto44/energy-sky-card?style=flat-square)](https://github.com/macanto44/energy-sky-card/releases)
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square)](https://github.com/macanto44/energy-sky-card)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/default)
 [![Home Assistant](https://img.shields.io/badge/Home_Assistant-2024.8%2B-41BDF5.svg?style=flat-square)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/github/license/macanto44/energy-sky-card?style=flat-square)](https://github.com/macanto44/energy-sky-card/blob/main/LICENSE)
 
@@ -24,12 +24,12 @@ It's free, open source and made for Home Assistant. The card is in French and En
 
 [![Open your Home Assistant instance and open this repository in the Marketplace or HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=macanto44&repository=energy-sky-card&category=plugin)
 
-The button opens the card in your Home Assistant's Marketplace, which offers to add the repository if it doesn't know it yet. Or, by hand:
+The card is in the Marketplace's default list (HACS). The button opens it in your Home Assistant. Or, by hand:
 
 ### Marketplace (Home Assistant 2026.11 and later)
 
-1. Go to **Settings → Marketplace**, select **⋮ → Add from link** and enter `https://github.com/macanto44/energy-sky-card`, as a **Dashboard**.
-2. Install **Energy Sky Card**.
+1. Go to **Settings → Marketplace** and search for **Energy Sky Card**.
+2. Install it.
 3. Refresh your browser.
 
 New versions show up under **Settings → Updates**.
