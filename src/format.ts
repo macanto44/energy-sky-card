@@ -52,10 +52,13 @@ export function formatVoltage(volts: number | undefined, locale: NumberLocale): 
     return volts === undefined || !Number.isFinite(volts) ? NO_VALUE : `${formatNumber(Math.round(volts), 0, locale)} V`;
 }
 
-/** A percentage rounded to the unit: "25 %" in French, "25%" in English */
+/** Languages that put a space before the percent sign */
+const SPACED_PERCENT = ['fr', 'de', 'es'];
+
+/** A percentage rounded to the unit: "25 %" in French, German and Spanish, "25%" in English, Italian and Dutch */
 export function formatPercent(value: number | undefined, locale: NumberLocale): string {
     if (value === undefined || !Number.isFinite(value)) return NO_VALUE;
-    return `${formatNumber(Math.round(value), 0, locale)}${locale.lang === 'fr' ? ' ' : ''}%`;
+    return `${formatNumber(Math.round(value), 0, locale)}${SPACED_PERCENT.includes(locale.lang) ? ' ' : ''}%`;
 }
 
 /** A temperature rounded to the degree, with its sensor's unit: "24 °C" */

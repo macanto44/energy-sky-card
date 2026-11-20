@@ -43,6 +43,10 @@ describe('other units', () => {
         expect(formatVoltage(233.98, fr)).toBe(`234${nb}V`);
         expect(formatPercent(25, fr)).toBe(`25${nb}%`);
         expect(formatPercent(25, en)).toBe('25%');
+        expect(formatPercent(25, { lang: 'de', decimal: ',' })).toBe(`25${nb}%`);
+        expect(formatPercent(25, { lang: 'es', decimal: ',' })).toBe(`25${nb}%`);
+        expect(formatPercent(25, { lang: 'it', decimal: ',' })).toBe('25%');
+        expect(formatPercent(25, { lang: 'nl', decimal: ',' })).toBe('25%');
     });
 });
 
@@ -69,6 +73,7 @@ describe('locale', () => {
         expect(decimalSeparator({ locale: { language: 'fr', number_format: 'comma_decimal' } })).toBe('.');
         expect(decimalSeparator({ locale: { language: 'en', number_format: 'decimal_comma' } })).toBe(',');
         expect(numberLocale({ language: 'fr-CA' }).lang).toBe('fr');
-        expect(numberLocale({ language: 'de' }).lang).toBe('en');
+        expect(numberLocale({ language: 'de' }).lang).toBe('de');
+        expect(numberLocale({ language: 'pt-BR' }).lang).toBe('en');
     });
 });

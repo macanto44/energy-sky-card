@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The card and its visual editor speak German, Spanish, Italian and Dutch too, following your Home Assistant profile's language (English for any other). Configuration errors stay in French or English.
 - The card is in the Marketplace / HACS default list: search for « Energy Sky Card », no custom repository to add.
 
 ## [0.3.9] — 2026-11-18

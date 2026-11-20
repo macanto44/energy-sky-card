@@ -52,8 +52,11 @@ for (const c of cards) {
 }
 check(cards.some(c => c.motion === 'paused'), 'at least one card is off-screen');
 
-// Brief §5.3: no line overflows at 320 px (a 304 px card), in either language, extreme values included
-for (const lang of ['fr', 'en']) {
+// Every language the card speaks
+const LANGS = ['fr', 'en', 'de', 'es', 'it', 'nl'];
+
+// Brief §5.3: no line overflows at 320 px (a 304 px card), in every language, extreme values included
+for (const lang of LANGS) {
     for (const c of probe(`lang=${lang}`, [], 2400)) {
         check(c.overflow === '0' && c.tall === '0', `${lang} ${c.name}: no overflow (hero ${c.hero} px${c.short === '1' ? ', short SOC' : c.short === '2' ? ', tight battery' : ''})`);
     }
@@ -66,8 +69,8 @@ for (const c of probe('h=184&s=bleu,extremes,coupure', [], 2400)) {
     check(c.overflow === '0' && c.tall === '0', `184 px ${c.name}: no overflow (hero ${c.hero} px)`);
 }
 
-// The side layout (2 rows, 120 px): nothing overflows on a phone, in either language, extreme values included
-for (const lang of ['fr', 'en']) {
+// The side layout (2 rows, 120 px): nothing overflows on a phone, in every language, extreme values included
+for (const lang of LANGS) {
     for (const c of probe(`side&lang=${lang}`, [], 2400)) {
         check(c.overflow === '0' && c.tall === '0', `side ${lang} ${c.name}: no overflow (hero ${c.hero} px${['', ', short SOC', ', tight battery', ', no complement'][Number(c.short)]})`);
     }
@@ -77,7 +80,7 @@ for (const c of probe('side&s=bleu&widths=360', [], 1200)) check(c.short === '0'
 
 // Unfolded (expandable: true), both layouts: nothing overflows, the comets run on the busy wires
 for (const layout of ['', 'side&']) {
-    for (const lang of ['fr', 'en']) {
+    for (const lang of LANGS) {
         for (const c of probe(`${layout}expand&lang=${lang}`, [], 2800)) {
             check(c.overflow === '0' && c.tall === '0', `unfolded ${layout ? 'side ' : ''}${lang} ${c.name}: no overflow`);
         }

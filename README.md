@@ -15,7 +15,7 @@
 
 Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a background that tells you something too: by day, the colour of today's electricity tariff (EDF Tempo's Bleu, Blanc and Rouge days), or the weather outside, or simply a colour of your choosing; a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
 
-It's free, open source and made for Home Assistant. The card is in French and English. You can [try it live](https://macanto44.github.io/energy-sky-card/) in your browser first, on sample readings.
+It's free, open source and made for Home Assistant. The card speaks French, English, German, Spanish, Italian and Dutch. You can [try it live](https://macanto44.github.io/energy-sky-card/) in your browser first, on sample readings.
 
 [Live demo](https://macanto44.github.io/energy-sky-card/) · [Install](#install) · [Set up](#set-up) · [Examples](#examples) · [Options](#options) · [Troubleshooting](#troubleshooting)
 
@@ -419,7 +419,7 @@ If you had set the card's height by hand in the **Layout** tab, change it after 
 
 ## Languages
 
-The card speaks French and English, following your Home Assistant profile's language (French for `fr`, English otherwise). Numbers follow your profile's number format.
+The card and its visual editor speak French, English, German, Spanish, Italian and Dutch, following your Home Assistant profile's language (English for any other). Numbers follow your profile's number format. Configuration error messages are in French or English.
 
 ## Troubleshooting
 

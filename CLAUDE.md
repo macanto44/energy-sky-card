@@ -37,7 +37,7 @@ src/
 ├── bundles.ts               # Loads the editor bundle from beside the main one
 ├── stub.ts                  # getStubConfig: Energy dashboard prefs (energy/get_prefs) + same-device sensors, Tempo, sun
 ├── utils.ts                 # escapeHtml, numeric states, W / kWh unit conversion
-├── localize.ts              # FR / EN strings, language, decimal separator
+├── localize.ts              # The card's strings in 6 languages (fr, en, de, es, it, nl: LANGUAGES), language, decimal separator
 ├── format.ts                # W / kW, kWh, V, % formatting; "—" for no reading
 ├── model.ts                 # Pure: config + hass → view (hero, context, metrics), tracked entities
 ├── sky.ts                   # Background: day / night, tariff palette, halo alpha, cloud shadows (CLOUDS); contrast utilities
@@ -98,7 +98,7 @@ test/
 
 ## Sizing
 
-`getGridOptions()` → 12 × 4 (248 px), min 6 × 3. Default spacing copies the prototype's (roomy, grid anchored to the bottom). One `fitLayout()` serves both layouts (on resize via ResizeObserver, and when the text that decides the layout changes): for the roomy then the compact spacing (`data-compact`, 3 rows / 184 px), for each level of the cells' text, for each hero size (`data-hero`), the first where the hero line and the content don't overflow, the cells' lines too in standard. The text levels (`metricForm` in model.ts, `data-form` on the host when above 0): 0 in full, 1 the short complement (« SOC atteint » → « SOC ✓ »), 2 the tight form where a cell has one (`MetricView.tight`, the battery with a temperature: « 100 % ↓ · -13° ✓ », narrow spaces), 3 no complement (`MetricView.bare`, « 78 % ↑ », side only). The card writes one text per cell (`writeForms`); nothing is stacked and hidden in CSS. In standard, lines still too wide take level 2 and end in an ellipsis; a context line too wide takes its short form (`writeContext`, `data-short-context`). `npm run test:browser` checks that nothing overflows at 304 px (a 320 px phone) in French and English, extreme values included.
+`getGridOptions()` → 12 × 4 (248 px), min 6 × 3. Default spacing copies the prototype's (roomy, grid anchored to the bottom). One `fitLayout()` serves both layouts (on resize via ResizeObserver, and when the text that decides the layout changes): for the roomy then the compact spacing (`data-compact`, 3 rows / 184 px), for each level of the cells' text, for each hero size (`data-hero`), the first where the hero line and the content don't overflow, the cells' lines too in standard. The text levels (`metricForm` in model.ts, `data-form` on the host when above 0): 0 in full, 1 the short complement (« SOC atteint » → « SOC ✓ »), 2 the tight form where a cell has one (`MetricView.tight`, the battery with a temperature: « 100 % ↓ · -13° ✓ », narrow spaces), 3 no complement (`MetricView.bare`, « 78 % ↑ », side only). The card writes one text per cell (`writeForms`); nothing is stacked and hidden in CSS. In standard, lines still too wide take level 2 and end in an ellipsis; a context line too wide takes its short form (`writeContext`, `data-short-context`). `npm run test:browser` checks that nothing overflows at 304 px (a 320 px phone) in every language, extreme values included.
 
 ### Side layout
 
@@ -126,6 +126,6 @@ The side layout has its own contrast test (`sky.test.ts`, positions from `?layou
 - Update text in place; never rebuild the DOM on a `hass` update. Only re-render when a tracked entity's `last_updated` changed.
 - Never put entity data in `innerHTML` without `escapeHtml`.
 - Animations: CSS `@keyframes` on `opacity` / `transform` only, paused when hidden or off-screen, none under `prefers-reduced-motion` or `animate: false`.
-- Strings: French and English only (`localize.ts`).
+- Strings: French, English, German, Spanish, Italian, Dutch (`localize.ts` for the card, `LABELS` / `HELPERS` in the editor; tests check every language has every key, `test:browser` that none overflows). Config errors (`configError`) stay French / English. A new string goes in all six.
 - All code here is the project's own. Don't copy code from other projects; third-party material (demo icons only, for now) is listed in `NOTICE.md`.
 - Work in the phases of the brief (§9); stop after each one for the user's validation.

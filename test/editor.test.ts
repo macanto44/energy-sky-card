@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { EnergySkyCardEditor, editorHelper, editorLabel, editorSchema, formData, nextConfig, type SchemaItem } from '../src/energy-sky-card-editor';
+import { EDITOR_HELPERS, EDITOR_LABELS, EnergySkyCardEditor, editorHelper, editorLabel, editorSchema, formData, nextConfig, type SchemaItem } from '../src/energy-sky-card-editor';
 import { CARD_EDITOR_NAME } from '../src/constants';
-import { CARD_STRINGS } from '../src/localize';
+import { CARD_STRINGS, LANGUAGES } from '../src/localize';
 import { FULL_CONFIG, makeHass } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -191,16 +191,15 @@ describe('the layout', () => {
     });
 });
 
-describe('English and French', () => {
-    it('labels every field and block, and offers every help, in both languages', () => {
-        for (const lang of ['fr', 'en'] as const) {
+describe('Languages', () => {
+    it('labels every field and block, and offers every help, in every language', () => {
+        for (const lang of LANGUAGES) {
             const data = { cell_1: 'custom', cell_2: 'battery', flow: 'tap', consumer_1_entity: 'sensor.boiler' };
             for (const block of editorSchema(lang, data)) {
                 expect(block.title).toBeTruthy();
                 for (const field of block.schema ?? []) {
                     expect(editorLabel(lang, field.name), `${lang} ${field.name}`).not.toBe(field.name);
-                    const other = lang === 'fr' ? 'en' : 'fr';
-                    expect(editorHelper(lang, field.name, block.name) === undefined).toBe(editorHelper(other, field.name, block.name) === undefined);
+                    expect(editorHelper(lang, field.name, block.name) === undefined, `${lang} ${field.name}`).toBe(editorHelper('en', field.name, block.name) === undefined);
                 }
             }
         }
@@ -208,8 +207,16 @@ describe('English and French', () => {
         expect(editorLabel('en', 'loading')).toBe('Loading the editor…');
     });
 
-    it('gives the card the same strings in both languages', () => {
-        expect(Object.keys(CARD_STRINGS.en).sort()).toEqual(Object.keys(CARD_STRINGS.fr).sort());
+    it('gives the card and the editor the same strings in every language', () => {
+        expect(LANGUAGES).toEqual(['fr', 'en', 'de', 'es', 'it', 'nl']);
+        for (const lang of LANGUAGES) {
+            expect(Object.keys(CARD_STRINGS[lang]).sort(), lang).toEqual(Object.keys(CARD_STRINGS.en).sort());
+            expect(Object.keys(EDITOR_LABELS[lang]).sort(), lang).toEqual(Object.keys(EDITOR_LABELS.en).sort());
+            expect(Object.keys(EDITOR_HELPERS[lang]).sort(), lang).toEqual(Object.keys(EDITOR_HELPERS.en).sort());
+        }
+        expect(editorSchema('de').map(b => b.title)).toEqual(['Produktion', 'Batterie', 'Netz', 'Darstellung', 'Felder', 'Verbraucher', 'Himmel', 'Aktionen']);
+        expect(editorLabel('nl', 'consumer_2_entity')).toBe('Apparaat 2');
+        expect(editorLabel('it', 'cell_3')).toBe('Casella 3');
     });
 });
 
