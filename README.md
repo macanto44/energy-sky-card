@@ -7,13 +7,13 @@
 [![Home Assistant](https://img.shields.io/badge/Home_Assistant-2024.8%2B-41BDF5.svg?style=flat-square)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/github/license/macanto44/energy-sky-card?style=flat-square)](https://github.com/macanto44/energy-sky-card/blob/main/LICENSE)
 
-| Bleu day | Blanc day |
+| Weather: sunny | Weather: rain |
 |---|---|
-| ![A blue sky card: 3.2 kW of solar, 7.2 kWh today, battery at 78 % and charging, 1.8 kW sold to the grid](docs/images/bleu.png) | ![A grey-blue sky card on a Blanc day: 860 W of solar, the battery full](docs/images/blanc.png) |
-| **Rouge day** | **Night** |
-| ![A red sky card on a Rouge day: 6.0 kW of solar, the battery discharging](docs/images/rouge.png) | ![The night card, animated: stars twinkle and a shooting star passes](docs/images/nuit-anim.png) |
+| ![A clear blue sky card: 3.2 kW of solar, 7.2 kWh today, battery at 78 % and charging, 1.8 kW sold to the grid](docs/images/soleil.png) | ![The same card under the weather sky on a rainy day: grey clouds drifting and rain slanting behind the numbers](docs/images/meteo.png) |
+| **One colour** | **Night** |
+| ![The card on a deep green gradient of the user's choosing](docs/images/uni.png) | ![The night card, animated: stars twinkle and a shooting star passes](docs/images/nuit-anim.png) |
 
-Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a background that tells you something too: by day, the colour of today's electricity tariff (EDF Tempo's Bleu, Blanc and Rouge days), or the weather outside, or simply a colour of your choosing; a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
+Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a sky that tells you something too: the weather outside, a colour of your choosing, or the colour of today's tariff if yours has coloured days; a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
 
 It's free, open source and made for Home Assistant. The card speaks French, English, German, Spanish, Italian and Dutch. You can [try it live](https://macanto44.github.io/energy-sky-card/) in your browser first, on sample readings.
 
@@ -55,17 +55,19 @@ To update, overwrite both files and raise the `?v=` in the resource URL so brows
 
 ---
 
-## Your sky: the tariff, one colour, or the weather.
+## Your sky: the weather, one colour, or the tariff.
 
 Choose what's behind the numbers (`background`, or **Background** in the editor's Sky section):
 
-- **Tempo** (the default): by day, a gradient in today's tariff colour, read from a sensor such as the EDF Tempo integration's. Any tariff sensor works: the palettes are keyed by its states, and you can add your own.
-- **Solid**: one colour of your choosing. The card draws a gentle gradient from it, and darkens it if need be so the white text always reads.
 - **Weather**: the sky follows a weather entity. Clouds drift across, rain slants down, snow falls, fog breathes, lightning flashes now and then; the wind hurries the clouds. Every weather sky keeps white text readable with its clouds or fog passing behind it.
+- **Solid**: one colour of your choosing. The card draws a gentle gradient from it, and darkens it if need be so the white text always reads.
+- **Tariff** (`tempo`, the default when `background` isn't set): by day, a gradient in today's tariff colour. It started with France's EDF Tempo (Bleu, Blanc and Rouge days), but any sensor whose state names the day's tariff works: the palettes are keyed by its states, and you can add your own.
+
+| Tempo: Bleu day | Blanc day | Rouge day |
+|---|---|---|
+| ![A blue sky card on a Bleu day](docs/images/bleu.png) | ![A grey-blue sky card on a Blanc day: the battery full](docs/images/blanc.png) | ![A red sky card on a Rouge day: the battery discharging](docs/images/rouge.png) |
 
 A sun halo in the corner grows with your production: faint on a grey morning, bright at noon (with the weather sky, when the sun is out). After sunset, the sky turns to night; with the weather, clouds and rain stay, and the stars only shine through a clear sky.
-
-![The card under the weather sky on a rainy day: grey clouds drifting and rain slanting behind the numbers](docs/images/meteo.png)
 
 ## Quiet, not busy.
 
@@ -126,9 +128,9 @@ White text keeps at least a 4.5:1 contrast where it sits on every default palett
 ## Set up
 
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
-2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's Tempo colour if an entity gives it. Without an Energy dashboard, it starts on the first power sensor it finds.
+2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's tariff colour if an entity gives it (EDF Tempo). Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, the big number at night, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (the home's consumption, and your appliances with a flow), **Sky** (Tempo, solid or weather, the sun, animations), and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, the big number at night, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (the home's consumption, and your appliances with a flow), **Sky** (weather, one colour or the tariff, the sun, animations), and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
