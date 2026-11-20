@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Flow: the battery's estimate reads as a sentence under its power, « Full at 14:20 », « Empty in 2 h 50 », not just the time. Where it doesn't fit (a phone), « → 100 % 14:20 »: the charge reached and when.
 - Flow: a small « % » after the charge in the Battery node's ring and in an appliance's ring showing its charge (a smaller size for 100).
 - Editor: each section keeps what nearly everyone sets on top, the rest in folded parts: « Fine tuning » (Production, Battery), « Time to full / empty » (the battery's capacity and estimate), « Voltage and outages » (Grid), « Flow colours » (Layout). Each cell and each appliance is a folded part of its own, titled with what it shows or the appliance's name; an empty one adds the next appliance. Nothing changes in the YAML.
 - Battery estimate: `battery.estimate.average` (minutes, 5 by default) sets the moving average of the battery power it reads, filled from Home Assistant's history when the dashboard opens; `0` reads the power as it is now. In the editor: « Power used: moving average / instant ». No estimate while the battery is idle or going the other way than its average.

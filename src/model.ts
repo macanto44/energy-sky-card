@@ -233,6 +233,8 @@ export interface BatteryEstimate {
     text: string;
     /** « Pleine à 14:20 », « Réserve dans 5 h 30 » */
     title: string;
+    /** The charge (%) it is reached at: max_soc while charging, reserve_soc while discharging */
+    target: number;
 }
 
 /**
@@ -251,7 +253,8 @@ export function batteryEstimate(config: EnergySkyCardConfig, hass: HomeAssistant
     const form = (charging ? battery?.estimate?.charge : battery?.estimate?.discharge) ?? (charging ? 'time' : 'duration');
     if (form === 'off') return undefined;
     const reserve = battery?.reserve_soc ?? 0;
-    const percent = charging ? (battery?.max_soc ?? 100) - soc : soc - reserve;
+    const target = charging ? battery?.max_soc ?? 100 : reserve;
+    const percent = charging ? target - soc : soc - reserve;
     if (percent <= 0) return undefined;
     const exact = percent / 100 * capacity * 1000 / Math.abs(power) * 60;
     if (exact > ESTIMATE_MAX) return undefined;
@@ -261,7 +264,7 @@ export function batteryEstimate(config: EnergySkyCardConfig, hass: HomeAssistant
         ? formatClock(new Date(Math.round((now + exact * 60000) / step) * step), loc)
         : formatDuration(Math.max(ESTIMATE_STEP, Math.round(exact / ESTIMATE_STEP) * ESTIMATE_STEP));
     const key = charging ? 'full' : reserve > 0 ? 'reserve' : 'empty';
-    return { text, title: localize(loc.lang, `${key}_${form === 'time' ? 'at' : 'in'}`, { time: text }) };
+    return { text, target, title: localize(loc.lang, `${key}_${form === 'time' ? 'at' : 'in'}`, { time: text }) };
 }
 
 /** What the view is worked out with, beside hass: the battery power the estimate uses (the card's average) and the time */

@@ -384,6 +384,7 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 /* The battery's estimate, a small third line under its power (« 14:20 »); none elsewhere */
 .nsub { font-size: 10px; font-weight: 500; line-height: 11px; font-variant-numeric: tabular-nums; opacity: 0.85; }
 .nsub:empty { display: none; }
+.nsub[data-tight] { font-size: 9px; letter-spacing: -0.02em; }
 .flow[data-narrow] .nval { font-size: 13.5px; }
 .flow[data-narrow] .nlab { font-size: 8.5px; }
 .flow[data-narrow] .node { gap: 6px; padding: 0 8px 0 5px; }

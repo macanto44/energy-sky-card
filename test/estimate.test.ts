@@ -40,12 +40,12 @@ describe('formats', () => {
 describe('the estimate', () => {
     it('gives the time the battery will be full, on a 10 minute step', () => {
         // 22 % of 10 kWh at 900 W: 2 h 27 → 14:27 → 14:30
-        expect(batteryEstimate(CONFIG, hass(78, 900), loc, undefined, NOON)).toEqual({ text: '14:30', title: 'Pleine à 14:30' });
+        expect(batteryEstimate(CONFIG, hass(78, 900), loc, undefined, NOON)).toEqual({ text: '14:30', title: 'Pleine à 14:30', target: 100 });
     });
 
     it('gives the time left until empty, or until the reserve', () => {
         // 64 % of 10 kWh at 450 W: 14 h 13 → 14 h 10
-        expect(batteryEstimate(CONFIG, hass(64, -450), loc, undefined, NOON)).toEqual({ text: `14${nb}h${nb}10`, title: `Vide dans 14${nb}h${nb}10` });
+        expect(batteryEstimate(CONFIG, hass(64, -450), loc, undefined, NOON)).toEqual({ text: `14${nb}h${nb}10`, title: `Vide dans 14${nb}h${nb}10`, target: 0 });
         // 54 %: 12 h
         expect(batteryEstimate(with_({ reserve_soc: 10 }), hass(64, -450), loc, undefined, NOON)?.title).toBe(`Réserve dans 12${nb}h`);
     });
@@ -111,8 +111,9 @@ describe('in the battery cell', () => {
 });
 
 describe('in the flow', () => {
-    it('is a small line under the battery node\'s power, its sentence the title, unless estimate.flow is false', () => {
-        expect(flowView(CONFIG, hass(78, 900), { now: NOON }).nodes.battery).toMatchObject({ label: 'Batterie', sub: '14:30', note: 'Pleine à 14:30' });
+    it('is a small line under the battery node\'s power, its sentence (a short form where it doesn\'t fit), unless estimate.flow is false', () => {
+        expect(flowView(CONFIG, hass(78, 900), { now: NOON }).nodes.battery).toMatchObject({ label: 'Batterie', sub: 'Pleine à 14:30', subShort: `→\u202F100${nb}%${nb}14:30`, note: 'Pleine à 14:30' });
+        expect(flowView(with_({ reserve_soc: 10 }), hass(64, -450), { now: NOON }).nodes.battery).toMatchObject({ sub: `Réserve dans 12${nb}h`, subShort: `→\u202F10${nb}%${nb}12${nb}h` });
         const off = flowView(with_({ estimate: { flow: false } }), hass(78, 900), { now: NOON }).nodes.battery;
         expect(off.sub).toBeUndefined();
         expect(off.note).toBeUndefined();
@@ -161,12 +162,33 @@ describe('in the card', () => {
         expect(asked).toHaveLength(1);
     });
 
+    it('takes the short form, then a smaller size, where the sentence doesn\'t fit', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOON);
+        const card = mount({ ...CONFIG, flow: 'always' }, hass(78, 900));
+        const sub = card.shadowRoot!.querySelector<HTMLElement>('[data-node="battery"] .nsub')!;
+        // A 60 px line, 6 px a character, 5 at the smaller size
+        Object.defineProperty(sub, 'clientWidth', { configurable: true, get: () => 60 });
+        Object.defineProperty(sub, 'scrollWidth', { configurable: true, get: () => sub.textContent!.length * (sub.hasAttribute('data-tight') ? 5 : 6) });
+        card.fit();
+        // « Pleine à 14:30 » (14): 84 px; « → 100 % 14:30 » (13): 78; at the smaller size, 70 and 65: the narrower, small
+        expect(sub.textContent).toBe(`→\u202F100${nb}%${nb}14:30`);
+        expect(sub.hasAttribute('data-tight')).toBe(true);
+        Object.defineProperty(sub, 'clientWidth', { configurable: true, get: () => 80 });
+        card.fit();
+        expect(sub.textContent).toBe(`→\u202F100${nb}%${nb}14:30`);
+        expect(sub.hasAttribute('data-tight')).toBe(false);
+        Object.defineProperty(sub, 'clientWidth', { configurable: true, get: () => 90 });
+        card.fit();
+        expect(sub.textContent).toBe('Pleine à 14:30');
+    });
+
     it('shows the line and the title on the battery node', () => {
         vi.useFakeTimers();
         vi.setSystemTime(NOON);
         const card = mount({ ...CONFIG, flow: 'always' }, hass(78, 900));
         const node = card.shadowRoot!.querySelector('[data-node="battery"]')!;
-        expect(node.querySelector('.nsub')?.textContent).toBe('14:30');
+        expect(node.querySelector('.nsub')?.textContent).toBe('Pleine à 14:30');
         expect(node.getAttribute('title')).toBe('Pleine à 14:30');
         expect(card.shadowRoot!.querySelector('[data-node="grid"] .nsub')?.textContent).toBe('');
     });

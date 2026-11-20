@@ -175,7 +175,7 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
 }
 
 /** A node of the flow: its pill, texts and ring segments */
-interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; sub: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }
+interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; sub: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[]; subTexts?: [string, string] }
 
 /** The elements updated in place on every change */
 interface Refs {
@@ -562,7 +562,28 @@ export class EnergySkyCard extends HTMLElement {
     fit(): void {
         this.fitLayout();
         this.layoutFlow();
+        for (const node of this.refs?.flow?.nodes.values() ?? []) this.fitSub(node);
         this.clearText();
+    }
+
+    /**
+     * A node's small line: its sentence where it fits, else its short form
+     * (« Vide dans 2 h 50 », « → 0 % 2 h 50 »), then both a size smaller
+     * (data-tight); failing all, the narrower one, small, with an ellipsis.
+     */
+    private fitSub(node: FlowNodeRefs): void {
+        const [full, short] = node.subTexts ?? ['', ''];
+        const overflows = () => node.sub.scrollWidth > node.sub.clientWidth + 1;
+        let narrowest: [number, string] | undefined;
+        for (const tight of [false, true]) {
+            node.sub.toggleAttribute('data-tight', tight);
+            for (const text of full === short ? [full] : [full, short]) {
+                setText(node.sub, text);
+                if (!overflows()) return;
+                if (!narrowest || node.sub.scrollWidth < narrowest[0]) narrowest = [node.sub.scrollWidth, text];
+            }
+        }
+        setText(node.sub, narrowest?.[1] ?? full);
     }
 
     /** The flow's wires and comets, for the panel's width (redrawn only when it changes) */
@@ -627,7 +648,8 @@ export class EnergySkyCard extends HTMLElement {
             if (node.el.hidden === v.present) node.el.hidden = !v.present;
             setText(node.label, v.label);
             setText(node.value, v.value);
-            setText(node.sub, v.sub ?? '');
+            node.subTexts = [v.sub ?? '', v.subShort ?? v.sub ?? ''];
+            this.fitSub(node);
             node.el.dataset.note = v.note ?? '';
             setText(node.centre, v.centre ?? '');
             node.centre.toggleAttribute('data-long', (v.centre ?? '').length > 2);

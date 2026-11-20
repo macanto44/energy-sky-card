@@ -82,16 +82,18 @@ export interface NodeView {
     centre?: string;
     /** Something's wrong: the grid is down */
     alert?: boolean;
-    /** A third, small line: the battery's estimate, « 14:20 » */
+    /** A third, small line: the battery's estimate, its sentence « Pleine à 14:20 » */
     sub?: string;
+    /** The same where the sentence doesn't fit: the charge reached and when, « → 100 % 14:20 » */
+    subShort?: string;
     /** Its sentence, for the node's title: « Pleine à 14:20 » */
     note?: string;
 }
 
 /** The battery node's estimate (unless estimate.flow is false): its line under the power, and its sentence */
-function batteryNote(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, options: ViewOptions): Pick<NodeView, 'sub' | 'note'> {
+function batteryNote(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, options: ViewOptions): Pick<NodeView, 'sub' | 'subShort' | 'note'> {
     const estimate = config.battery?.estimate?.flow === false ? undefined : viewEstimate(config, hass, loc, options);
-    return estimate ? { sub: estimate.text, note: estimate.title } : {};
+    return estimate ? { sub: estimate.title, subShort: `→\u202F${formatPercent(estimate.target, loc)}\u00a0${estimate.text}`, note: estimate.title } : {};
 }
 
 /** The entity a node opens: the first production sensor, grid power, battery power (else its charge), consumption */
