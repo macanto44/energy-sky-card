@@ -23,7 +23,7 @@ export interface HomeAssistant {
 }
 
 /** A built-in cell of the grid */
-export type CellKind = 'battery' | 'grid' | 'voltage' | 'tomorrow' | 'consumption';
+export type CellKind = 'battery' | 'grid' | 'voltage' | 'tomorrow' | 'consumption' | 'self_sufficiency';
 
 /** A built-in cell with its own tap action: { type: grid, tap_action: … } */
 export interface BuiltinCell {

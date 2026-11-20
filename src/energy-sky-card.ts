@@ -12,6 +12,7 @@ import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { Smoother, smoothedEntities } from './smoothing';
 import { energyPrefs, stubConfig } from './stub';
+import { canComputeSelfSufficiency, energyMeters, meterIds, nextRefreshIn, selfSufficiency, todaysChanges } from './selfsufficiency';
 import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
 import { FLOW_HEIGHT, MAX_CONSUMERS, WIRES, WIRE_KEYS, flowGeometry, flowNodeEntity, flowView, type NodeKey, type WireKey } from './flow';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
@@ -27,6 +28,9 @@ const SIDE_FORM_LEVELS = [0, 1, 2, 3];
 const NODES: [NodeKey, string][] = [['solar', METRIC_ICONS.tomorrow], ['grid', METRIC_ICONS.grid], ['battery', METRIC_ICONS.battery], ['home', METRIC_ICONS.consumption]];
 /** A ring's circumference: r = 17 in a 40 × 40 box */
 const RING = 2 * Math.PI * 17;
+
+/** Where a tap on the self-sufficiency cell goes by default */
+const ENERGY_DASHBOARD_TAP: ActionConfig = { action: 'navigate', navigation_path: '/energy' };
 
 /** A config error, in the page's language (French or English) */
 function configError(fr: string, en: string): Error {
@@ -213,6 +217,11 @@ export class EnergySkyCard extends HTMLElement {
     private estimateIds: string[] = [];
     /** What the last view was worked out with beside hass: the estimate's battery power and the time */
     private viewOptions: ViewOptions = {};
+    /** Today's self-sufficiency (%), read every 5 minutes while a cell shows it; the read's config, to drop an answer for an older one */
+    private selfSufficiency?: number;
+    private selfTimer?: ReturnType<typeof setTimeout>;
+    /** The read on its way, if any: a newer config or a disconnect drops its answer */
+    private selfRead?: object;
     private smoothIds: string[] = [];
     private smoothTimer?: ReturnType<typeof setInterval>;
     /** The hass the card shows: smoothed powers with smoothing, else hass itself */
@@ -255,8 +264,14 @@ export class EnergySkyCard extends HTMLElement {
         this.estimateSmoother = estimating && !this.smoother ? new Smoother(ESTIMATE_AVERAGE_MS) : undefined;
         this.estimateIds = estimating ? batteryPowerEntities(this.config) : [];
         this.viewOptions = {};
+        // Today's self-sufficiency: read again for this config
+        this.selfSufficiency = undefined;
+        clearTimeout(this.selfTimer);
+        this.selfTimer = undefined;
+        this.selfRead = undefined;
         this.syncSmoothTimer();
         if (this._hass) this.update();
+        this.startSelfSufficiency();
     }
 
     /** One tick a second while connected and smoothing */
@@ -273,6 +288,7 @@ export class EnergySkyCard extends HTMLElement {
         this.motion.start();
         this.staleTimer ??= setInterval(() => this.markStale(), 60_000);
         this.syncSmoothTimer();
+        this.startSelfSufficiency();
         if (this.refs && this.resizeObserver) this.resizeObserver.observe(this.refs.card);
         this.fit();
         // Text measured before the fonts load is narrower or wider than it will be
@@ -284,6 +300,9 @@ export class EnergySkyCard extends HTMLElement {
         clearInterval(this.staleTimer);
         this.staleTimer = undefined;
         this.syncSmoothTimer();
+        clearTimeout(this.selfTimer);
+        this.selfTimer = undefined;
+        this.selfRead = undefined;
         this.resizeObserver?.disconnect();
         if (this.readyFrame !== undefined) cancelAnimationFrame(this.readyFrame);
         this.readyFrame = undefined;
@@ -318,6 +337,47 @@ export class EnergySkyCard extends HTMLElement {
     set hass(hass: HomeAssistant) {
         this._hass = hass;
         this.update();
+        this.startSelfSufficiency();
+    }
+
+    /** Whether a cell shows today's self-sufficiency */
+    private get showsSelfSufficiency(): boolean {
+        return !!this.config && configuredCells(this.config).some(cell => cell.kind === 'self_sufficiency');
+    }
+
+    /** Reads today's self-sufficiency now, unless a read is on its way or planned */
+    private startSelfSufficiency(): void {
+        if (!this.showsSelfSufficiency || !this.isConnected || !this._hass || this.selfRead || this.selfTimer) return;
+        void this.readSelfSufficiency();
+    }
+
+    /**
+     * The Energy dashboard's meters and their changes since midnight, from
+     * Home Assistant (never the internet); again in 5 minutes, or just after
+     * midnight when that comes first.
+     */
+    private async readSelfSufficiency(): Promise<void> {
+        const hass = this._hass;
+        if (!hass) return;
+        const read = {};
+        this.selfRead = read;
+        let value: number | undefined;
+        try {
+            const meters = energyMeters(await energyPrefs(hass));
+            value = canComputeSelfSufficiency(meters) ? selfSufficiency(meters, await todaysChanges(hass, meterIds(meters))) : undefined;
+        } catch {
+            value = undefined;
+        }
+        // A new config or a disconnect since: this answer is no one's
+        if (this.selfRead !== read) return;
+        this.selfRead = undefined;
+        this.selfSufficiency = value;
+        this.renderedKey = '';
+        this.update();
+        if (this.isConnected) this.selfTimer = setTimeout(() => {
+            this.selfTimer = undefined;
+            this.startSelfSufficiency();
+        }, nextRefreshIn(new Date()));
     }
 
     get hass(): HomeAssistant | undefined {
@@ -386,7 +446,9 @@ export class EnergySkyCard extends HTMLElement {
         const opensEntity = config.tap_action === undefined;
         this.cellTargets = new Map(cells.flatMap((cell): [string, { entity?: string; tap?: ActionConfig }][] => {
             const entity = cellEntity(config, cell);
-            const tap = isAction(cell.tapAction) ? cell.tapAction : undefined;
+            // Today's self-sufficiency has no entity: it opens the Energy dashboard
+            const tap = isAction(cell.tapAction) ? cell.tapAction
+                : cell.kind === 'self_sufficiency' && opensEntity ? ENERGY_DASHBOARD_TAP : undefined;
             if (tap) return [[cell.key, { entity, tap }]];
             return opensEntity && entity ? [[cell.key, { entity }]] : [];
         }));
@@ -686,8 +748,8 @@ export class EnergySkyCard extends HTMLElement {
             // The averages move between readings: render when what they show changes
             key += '|' + this.smoothIds.map(id => Number(shown.states[id]?.state).toPrecision(3)).join('|');
         }
-        // The estimate: its average power, and the minute (a clock time moves on with it)
-        const options: ViewOptions = {};
+        // The estimate: its average power, and the minute (a clock time moves on with it); today's self-sufficiency
+        const options: ViewOptions = this.selfSufficiency === undefined ? {} : { selfSufficiency: this.selfSufficiency };
         if (this.estimateIds.length) {
             const now = Date.now();
             options.now = now;
@@ -697,6 +759,7 @@ export class EnergySkyCard extends HTMLElement {
             }
             key += `|${options.estimatePower?.toPrecision(2) ?? ''}|${Math.floor(now / 60000)}`;
         }
+        key += `|${this.selfSufficiency ?? ''}`;
         if (key === this.renderedKey) return;
         this.renderedKey = key;
         this.shown = shown;

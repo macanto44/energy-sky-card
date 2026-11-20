@@ -18,6 +18,7 @@ export const METRIC_ICONS: Record<CellKind, string> = {
     voltage: 'mdi:sine-wave',
     tomorrow: 'mdi:solar-power-variant-outline',
     consumption: 'mdi:home-lightning-bolt-outline',
+    self_sufficiency: 'mdi:home-percent-outline',
 };
 export const CUSTOM_CELL_ICON = 'mdi:gauge';
 export const CELL_KINDS = Object.keys(METRIC_ICONS) as CellKind[];
@@ -118,6 +119,7 @@ export function cellEntity(config: EnergySkyCardConfig, cell: CellSpec): string 
         case 'voltage': return config.grid?.voltage_entity ?? config.grid?.outage_entity;
         case 'tomorrow': return config.forecast_tomorrow_entity;
         case 'consumption': return config.consumption_entity;
+        case 'self_sufficiency': return undefined;
         case 'custom': return cell.custom?.entity;
     }
 }
@@ -264,6 +266,8 @@ export function batteryEstimate(config: EnergySkyCardConfig, hass: HomeAssistant
 export interface ViewOptions {
     estimatePower?: number;
     now?: number;
+    /** Today's self-sufficiency (%), read by the card from Home Assistant's statistics */
+    selfSufficiency?: number;
 }
 
 /** The estimate shown with this view's readings (none while the battery's target is reported reached) */
@@ -419,6 +423,17 @@ function consumptionMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc
     };
 }
 
+/** Today's self-sufficiency, « 82 % » (« — » until read, or without the Energy dashboard) */
+function selfSufficiencyMetric(loc: NumberLocale, options: ViewOptions): MetricView {
+    return {
+        key: 'self_sufficiency',
+        label: localize(loc.lang, 'self_sufficiency'),
+        value: formatPercent(options.selfSufficiency, loc),
+        extra: '', extraShort: '',
+        note: localize(loc.lang, 'self_sufficiency_title'),
+    };
+}
+
 /**
  * A free cell. Powers read like the card's own (W / kW); anything else as
  * Home Assistant formats it (unit, precision, translated states), or the
@@ -481,6 +496,7 @@ export function buildView(config: EnergySkyCardConfig, hass: HomeAssistant, opti
             case 'voltage': return voltageMetric(config, hass, loc);
             case 'tomorrow': return tomorrowMetric(config, hass, loc);
             case 'consumption': return consumptionMetric(config, hass, loc);
+            case 'self_sufficiency': return selfSufficiencyMetric(loc, options);
             case 'custom': return customMetric(spec, hass, loc);
         }
     });

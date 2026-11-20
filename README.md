@@ -419,6 +419,7 @@ Each entry in `cells` is one of:
 | `voltage` | The voltage, or `Outage` |
 | `tomorrow` | Tomorrow's forecast |
 | `consumption` | The home's power use (needs `consumption_entity`) |
+| `self_sufficiency` | Today's self-sufficiency, `82 %`: the share of the home's use not bought from the grid since midnight, the same figure as the Energy dashboard's gauge. Read from the Energy dashboard's meters (nothing to set; it needs a grid meter there), every 5 minutes. A tap opens the Energy dashboard |
 | `{ type: grid, tap_action: … }` | A built-in cell with a tap action of its own |
 | `{ entity: …, name: …, icon: …, tap_action: … }` | A free cell: any entity. Powers read like the rest of the card (W / kW); anything else as Home Assistant formats it. `name` and `icon` default to the entity's |
 

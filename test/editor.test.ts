@@ -389,3 +389,13 @@ describe('One power sensor or two', () => {
         expect(formData({ ...MINIMAL, battery: { soc_entity: 'sensor.soc' } }).battery).toMatchObject({ soc_entity: ['sensor.soc'], sensors: 'single' });
     });
 });
+
+describe('the sensor choice in the form', () => {
+    it('stays on « Two sensors » before they are picked', () => {
+        const { form, change, changes } = mount({ ...MINIMAL, grid: { power_entity: 'sensor.grid' } });
+        change({ grid: { ...(form.data!.grid as object), sensors: 'split' } });
+        expect(changes.at(-1)?.grid).toBeUndefined();
+        expect((form.data!.grid as Record<string, unknown>).sensors).toBe('split');
+        expect(form.schema!.find(b => b.name === 'grid')!.schema!.map(f => f.name)).toContain('import_entity');
+    });
+});

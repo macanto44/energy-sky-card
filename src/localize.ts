@@ -6,7 +6,8 @@ export type CardString =
     | 'produced' | 'battery' | 'grid'
     | 'solar' | 'home' | 'stale'
     | 'voltage' | 'outage' | 'tomorrow' | 'soc_reached' | 'soc_reached_short' | 'consumption' | 'consumption_short'
-    | 'full_at' | 'full_in' | 'reserve_at' | 'reserve_in' | 'empty_at' | 'empty_in';
+    | 'full_at' | 'full_in' | 'reserve_at' | 'reserve_in' | 'empty_at' | 'empty_in'
+    | 'self_sufficiency' | 'self_sufficiency_title';
 
 const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString, string>> = {
     fr: {
@@ -15,6 +16,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Pas de nouvelle valeur depuis {age}',
         voltage: 'Tension', outage: 'Coupure', tomorrow: 'Prévu demain',
         soc_reached: 'SOC atteint', soc_reached_short: 'SOC ✓', consumption: 'Consommation', consumption_short: 'Conso.',
+        self_sufficiency: 'Autosuff.', self_sufficiency_title: 'Autosuffisance du jour',
         full_at: 'Pleine à {time}', full_in: 'Pleine dans {time}', reserve_at: 'Réserve atteinte à {time}', reserve_in: 'Réserve dans {time}', empty_at: 'Vide à {time}', empty_in: 'Vide dans {time}',
     },
     en: {
@@ -23,6 +25,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'No new reading for {age}',
         voltage: 'Voltage', outage: 'Outage', tomorrow: 'Tomorrow',
         soc_reached: 'SOC reached', soc_reached_short: 'SOC ✓', consumption: 'Consumption', consumption_short: 'Use',
+        self_sufficiency: 'Self-suff.', self_sufficiency_title: 'Today\'s self-sufficiency',
         full_at: 'Full at {time}', full_in: 'Full in {time}', reserve_at: 'Reserve at {time}', reserve_in: 'Reserve in {time}', empty_at: 'Empty at {time}', empty_in: 'Empty in {time}',
     },
     de: {
@@ -31,6 +34,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Kein neuer Wert seit {age}',
         voltage: 'Spannung', outage: 'Ausfall', tomorrow: 'Morgen',
         soc_reached: 'SOC erreicht', soc_reached_short: 'SOC ✓', consumption: 'Verbrauch', consumption_short: 'Verbr.',
+        self_sufficiency: 'Autarkie', self_sufficiency_title: 'Autarkie heute',
         full_at: 'Voll um {time}', full_in: 'Voll in {time}', reserve_at: 'Reserve um {time}', reserve_in: 'Reserve in {time}', empty_at: 'Leer um {time}', empty_in: 'Leer in {time}',
     },
     es: {
@@ -39,6 +43,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Sin valor nuevo desde hace {age}',
         voltage: 'Tensión', outage: 'Corte', tomorrow: 'Mañana',
         soc_reached: 'SOC alcanzado', soc_reached_short: 'SOC ✓', consumption: 'Consumo', consumption_short: 'Cons.',
+        self_sufficiency: 'Autosuf.', self_sufficiency_title: 'Autosuficiencia de hoy',
         full_at: 'Llena a las {time}', full_in: 'Llena en {time}', reserve_at: 'Reserva a las {time}', reserve_in: 'Reserva en {time}', empty_at: 'Vacía a las {time}', empty_in: 'Vacía en {time}',
     },
     it: {
@@ -47,6 +52,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Nessun nuovo valore da {age}',
         voltage: 'Tensione', outage: 'Blackout', tomorrow: 'Domani',
         soc_reached: 'SOC raggiunto', soc_reached_short: 'SOC ✓', consumption: 'Consumo', consumption_short: 'Cons.',
+        self_sufficiency: 'Autosuff.', self_sufficiency_title: 'Autosufficienza di oggi',
         full_at: 'Piena alle {time}', full_in: 'Piena tra {time}', reserve_at: 'Riserva alle {time}', reserve_in: 'Riserva tra {time}', empty_at: 'Scarica alle {time}', empty_in: 'Scarica tra {time}',
     },
     nl: {
@@ -55,6 +61,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Geen nieuwe waarde sinds {age}',
         voltage: 'Spanning', outage: 'Storing', tomorrow: 'Morgen',
         soc_reached: 'SOC bereikt', soc_reached_short: 'SOC ✓', consumption: 'Verbruik', consumption_short: 'Verbr.',
+        self_sufficiency: 'Zelfvoorz.', self_sufficiency_title: 'Zelfvoorziening vandaag',
         full_at: 'Vol om {time}', full_in: 'Vol over {time}', reserve_at: 'Reserve om {time}', reserve_in: 'Reserve over {time}', empty_at: 'Leeg om {time}', empty_in: 'Leeg over {time}',
     },
 };

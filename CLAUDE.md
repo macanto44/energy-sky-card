@@ -42,6 +42,7 @@ src/
 ├── model.ts                 # Pure: config + hass → view (hero, context, metrics), tracked entities
 ├── sky.ts                   # Background: day / night, tariff palette, halo alpha, cloud shadows (CLOUDS); contrast utilities
 ├── actions.ts               # GestureListener: tap / hold / double_tap → hass-action; default tap = more-info
+├── selfsufficiency.ts       # Today's self-sufficiency: the Energy dashboard's meters (energyMeters), the gauge's sum, todaysChanges (recorder/statistic_during_period)
 ├── smoothing.ts             # smoothing: Smoother (time-weighted average per power entity over the window), smoothedEntities
 ├── motion.ts                # data-motion on / paused / off: tab, IntersectionObserver, reduced motion, animate
 ├── flow.ts                  # Pure: the unfolded energy flow: energyFlows (powers → wires), flowView (nodes, rings, levels), flowGeometry (paths, comet keyframes for a width)
@@ -66,6 +67,7 @@ test/
 ├── card.test.ts             # Registration, validation, render, in-place updates, background, sizing, stub
 ├── bundles.test.ts          # Sibling bundle URLs
 ├── estimate.test.ts         # Battery estimate: formats, calculation, cell, flow node, the card's 5 min average, settings
+├── selfsufficiency.test.ts  # Meters, the sum, the statistics request, the cell (read by the card, tap → /energy), the editor's offer
 ├── sensors.test.ts          # Grid import / export, battery charge / discharge, several batteries, their validation and pre-fill
 ├── stub.test.ts             # Prefill from the Energy dashboard (both prefs shapes), Tempo, fallback
 └── build.test.ts            # Bundle size and no network
@@ -98,6 +100,7 @@ test/
 - Cells (`configuredCells` in model.ts): `cells` if set (≤ 4, built-in kinds deduplicated, free cells keyed `custom-<index>`), else the built-in ones whose entities are set. A free cell's name and icon are user text: written with textContent / setAttribute only. The editor shows them as four slots (`cell_1` … `cell_4`, plus `_entity` / `_name` / `_icon` for a free one) and writes `cells` only when they differ from the automatic choice.
 - Cell taps: a cell's own `tap_action` (`{ type, tap_action }` for a built-in cell, `tap_action` on a free one; `CellSpec.tapAction`), else its entity's more-info unless the card has a `tap_action`. Such cells get `data-cell-target` (role button and tabindex unless their action is `none`). The gesture listener passes the event path to `actionsFor`, which answers with the cell's entity and its tap (hold / double tap stay the card's). Editor: `cell_n_tap_action` slots (ui_action), a built-in cell saved as an object only when it has one.
 - `getStubConfig` is async (HA awaits it): `stub.ts` reads `energy/get_prefs` in both shapes (grid `flow_from[]` / `power[]`, or `stat_rate` / `power_config`), takes sensors on the meters' devices from `hass.entities`, and sets `battery.invert` when the power is HA's `stat_rate` (positive discharging).
+- Self-sufficiency cell (`self_sufficiency`, no entity): the card reads `energy/get_prefs` and each meter's `change` since midnight (`recorder/statistic_during_period`, `calendar: day`), 5 min apart or just after midnight (`nextRefreshIn`), only while a cell shows it and connected; `selfRead` drops an answer for an older config. The sum is the Energy dashboard gauge's: `1 − min(1, bought / used)`, used = the home meter, else bought + solar + discharged − sold − charged. Passed to `buildView` as `ViewOptions.selfSufficiency`; « — » until read. Tap: `/energy` unless the cell has its own `tap_action` or the card a `tap_action`. The editor offers it when the dashboard has a grid meter (asked once), or when a cell already shows it.
 - `night_hero` (consumption / battery) only applies below the horizon and when its entity is set; the context line then starts with the hero's name, shortened when too wide (`data-short-context`).
 
 ## Sizing

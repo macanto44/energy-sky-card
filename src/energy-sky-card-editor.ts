@@ -7,6 +7,8 @@ import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
 import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, entityList, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
+import { energyPrefs } from './stub';
+import { canComputeSelfSufficiency, energyMeters } from './selfsufficiency';
 import { DEFAULT_PRODUCTION_MAX, DEFAULT_SOLID_COLOR, FLOW_COLOURS } from './sky';
 import type { BatteryEstimateConfig, CellConfig, CellKind, ConsumerConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 
@@ -35,7 +37,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         layout: 'Format', layout_standard: 'Standard : les cases sous le chiffre (4 rangées)', layout_side: 'Côté : icône + valeur à droite (2 rangées)',
         cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)', cell_tap_action: 'Appui sur la case',
         kind_none: 'Aucune', kind_battery: 'Batterie', kind_grid: 'Réseau', kind_voltage: 'Tension', kind_tomorrow: 'Prévu demain',
-        kind_consumption: 'Consommation', kind_custom: 'Libre (une entité au choix)',
+        kind_self_sufficiency: 'Autosuffisance du jour', kind_consumption: 'Consommation', kind_custom: 'Libre (une entité au choix)',
         hero_production: 'Production solaire', hero_consumption: 'Consommation de la maison', hero_battery: 'Charge de la batterie', production_max: 'Puissance maximale (halo)',
         daily_production_entities: 'Production du jour (kWh, additionnés)', forecast_tomorrow_entity: 'Prévision pour demain (kWh)',
         soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', temperature_entity: 'Température', soc_reached_entities: 'SOC atteint',
@@ -60,7 +62,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         layout: 'Format', layout_standard: 'Standard: the cells under the number (4 rows)', layout_side: 'Side: icon + value on the right (2 rows)',
         cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)', cell_tap_action: 'Tap on the cell',
         kind_none: 'None', kind_battery: 'Battery', kind_grid: 'Grid', kind_voltage: 'Voltage', kind_tomorrow: 'Tomorrow',
-        kind_consumption: 'Consumption', kind_custom: 'Free (any entity)',
+        kind_self_sufficiency: 'Today\'s self-sufficiency', kind_consumption: 'Consumption', kind_custom: 'Free (any entity)',
         hero_production: 'Solar production', hero_consumption: 'Home consumption', hero_battery: 'Battery charge', production_max: 'Maximum power (halo)',
         daily_production_entities: 'Energy today (kWh, summed)', forecast_tomorrow_entity: 'Forecast for tomorrow (kWh)',
         soc_entity: 'Charge (%)', power_entity: 'Power (W)', temperature_entity: 'Temperature', soc_reached_entities: 'SOC reached',
@@ -85,7 +87,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         layout: 'Format', layout_standard: 'Standard: die Felder unter der Zahl (4 Reihen)', layout_side: 'Seitlich: Symbol + Wert rechts (2 Reihen)',
         cell: 'Feld {n}', cell_entity: 'Entität', cell_name: 'Name (optional)', cell_icon: 'Symbol (optional)', cell_tap_action: 'Tippen auf das Feld',
         kind_none: 'Keines', kind_battery: 'Batterie', kind_grid: 'Netz', kind_voltage: 'Spannung', kind_tomorrow: 'Morgen',
-        kind_consumption: 'Verbrauch', kind_custom: 'Frei (beliebige Entität)',
+        kind_self_sufficiency: 'Autarkie heute', kind_consumption: 'Verbrauch', kind_custom: 'Frei (beliebige Entität)',
         hero_production: 'Solarproduktion', hero_consumption: 'Hausverbrauch', hero_battery: 'Batterieladung', production_max: 'Maximale Leistung (Halo)',
         daily_production_entities: 'Energie heute (kWh, summiert)', forecast_tomorrow_entity: 'Prognose für morgen (kWh)',
         soc_entity: 'Ladung (%)', power_entity: 'Leistung (W)', temperature_entity: 'Temperatur', soc_reached_entities: 'SOC erreicht',
@@ -110,7 +112,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         layout: 'Formato', layout_standard: 'Estándar: las casillas bajo la cifra (4 filas)', layout_side: 'Lateral: icono + valor a la derecha (2 filas)',
         cell: 'Casilla {n}', cell_entity: 'Entidad', cell_name: 'Nombre (opcional)', cell_icon: 'Icono (opcional)', cell_tap_action: 'Toque en la casilla',
         kind_none: 'Ninguna', kind_battery: 'Batería', kind_grid: 'Red', kind_voltage: 'Tensión', kind_tomorrow: 'Mañana',
-        kind_consumption: 'Consumo', kind_custom: 'Libre (cualquier entidad)',
+        kind_self_sufficiency: 'Autosuficiencia de hoy', kind_consumption: 'Consumo', kind_custom: 'Libre (cualquier entidad)',
         hero_production: 'Producción solar', hero_consumption: 'Consumo de la casa', hero_battery: 'Carga de la batería', production_max: 'Potencia máxima (halo)',
         daily_production_entities: 'Energía de hoy (kWh, sumadas)', forecast_tomorrow_entity: 'Previsión para mañana (kWh)',
         soc_entity: 'Carga (%)', power_entity: 'Potencia (W)', temperature_entity: 'Temperatura', soc_reached_entities: 'SOC alcanzado',
@@ -135,7 +137,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         layout: 'Formato', layout_standard: 'Standard: le caselle sotto il numero (4 righe)', layout_side: 'Laterale: icona + valore a destra (2 righe)',
         cell: 'Casella {n}', cell_entity: 'Entità', cell_name: 'Nome (facoltativo)', cell_icon: 'Icona (facoltativa)', cell_tap_action: 'Tocco sulla casella',
         kind_none: 'Nessuna', kind_battery: 'Batteria', kind_grid: 'Rete', kind_voltage: 'Tensione', kind_tomorrow: 'Domani',
-        kind_consumption: 'Consumo', kind_custom: 'Libera (un\'entità a scelta)',
+        kind_self_sufficiency: 'Autosufficienza di oggi', kind_consumption: 'Consumo', kind_custom: 'Libera (un\'entità a scelta)',
         hero_production: 'Produzione solare', hero_consumption: 'Consumo della casa', hero_battery: 'Carica della batteria', production_max: 'Potenza massima (alone)',
         daily_production_entities: 'Energia di oggi (kWh, sommate)', forecast_tomorrow_entity: 'Previsione per domani (kWh)',
         soc_entity: 'Carica (%)', power_entity: 'Potenza (W)', temperature_entity: 'Temperatura', soc_reached_entities: 'SOC raggiunto',
@@ -160,7 +162,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         layout: 'Formaat', layout_standard: 'Standaard: de vakken onder het getal (4 rijen)', layout_side: 'Zijkant: icoon + waarde rechts (2 rijen)',
         cell: 'Vak {n}', cell_entity: 'Entiteit', cell_name: 'Naam (optioneel)', cell_icon: 'Icoon (optioneel)', cell_tap_action: 'Tikken op het vak',
         kind_none: 'Geen', kind_battery: 'Batterij', kind_grid: 'Net', kind_voltage: 'Spanning', kind_tomorrow: 'Morgen',
-        kind_consumption: 'Verbruik', kind_custom: 'Vrij (elke entiteit)',
+        kind_self_sufficiency: 'Zelfvoorziening vandaag', kind_consumption: 'Verbruik', kind_custom: 'Vrij (elke entiteit)',
         hero_production: 'Zonneproductie', hero_consumption: 'Verbruik van het huis', hero_battery: 'Lading van de batterij', production_max: 'Maximaal vermogen (halo)',
         daily_production_entities: 'Energie vandaag (kWh, opgeteld)', forecast_tomorrow_entity: 'Verwachting voor morgen (kWh)',
         soc_entity: 'Lading (%)', power_entity: 'Vermogen (W)', temperature_entity: 'Temperatuur', soc_reached_entities: 'SOC bereikt',
@@ -303,8 +305,10 @@ const sensor = (extra: Record<string, unknown> = {}) => ({ entity: { domain: 'se
 const CELL_CHOICES = ['none', ...CELL_KINDS, 'custom'] as const;
 
 /** The slots' fields: a choice per cell, and entity, name and icon under a free one */
-function cellFields(lang: Lang, data: Record<string, unknown>): SchemaItem[] {
-    const options = CELL_CHOICES.map(value => ({ value, label: editorLabel(lang, `kind_${value}`) }));
+function cellFields(lang: Lang, data: Record<string, unknown>, energy: boolean): SchemaItem[] {
+    // Today's self-sufficiency needs the Energy dashboard's grid meter (kept when a cell already shows it)
+    const offered = energy || Array.from({ length: MAX_CELLS }, (_, i) => data[`cell_${i + 1}`]).includes('self_sufficiency');
+    const options = CELL_CHOICES.filter(value => value !== 'self_sufficiency' || offered).map(value => ({ value, label: editorLabel(lang, `kind_${value}`) }));
     return Array.from({ length: MAX_CELLS }, (_, i) => i + 1).flatMap(n => [
         { name: `cell_${n}`, selector: { select: { mode: 'dropdown', options } } },
         ...(data[`cell_${n}`] === 'custom' ? [
@@ -336,7 +340,7 @@ const BATTERY_LISTS = ['soc_entity', 'power_entity', 'charge_entity', 'discharge
 const SPLIT_FIELDS = { grid: [['import_entity', 'export_entity'], ['power_entity', 'invert']], battery: [['charge_entity', 'discharge_entity'], ['power_entity', 'invert']] } as const;
 
 /** The form; data (the form's current values) decides which free-cell fields show */
-export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): SchemaItem[] {
+export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, energy = false): SchemaItem[] {
     const t = (key: string) => editorLabel(lang, key);
     const heroOptions = (['production', 'consumption', 'battery'] as const).map(value => ({ value, label: t(`hero_${value}`) }));
     const estimateChoice = (name: string, values: string[]): SchemaItem => ({
@@ -408,7 +412,7 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
-            schema: cellFields(lang, data),
+            schema: cellFields(lang, data, energy),
         },
         // The home's consumption, and the appliances with a flow
         {
@@ -706,6 +710,9 @@ export class EnergySkyCardEditor extends HTMLElement {
     private config?: EnergySkyCardConfig;
     private _hass?: HomeAssistant;
     private form?: HaForm;
+    /** Whether the Energy dashboard has a grid meter (today's self-sufficiency can be offered), once asked */
+    private energy = false;
+    private askedEnergy = false;
 
     setConfig(config: EnergySkyCardConfig): void {
         this.config = config;
@@ -715,6 +722,13 @@ export class EnergySkyCardEditor extends HTMLElement {
     set hass(hass: HomeAssistant) {
         const langChanged = cardLanguage(hass) !== cardLanguage(this._hass);
         this._hass = hass;
+        if (!this.askedEnergy) {
+            this.askedEnergy = true;
+            void energyPrefs(hass).then(prefs => {
+                this.energy = canComputeSelfSufficiency(energyMeters(prefs));
+                if (this.energy) this.render();
+            });
+        }
         if (this.form && !langChanged) this.form.hass = hass;
         else this.render();
     }
@@ -735,7 +749,7 @@ export class EnergySkyCardEditor extends HTMLElement {
         }
         this.form.hass = this._hass;
         const data = formData(this.config);
-        this.form.schema = editorSchema(lang, data);
+        this.form.schema = editorSchema(lang, data, this.energy);
         this.form.computeLabel = item => editorLabel(lang, item.name);
         this.form.computeHelper = item => editorHelper(lang, item.name, this.blockOf(item));
         this.form.data = data;
@@ -754,7 +768,12 @@ export class EnergySkyCardEditor extends HTMLElement {
         if (this.form) {
             // The free-cell fields follow the slots' choices, even before an entity is picked
             const data = { ...formData(this.config), ...Object.fromEntries(Object.entries(value).filter(([key]) => SLOT_KEY.test(key))) };
-            this.form.schema = editorSchema(cardLanguage(this._hass), data);
+            // So do a block's sensor fields: « Two sensors » stays chosen before its sensors are picked
+            for (const block of ['battery', 'grid'] as const) {
+                const chosen = (value[block] as Record<string, unknown> | undefined)?.sensors;
+                if (chosen) data[block] = { ...(data[block] as object), sensors: chosen };
+            }
+            this.form.schema = editorSchema(cardLanguage(this._hass), data, this.energy);
             this.form.data = data;
         }
         this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this.config }, bubbles: true, composed: true }));
