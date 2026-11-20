@@ -630,6 +630,7 @@ export class EnergySkyCard extends HTMLElement {
             setText(node.sub, v.sub ?? '');
             node.el.dataset.note = v.note ?? '';
             setText(node.centre, v.centre ?? '');
+            node.centre.toggleAttribute('data-long', (v.centre ?? '').length > 2);
             node.el.toggleAttribute('data-centre', v.centre !== undefined);
             node.el.toggleAttribute('data-alert', !!v.alert);
             drawRing(node.segs, v.ring);
@@ -648,6 +649,7 @@ export class EnergySkyCard extends HTMLElement {
             setAttr(node.icon, 'icon', v.icon);
             node.el.toggleAttribute('data-idle', v.level === 0);
             setText(node.centre, v.soc === undefined ? '' : String(Math.round(v.soc)));
+            node.centre.toggleAttribute('data-long', v.soc !== undefined && Math.round(v.soc) >= 100);
             node.el.toggleAttribute('data-centre', v.soc !== undefined);
             drawRing(node.segs, v.soc === undefined ? [[v.share, 'use']] : [[v.soc / 100, 'batt']]);
             setAttr(node.wire, 'data-level', String(v.level));

@@ -372,6 +372,11 @@ ${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].ma
 ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[data-source="${k}"] { stroke: ${flowColour(k)}; }`).join(' ')}
 .disc ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; display: inline-flex; }
 .centre { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* The charge's unit, small beside the number so the ring's disc holds « 100 % » */
+.centre { display: inline-flex; align-items: baseline; letter-spacing: -0.02em; }
+.centre:not(:empty)::after { content: '%'; font-size: 7px; font-weight: 600; margin-left: 0.5px; opacity: 0.85; }
+.centre[data-long] { font-size: 9px; letter-spacing: -0.04em; }
+.centre[data-long]::after { font-size: 6px; }
 .node[data-centre] .disc ha-icon, .node:not([data-centre]) .centre { display: none; }
 .ntext { min-width: 0; display: flex; flex-direction: column; }
 .nlab { font-size: 9.5px; font-weight: 600; line-height: 12px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.78; }

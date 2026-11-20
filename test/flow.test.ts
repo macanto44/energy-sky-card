@@ -313,9 +313,14 @@ describe('the expandable card', () => {
         expect(value.textContent).toBe(`-1,8${nb}kW`);
         expect($('[data-node="battery"] .centre').textContent).toBe('78');
         expect($('[data-node="battery"]').hasAttribute('data-centre')).toBe(true);
+        // A small « % » after the number (CSS), a smaller size for 100
+        expect(CARD_CSS).toMatch(/\.centre:not\(:empty\)::after \{ content: '%'; font-size: 7px/);
+        expect($('[data-node="battery"] .centre').hasAttribute('data-long')).toBe(false);
         expect($('[data-wire="sg"]').getAttribute('data-level')).toBe('3');
         expect($('[data-wire="sh"]').getAttribute('data-level')).toBe('2');
         expect($('[data-wire="gh"]').getAttribute('data-level')).toBe('0');
+        card.hass = makeHass({ ...DAY, [PV]: 3200, [GRID]: 250, [BATT]: 300, [SOC]: 100 });
+        expect($('[data-node="battery"] .centre').hasAttribute('data-long')).toBe(true);
         card.hass = makeHass({ ...DAY, [PV]: 3200, [GRID]: 250, [BATT]: 300, [SOC]: 78 });
         expect($('[data-node="grid"] .nval')).toBe(value);
         expect(value.textContent).toBe(`250${nb}W`);
