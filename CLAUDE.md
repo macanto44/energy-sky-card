@@ -4,7 +4,7 @@ Map of the code for Claude Code and anyone working here.
 
 ## The project
 
-Energy Sky Card is a Home Assistant dashboard card (Marketplace / HACS category "Dashboard", `plugin`) that shows solar production, battery and grid on a background carrying information: the EDF Tempo colour (or the weather, or one colour: `background`) by day, a starry sky by night. Specification: `BRIEF-energy-sky-card.md` (kept local, not committed; the source of truth, in French).
+Energy Sky Card is a Home Assistant dashboard card (Marketplace / HACS category "Dashboard", `plugin`) that shows solar production, battery and grid on a background carrying information, chosen by `background`: the weather, one colour, or the day's tariff colour (EDF Tempo's, or any tariff sensor's) by day, a starry sky by night. Tempo is one sky among three, not the card's premise: keep it that way in public texts. Specification: `BRIEF-energy-sky-card.md` (kept local, not committed; the source of truth, in French).
 
 ## Commands
 
