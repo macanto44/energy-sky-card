@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { canComputeSelfSufficiency, energyMeters, meterIds, nextRefreshIn, selfSufficiency, todaysChanges, SELF_SUFFICIENCY_REFRESH_MS } from '../src/selfsufficiency';
 import { buildView, configuredCells } from '../src/model';
 import { validateConfig } from '../src/energy-sky-card';
-import { editorSchema, editorLabel } from '../src/energy-sky-card-editor';
+import { editorSchema, editorLabel, schemaLeaves } from '../src/energy-sky-card-editor';
 import { actionsOf, makeHass, mountCard as mount, nb, tap } from './helpers';
 import type { EnergyPrefs } from '../src/stub';
 import type { EnergySkyCardConfig, HomeAssistant } from '../src/types';
@@ -109,7 +109,7 @@ describe('the cell', () => {
 
 describe('the editor', () => {
     const kinds = (energy: boolean, data: Record<string, unknown> = {}) => {
-        const cells = editorSchema('fr', data, energy).find(b => b.title === 'Cases')!.schema!;
+        const cells = schemaLeaves(editorSchema('fr', data, energy).find(b => b.title === 'Cases')!.schema!);
         return ((cells[0].selector as { select: { options: { value: string }[] } }).select.options).map(o => o.value);
     };
 

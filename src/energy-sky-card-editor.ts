@@ -5,7 +5,7 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, entityList, isBuiltinObject, isCustom } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, DEFAULT_ESTIMATE_AVERAGE, DEFAULT_OUTAGE_STATES, METRIC_ICONS, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, entityList, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
 import { energyPrefs } from './stub';
 import { canComputeSelfSufficiency, energyMeters } from './selfsufficiency';
@@ -50,6 +50,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         capacity: 'Capacité (kWh)', max_soc: 'Charge visée (%)', reserve_soc: 'Réserve (%)', estimate_charge: 'Estimation en charge', estimate_discharge: 'Estimation en décharge', estimate_time: 'Heure (14:20)', estimate_duration: 'Durée (2 h 10)', estimate_off: 'Aucune', estimate_with_temperature: 'Avec la température', estimate_replace: 'L\'estimation remplace la température', estimate_both: 'Les deux', estimate_flow: 'Estimation dans le flux',
         consumer_soc_entity: 'Charge (%, facultatif)', consumer_always_show: 'Toujours dans le flux',
         sensors: 'Capteurs de puissance', sensors_single: 'Un capteur (+ / −)', sensors_split_grid: 'Deux capteurs : achat et vente', sensors_split_battery: 'Deux capteurs : charge et décharge', import_entity: 'Achat (W)', export_entity: 'Vente (W)', charge_entity: 'Puissance de charge (W)', discharge_entity: 'Puissance de décharge (W)',
+        fine: 'Réglages fins', autonomy: 'Autonomie', grid_more: 'Tension et coupures', flow_colors: 'Couleurs du flux', cell_kind: 'Contenu',
+        estimate_power: 'Puissance prise en compte', estimate_power_average: 'Moyenne mobile', estimate_power_instant: 'Instantanée', estimate_average: 'Durée de la moyenne',
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
@@ -76,6 +78,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         capacity: 'Capacity (kWh)', max_soc: 'Target charge (%)', reserve_soc: 'Reserve (%)', estimate_charge: 'Estimate while charging', estimate_discharge: 'Estimate while discharging', estimate_time: 'Time (14:20)', estimate_duration: 'Duration (2 h 10)', estimate_off: 'None', estimate_with_temperature: 'With the temperature', estimate_replace: 'The estimate replaces the temperature', estimate_both: 'Both', estimate_flow: 'Estimate in the flow',
         consumer_soc_entity: 'Charge (%, optional)', consumer_always_show: 'Always in the flow',
         sensors: 'Power sensors', sensors_single: 'One sensor (+ / −)', sensors_split_grid: 'Two sensors: import and export', sensors_split_battery: 'Two sensors: charge and discharge', import_entity: 'Import (W)', export_entity: 'Export (W)', charge_entity: 'Charging power (W)', discharge_entity: 'Discharging power (W)',
+        fine: 'Fine tuning', autonomy: 'Time to full / empty', grid_more: 'Voltage and outages', flow_colors: 'Flow colours', cell_kind: 'Content',
+        estimate_power: 'Power used', estimate_power_average: 'Moving average', estimate_power_instant: 'Instant', estimate_average: 'Averaged over',
         loading: 'Loading the editor…',
     },
     de: {
@@ -102,6 +106,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         capacity: 'Kapazität (kWh)', max_soc: 'Ziel-Ladung (%)', reserve_soc: 'Reserve (%)', estimate_charge: 'Schätzung beim Laden', estimate_discharge: 'Schätzung beim Entladen', estimate_time: 'Uhrzeit (14:20)', estimate_duration: 'Dauer (2 h 10)', estimate_off: 'Keine', estimate_with_temperature: 'Mit der Temperatur', estimate_replace: 'Die Schätzung ersetzt die Temperatur', estimate_both: 'Beides', estimate_flow: 'Schätzung im Fluss',
         consumer_soc_entity: 'Ladung (%, optional)', consumer_always_show: 'Immer im Fluss',
         sensors: 'Leistungssensoren', sensors_single: 'Ein Sensor (+ / −)', sensors_split_grid: 'Zwei Sensoren: Bezug und Einspeisung', sensors_split_battery: 'Zwei Sensoren: Laden und Entladen', import_entity: 'Bezug (W)', export_entity: 'Einspeisung (W)', charge_entity: 'Ladeleistung (W)', discharge_entity: 'Entladeleistung (W)',
+        fine: 'Feineinstellungen', autonomy: 'Restlaufzeit', grid_more: 'Spannung und Ausfälle', flow_colors: 'Farben des Flusses', cell_kind: 'Inhalt',
+        estimate_power: 'Verwendete Leistung', estimate_power_average: 'Gleitender Mittelwert', estimate_power_instant: 'Momentanwert', estimate_average: 'Mittelungsdauer',
         loading: 'Editor wird geladen…',
     },
     es: {
@@ -128,6 +134,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         capacity: 'Capacidad (kWh)', max_soc: 'Carga objetivo (%)', reserve_soc: 'Reserva (%)', estimate_charge: 'Estimación al cargar', estimate_discharge: 'Estimación al descargar', estimate_time: 'Hora (14:20)', estimate_duration: 'Duración (2 h 10)', estimate_off: 'Ninguna', estimate_with_temperature: 'Con la temperatura', estimate_replace: 'La estimación sustituye a la temperatura', estimate_both: 'Las dos', estimate_flow: 'Estimación en el flujo',
         consumer_soc_entity: 'Carga (%, opcional)', consumer_always_show: 'Siempre en el flujo',
         sensors: 'Sensores de potencia', sensors_single: 'Un sensor (+ / −)', sensors_split_grid: 'Dos sensores: compra y venta', sensors_split_battery: 'Dos sensores: carga y descarga', import_entity: 'Compra (W)', export_entity: 'Venta (W)', charge_entity: 'Potencia de carga (W)', discharge_entity: 'Potencia de descarga (W)',
+        fine: 'Ajustes finos', autonomy: 'Autonomía', grid_more: 'Tensión y cortes', flow_colors: 'Colores del flujo', cell_kind: 'Contenido',
+        estimate_power: 'Potencia usada', estimate_power_average: 'Media móvil', estimate_power_instant: 'Instantánea', estimate_average: 'Duración de la media',
         loading: 'Cargando el editor…',
     },
     it: {
@@ -154,6 +162,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         capacity: 'Capacità (kWh)', max_soc: 'Carica obiettivo (%)', reserve_soc: 'Riserva (%)', estimate_charge: 'Stima in carica', estimate_discharge: 'Stima in scarica', estimate_time: 'Ora (14:20)', estimate_duration: 'Durata (2 h 10)', estimate_off: 'Nessuna', estimate_with_temperature: 'Con la temperatura', estimate_replace: 'La stima sostituisce la temperatura', estimate_both: 'Entrambe', estimate_flow: 'Stima nel flusso',
         consumer_soc_entity: 'Carica (%, facoltativa)', consumer_always_show: 'Sempre nel flusso',
         sensors: 'Sensori di potenza', sensors_single: 'Un sensore (+ / −)', sensors_split_grid: 'Due sensori: prelievo e immissione', sensors_split_battery: 'Due sensori: carica e scarica', import_entity: 'Prelievo (W)', export_entity: 'Immissione (W)', charge_entity: 'Potenza di carica (W)', discharge_entity: 'Potenza di scarica (W)',
+        fine: 'Regolazioni fini', autonomy: 'Autonomia', grid_more: 'Tensione e blackout', flow_colors: 'Colori del flusso', cell_kind: 'Contenuto',
+        estimate_power: 'Potenza usata', estimate_power_average: 'Media mobile', estimate_power_instant: 'Istantanea', estimate_average: 'Durata della media',
         loading: 'Caricamento dell\'editor…',
     },
     nl: {
@@ -180,6 +190,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
         capacity: 'Capaciteit (kWh)', max_soc: 'Doellading (%)', reserve_soc: 'Reserve (%)', estimate_charge: 'Schatting bij laden', estimate_discharge: 'Schatting bij ontladen', estimate_time: 'Tijd (14:20)', estimate_duration: 'Duur (2 h 10)', estimate_off: 'Geen', estimate_with_temperature: 'Met de temperatuur', estimate_replace: 'De schatting vervangt de temperatuur', estimate_both: 'Beide', estimate_flow: 'Schatting in de stroom',
         consumer_soc_entity: 'Lading (%, optioneel)', consumer_always_show: 'Altijd in de stroom',
         sensors: 'Vermogenssensoren', sensors_single: 'Eén sensor (+ / −)', sensors_split_grid: 'Twee sensoren: afname en teruglevering', sensors_split_battery: 'Twee sensoren: laden en ontladen', import_entity: 'Afname (W)', export_entity: 'Teruglevering (W)', charge_entity: 'Laadvermogen (W)', discharge_entity: 'Ontlaadvermogen (W)',
+        fine: 'Fijnafstelling', autonomy: 'Resterende tijd', grid_more: 'Spanning en storingen', flow_colors: 'Kleuren van de stroom', cell_kind: 'Inhoud',
+        estimate_power: 'Gebruikt vermogen', estimate_power_average: 'Voortschrijdend gemiddelde', estimate_power_instant: 'Momentaan', estimate_average: 'Middelingsduur',
         loading: 'Editor laden…',
     },
 };
@@ -191,11 +203,13 @@ export function editorLabel(lang: Lang, key: string): string {
     // An appliance's slot: its entity is labelled with its number, the rest like a cell's
     const consumer = /^consumer_(\d)_(entity|name|icon|tap_action|soc_entity|always_show)$/.exec(key);
     if (consumer) {
-        if (consumer[2] === 'entity') return LABELS[lang].consumer.replace('{n}', consumer[1]);
+        // Inside its section, titled with its name: its sensor is its power
+        if (consumer[2] === 'entity') return LABELS[lang].power_entity;
         return LABELS[lang][consumer[2] === 'soc_entity' || consumer[2] === 'always_show' ? `consumer_${consumer[2]}` : `cell_${consumer[2]}`];
     }
     const slot = /^cell_(\d)(?:_(entity|name|icon|tap_action))?$/.exec(key);
-    if (slot) return slot[2] ? LABELS[lang][`cell_${slot[2]}`] : LABELS[lang].cell.replace('{n}', slot[1]);
+    // The cell's choice, inside its section titled « Cell n · … »: what it shows
+    if (slot) return slot[2] ? LABELS[lang][`cell_${slot[2]}`] : LABELS[lang].cell_kind;
     return LABELS[lang][key] ?? key;
 }
 
@@ -217,6 +231,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_soc_entity: 'Une voiture, par exemple : sa charge remplace la part de la maison dans l\'anneau, en vert.', consumer_always_show: 'Reste affiché sous le seuil d\'affichage (une voiture branchée qui ne charge pas).',
         capacity: 'Active l\'estimation : l\'heure à laquelle la batterie sera pleine, le temps avant la réserve. Plusieurs batteries : leur capacité totale (ou une par batterie en YAML).',
         soc_entity: 'Plusieurs batteries : une entité par batterie ; la carte affiche leur charge moyenne et additionne leurs puissances.', import_entity: 'Deux capteurs positifs ; s\'il en manque un, il compte pour 0.', charge_entity: 'Deux capteurs positifs ; s\'il en manque un, il compte pour 0.',
+        estimate_power: 'Instantanée : la puissance du moment, réagit vite mais saute à chaque nuage. Moyenne mobile : plus stable ; à l\'ouverture, la carte la remplit avec l\'historique de Home Assistant. Vaut pour la charge comme pour la décharge.',
+        estimate_average: '5 min si vide. 60 min lisse les nuages et les appareils qui démarrent.',
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
@@ -234,6 +250,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_soc_entity: 'A car, say: its charge takes the place of the home\'s share in the ring, in green.', consumer_always_show: 'Stays shown below the display threshold (a plugged-in car that isn\'t charging).',
         capacity: 'Turns the estimate on: when the battery will be full, how long until the reserve. Several batteries: their total capacity (or one each in YAML).',
         soc_entity: 'Several batteries: one entity each; the card shows their average charge and adds up their powers.', import_entity: 'Two positive sensors; a missing one counts as 0.', charge_entity: 'Two positive sensors; a missing one counts as 0.',
+        estimate_power: 'Instant: the power right now, quick but jumps with every cloud. Moving average: steadier; on opening, the card fills it from Home Assistant\'s history. Applies to charging and discharging alike.',
+        estimate_average: '5 min when empty. 60 min smooths out clouds and appliances starting up.',
     },
     de: {
         soc_reached_entities: 'Ein/Aus-Entitäten (input_boolean, binary_sensor, switch), die auf „on“ gehen, wenn die Batterie die gewünschte Ladung erreicht hat, z. B. ein input_boolean, das eine Automatisierung setzt. Ist eine davon „on“, zeigt das Feld Batterie „· SOC erreicht“; sonst nichts.',
@@ -251,6 +269,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_soc_entity: 'Ein Auto zum Beispiel: seine Ladung ersetzt im Ring den Anteil am Haus, in Grün.', consumer_always_show: 'Bleibt unter der Anzeigeschwelle sichtbar (ein angestecktes Auto, das nicht lädt).',
         capacity: 'Schaltet die Schätzung ein: wann die Batterie voll ist, wie lange bis zur Reserve. Mehrere Batterien: die Gesamtkapazität (oder je eine in YAML).',
         soc_entity: 'Mehrere Batterien: je eine Entität; die Karte zeigt die mittlere Ladung und addiert die Leistungen.', import_entity: 'Zwei positive Sensoren; ein fehlender zählt als 0.', charge_entity: 'Zwei positive Sensoren; ein fehlender zählt als 0.',
+        estimate_power: 'Momentanwert: die aktuelle Leistung, reagiert schnell, springt aber bei jeder Wolke. Gleitender Mittelwert: ruhiger; beim Öffnen füllt die Karte ihn aus dem Verlauf von Home Assistant. Gilt für Laden und Entladen.',
+        estimate_average: 'Leer: 5 min. 60 min glättet Wolken und anlaufende Geräte.',
     },
     es: {
         soc_reached_entities: 'Entidades on / off (input_boolean, binary_sensor, switch) que pasan a «on» cuando la batería alcanza la carga que buscas, por ejemplo un input_boolean activado por una automatización. Si alguna está en «on», la casilla Batería muestra «· SOC alcanzado»; si no, nada.',
@@ -268,6 +288,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_soc_entity: 'Un coche, por ejemplo: su carga sustituye a la parte de la casa en el anillo, en verde.', consumer_always_show: 'Sigue visible por debajo del umbral (un coche enchufado que no carga).',
         capacity: 'Activa la estimación: cuándo estará llena la batería, cuánto falta para la reserva. Varias baterías: su capacidad total (o una por batería en YAML).',
         soc_entity: 'Varias baterías: una entidad por batería; la tarjeta muestra su carga media y suma sus potencias.', import_entity: 'Dos sensores positivos; si falta uno, cuenta como 0.', charge_entity: 'Dos sensores positivos; si falta uno, cuenta como 0.',
+        estimate_power: 'Instantánea: la potencia del momento, rápida pero salta con cada nube. Media móvil: más estable; al abrir, la tarjeta la completa con el historial de Home Assistant. Vale para la carga y la descarga.',
+        estimate_average: '5 min si está vacío. 60 min suaviza las nubes y los aparatos que arrancan.',
     },
     it: {
         soc_reached_entities: 'Entità on / off (input_boolean, binary_sensor, switch) che passano a «on» quando la batteria ha raggiunto la carica desiderata, ad esempio un input_boolean attivato da un\'automazione. Se una è «on», la casella Batteria mostra «· SOC raggiunto»; altrimenti niente.',
@@ -285,6 +307,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_soc_entity: 'Un\'auto, ad esempio: la sua carica sostituisce la quota della casa nell\'anello, in verde.', consumer_always_show: 'Resta visibile sotto la soglia (un\'auto collegata che non sta caricando).',
         capacity: 'Attiva la stima: quando la batteria sarà piena, quanto manca alla riserva. Più batterie: la capacità totale (o una per batteria in YAML).',
         soc_entity: 'Più batterie: un\'entità per batteria; la scheda mostra la carica media e somma le potenze.', import_entity: 'Due sensori positivi; se ne manca uno, conta 0.', charge_entity: 'Due sensori positivi; se ne manca uno, conta 0.',
+        estimate_power: 'Istantanea: la potenza del momento, reattiva ma salta a ogni nuvola. Media mobile: più stabile; all\'apertura la scheda la riempie con la cronologia di Home Assistant. Vale per la carica e la scarica.',
+        estimate_average: '5 min se vuoto. 60 min attenua le nuvole e gli apparecchi che si avviano.',
     },
     nl: {
         soc_reached_entities: 'Aan/uit-entiteiten (input_boolean, binary_sensor, switch) die „on” worden zodra de batterij de gewenste lading heeft bereikt, bijvoorbeeld een input_boolean die een automatisering aanzet. Staat er één op „on”, dan toont het vak Batterij „· SOC bereikt”; anders niets.',
@@ -302,6 +326,8 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_soc_entity: 'Een auto bijvoorbeeld: de lading vervangt het aandeel van het huis in de ring, in het groen.', consumer_always_show: 'Blijft zichtbaar onder de drempel (een aangesloten auto die niet laadt).',
         capacity: 'Zet de schatting aan: wanneer de batterij vol is, hoe lang tot de reserve. Meerdere batterijen: de totale capaciteit (of één per batterij in YAML).',
         soc_entity: 'Meerdere batterijen: één entiteit per batterij; de kaart toont de gemiddelde lading en telt de vermogens op.', import_entity: 'Twee positieve sensoren; een ontbrekende telt als 0.', charge_entity: 'Twee positieve sensoren; een ontbrekende telt als 0.',
+        estimate_power: 'Momentaan: het vermogen van nu, snel maar springt bij elke wolk. Voortschrijdend gemiddelde: rustiger; bij het openen vult de kaart het met de geschiedenis van Home Assistant. Geldt voor laden en ontladen.',
+        estimate_average: 'Leeg: 5 min. 60 min vlakt wolken en opstartende apparaten af.',
     },
 };
 
@@ -319,23 +345,59 @@ export function editorHelper(lang: Lang, key: string, block?: string): string | 
 
 const sensor = (extra: Record<string, unknown> = {}) => ({ entity: { domain: 'sensor', ...extra } });
 
+/** A field's entity name, for a section's title (the editor passes Home Assistant's friendly names) */
+export type EntityName = (id: string) => string | undefined;
+
+/** A folded section inside a block: its fields share the block's values (flatten) */
+const section = (title: string, icon: string, schema: SchemaItem[]): SchemaItem => ({ name: '', type: 'expandable', flatten: true, title, icon, schema });
+
+/** The fields under a schema, the folded sections' opened (for the tests and blockOf) */
+export function schemaLeaves(items: SchemaItem[]): SchemaItem[] {
+    return items.flatMap(item => item.type === 'expandable' && item.flatten ? schemaLeaves(item.schema ?? []) : [item]);
+}
+
+/** The named block (battery, grid) a field sits in, through the folded sections; undefined at the top */
+export function blockOfField(schema: SchemaItem[], field: SchemaItem): string | undefined {
+    const walk = (items: SchemaItem[], block: string | undefined): string | undefined | null => {
+        for (const item of items) {
+            if (item === field) return block;
+            if (item.schema) {
+                const found = walk(item.schema, item.name && !item.flatten ? item.name : block);
+                if (found !== null) return found;
+            }
+        }
+        return null;
+    };
+    return walk(schema, undefined) ?? undefined;
+}
+
 const CELL_CHOICES = ['none', ...CELL_KINDS, 'custom'] as const;
 
-/** The slots' fields: a choice per cell, and entity, name and icon under a free one */
-function cellFields(lang: Lang, data: Record<string, unknown>, energy: boolean): SchemaItem[] {
+/** The cells: a folded section each, its title saying what it shows; inside, the choice, a free cell's entity, name and icon, the tap */
+function cellFields(lang: Lang, data: Record<string, unknown>, energy: boolean, names: EntityName): SchemaItem[] {
+    const t = (key: string) => editorLabel(lang, key);
     // Today's self-sufficiency needs the Energy dashboard's grid meter (kept when a cell already shows it)
     const offered = energy || Array.from({ length: MAX_CELLS }, (_, i) => data[`cell_${i + 1}`]).includes('self_sufficiency');
-    const options = CELL_CHOICES.filter(value => value !== 'self_sufficiency' || offered).map(value => ({ value, label: editorLabel(lang, `kind_${value}`) }));
-    return Array.from({ length: MAX_CELLS }, (_, i) => i + 1).flatMap(n => [
-        { name: `cell_${n}`, selector: { select: { mode: 'dropdown', options } } },
-        ...(data[`cell_${n}`] === 'custom' ? [
-            { name: `cell_${n}_entity`, selector: { entity: {} } },
-            { name: `cell_${n}_name`, selector: { text: {} } },
-            { name: `cell_${n}_icon`, selector: { icon: {} } },
-        ] : []),
-        // Home Assistant's action picker: more-info, navigate, url, perform-action, none…
-        ...(data[`cell_${n}`] && data[`cell_${n}`] !== 'none' ? [{ name: `cell_${n}_tap_action`, selector: { ui_action: {} } }] : []),
-    ]);
+    const options = CELL_CHOICES.filter(value => value !== 'self_sufficiency' || offered).map(value => ({ value, label: t(`kind_${value}`) }));
+    return Array.from({ length: MAX_CELLS }, (_, i) => i + 1).map(n => {
+        const kind = typeof data[`cell_${n}`] === 'string' ? data[`cell_${n}`] as string : 'none';
+        const entity = data[`cell_${n}_entity`];
+        const own = kind === 'custom'
+            ? (data[`cell_${n}_name`] as string | undefined) || (typeof entity === 'string' && entity ? names(entity) ?? entity : t('kind_custom'))
+            : t(`kind_${kind}`);
+        const icon = kind === 'custom' ? (data[`cell_${n}_icon`] as string | undefined) || CUSTOM_CELL_ICON
+            : (METRIC_ICONS as Record<string, string>)[kind] ?? 'mdi:checkbox-blank-outline';
+        return section(`${LABELS[lang].cell.replace('{n}', String(n))} · ${own}`, icon, [
+            { name: `cell_${n}`, selector: { select: { mode: 'dropdown', options } } },
+            ...(kind === 'custom' ? [
+                { name: `cell_${n}_entity`, selector: { entity: {} } },
+                { name: `cell_${n}_name`, selector: { text: {} } },
+                { name: `cell_${n}_icon`, selector: { icon: {} } },
+            ] : []),
+            // Home Assistant's action picker: more-info, navigate, url, perform-action, none…
+            ...(kind !== 'none' ? [{ name: `cell_${n}_tap_action`, selector: { ui_action: {} } }] : []),
+        ]);
+    });
 }
 
 /** Whether a block's power comes from two sensors (the form's choice) */
@@ -349,6 +411,7 @@ const battery = (data: Record<string, unknown>): Record<string, unknown> => (dat
 const ESTIMATE_FIELDS: [string, keyof BatteryEstimateConfig, unknown][] = [
     ['estimate_charge', 'charge', 'time'], ['estimate_discharge', 'discharge', 'duration'],
     ['estimate_with_temperature', 'with_temperature', 'replace'], ['estimate_flow', 'flow', true],
+    ['estimate_average', 'average', DEFAULT_ESTIMATE_AVERAGE],
 ];
 
 /** The battery's entity options, as lists for the form's multiple selectors */
@@ -356,29 +419,41 @@ const BATTERY_LISTS = ['soc_entity', 'power_entity', 'charge_entity', 'discharge
 /** The two-sensor fields of each block, and the one-sensor ones they replace */
 const SPLIT_FIELDS = { grid: [['import_entity', 'export_entity'], ['power_entity', 'invert']], battery: [['charge_entity', 'discharge_entity'], ['power_entity', 'invert']] } as const;
 
-/** The form; data (the form's current values) decides which free-cell fields show */
-export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, energy = false): SchemaItem[] {
+const watts = (max = 1000) => ({ number: { min: 0, max, step: 1, mode: 'box', unit_of_measurement: 'W' } });
+const percent = { number: { min: 0, max: 100, step: 1, mode: 'box', unit_of_measurement: '%' } };
+
+/**
+ * The form, in blocks; in each, what nearly everyone sets on top and the
+ * rest in folded sections (« Fine tuning », « Time to full / empty »…).
+ * data (the form's current values) decides which fields show; names gives
+ * entities' friendly names for the sections' titles.
+ */
+export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, energy = false, names: EntityName = () => undefined): SchemaItem[] {
     const t = (key: string) => editorLabel(lang, key);
     const heroOptions = (['production', 'consumption', 'battery'] as const).map(value => ({ value, label: t(`hero_${value}`) }));
-    const estimateChoice = (name: string, values: string[]): SchemaItem => ({
-        name, selector: { select: { mode: 'dropdown', options: values.map(value => ({ value, label: t(`estimate_${value}`) })) } },
+    const choice = (name: string, values: readonly string[], mode = 'dropdown', prefix = name): SchemaItem => ({
+        name, selector: { select: { mode, options: values.map(value => ({ value, label: t(`${prefix}_${value}`) })) } },
     });
     // One signed power sensor, or two positive ones (import / export, charge / discharge)
     const sensorsChoice = (block: 'grid' | 'battery'): SchemaItem => ({
         name: 'sensors',
         selector: { select: { mode: 'list', options: [{ value: 'single', label: t('sensors_single') }, { value: 'split', label: t(`sensors_split_${block}`) }] } },
     });
+    const flow = data.flow === 'tap' || data.flow === 'always';
+    const b = battery(data);
     return [
         {
             name: '', type: 'expandable', flatten: true, expanded: true, title: t('production'), icon: 'mdi:solar-power-variant-outline',
             schema: [
                 { name: 'production_entity', required: true, selector: sensor({ device_class: 'power', multiple: true }) },
-                { name: 'production_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
-                { name: 'production_max', selector: { number: { min: 100, max: 100000, step: 100, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'daily_production_entities', selector: sensor({ multiple: true }) },
                 { name: 'forecast_tomorrow_entity', selector: sensor() },
-                { name: 'smoothing', selector: { number: { min: 0, max: 300, step: 1, mode: 'box', unit_of_measurement: 's' } } },
-                { name: 'stale_after', selector: { number: { min: 0, max: 1440, step: 1, mode: 'box', unit_of_measurement: 'min' } } },
+                section(t('fine'), 'mdi:tune-variant', [
+                    { name: 'production_threshold', selector: watts() },
+                    { name: 'production_max', selector: { number: { min: 100, max: 100000, step: 100, mode: 'box', unit_of_measurement: 'W' } } },
+                    { name: 'smoothing', selector: { number: { min: 0, max: 300, step: 1, mode: 'box', unit_of_measurement: 's' } } },
+                    { name: 'stale_after', selector: { number: { min: 0, max: 1440, step: 1, mode: 'box', unit_of_measurement: 'min' } } },
+                ]),
             ],
         },
         {
@@ -389,20 +464,26 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, ene
                 ...(split(data, 'battery')
                     ? [{ name: 'charge_entity', selector: sensor({ multiple: true }) }, { name: 'discharge_entity', selector: sensor({ multiple: true }) }]
                     : [{ name: 'power_entity', selector: sensor({ multiple: true }) }]),
-                { name: 'temperature_entity', selector: sensor({ device_class: 'temperature' }) },
-                ...(split(data, 'battery') ? [] : [{ name: 'invert', selector: { boolean: {} } }]),
-                { name: 'power_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
-                { name: 'soc_reached_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
                 // The estimate: a capacity turns it on (a list of them stays YAML-only, kept as it is)
-                ...(Array.isArray(battery(data).capacity) ? [] : [{ name: 'capacity', selector: { number: { min: 0, max: 1000, step: 0.1, mode: 'box', unit_of_measurement: 'kWh' } } }]),
-                ...(battery(data).capacity ? [
-                    { name: 'max_soc', selector: { number: { min: 0, max: 100, step: 1, mode: 'box', unit_of_measurement: '%' } } },
-                    { name: 'reserve_soc', selector: { number: { min: 0, max: 100, step: 1, mode: 'box', unit_of_measurement: '%' } } },
-                    estimateChoice('estimate_charge', ['time', 'duration', 'off']),
-                    estimateChoice('estimate_discharge', ['duration', 'time', 'off']),
-                    estimateChoice('estimate_with_temperature', ['replace', 'both']),
-                    { name: 'estimate_flow', selector: { boolean: {} } },
-                ] : []),
+                section(t('autonomy'), 'mdi:timer-sand', [
+                    ...(Array.isArray(b.capacity) ? [] : [{ name: 'capacity', selector: { number: { min: 0, max: 1000, step: 0.1, mode: 'box', unit_of_measurement: 'kWh' } } }]),
+                    ...(b.capacity ? [
+                        { name: 'max_soc', selector: percent },
+                        { name: 'reserve_soc', selector: percent },
+                        choice('estimate_power', ['average', 'instant'], 'list'),
+                        ...(b.estimate_power === 'instant' ? [] : [{ name: 'estimate_average', selector: { number: { min: 1, max: 1440, step: 1, mode: 'box', unit_of_measurement: 'min' } } }]),
+                        choice('estimate_charge', ['time', 'duration', 'off'], 'dropdown', 'estimate'),
+                        choice('estimate_discharge', ['duration', 'time', 'off'], 'dropdown', 'estimate'),
+                        choice('estimate_with_temperature', ['replace', 'both'], 'dropdown', 'estimate'),
+                        { name: 'estimate_flow', selector: { boolean: {} } },
+                    ] : []),
+                ]),
+                section(t('fine'), 'mdi:tune-variant', [
+                    { name: 'temperature_entity', selector: sensor({ device_class: 'temperature' }) },
+                    ...(split(data, 'battery') ? [] : [{ name: 'invert', selector: { boolean: {} } }]),
+                    { name: 'power_threshold', selector: watts() },
+                    { name: 'soc_reached_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
+                ]),
             ],
         },
         {
@@ -412,37 +493,39 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, ene
                 ...(split(data, 'grid')
                     ? [{ name: 'import_entity', selector: sensor() }, { name: 'export_entity', selector: sensor() }]
                     : [{ name: 'power_entity', selector: sensor() }, { name: 'invert', selector: { boolean: {} } }]),
-                { name: 'voltage_entity', selector: sensor() },
-                { name: 'outage_entity', selector: { entity: {} } },
-                { name: 'outage_states', selector: { select: { multiple: true, custom_value: true, options: DEFAULT_OUTAGE_STATES } } },
+                section(t('grid_more'), 'mdi:flash-alert-outline', [
+                    { name: 'voltage_entity', selector: sensor() },
+                    { name: 'outage_entity', selector: { entity: {} } },
+                    { name: 'outage_states', selector: { select: { multiple: true, custom_value: true, options: DEFAULT_OUTAGE_STATES } } },
+                ]),
             ],
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('display'), icon: 'mdi:page-layout-body',
             schema: [
-                { name: 'layout', selector: { select: { mode: 'list', options: (['standard', 'side'] as const).map(value => ({ value, label: t(`layout_${value}`) })) } } },
+                choice('layout', ['standard', 'side'], 'list'),
+                choice('flow', ['none', 'tap', 'always'], 'list'),
                 { name: 'night_hero', selector: { select: { mode: 'dropdown', options: heroOptions } } },
-                { name: 'flow', selector: { select: { mode: 'list', options: (['none', 'tap', 'always'] as const).map(value => ({ value, label: t(`flow_${value}`) })) } } },
                 // The flow's colours, with a flow (a theme can set them too)
-                ...(data.flow === 'tap' || data.flow === 'always' ? FLOW_COLOR_FIELDS.map(key => ({ name: `flow_color_${key}`, selector: { color_rgb: {} } })) : []),
+                ...(flow ? [section(t('flow_colors'), 'mdi:palette-outline', FLOW_COLOR_FIELDS.map(key => ({ name: `flow_color_${key}`, selector: { color_rgb: {} } })))] : []),
             ],
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('cells'), icon: 'mdi:view-grid-outline',
-            schema: cellFields(lang, data, energy),
+            schema: cellFields(lang, data, energy, names),
         },
         // The home's consumption, and the appliances with a flow
         {
             name: '', type: 'expandable', flatten: true, title: t('consumers'), icon: 'mdi:power-plug-outline',
             schema: [
                 { name: 'consumption_entity', selector: sensor({ device_class: 'power' }) },
-                ...(data.flow === 'tap' || data.flow === 'always' ? consumerFields(data) : []),
+                ...(flow ? consumerFields(lang, data, names) : []),
             ],
         },
         {
             name: '', type: 'expandable', flatten: true, title: t('sky'), icon: 'mdi:weather-partly-cloudy',
             schema: [
-                { name: 'background', selector: { select: { mode: 'list', options: (['tempo', 'solid', 'weather'] as const).map(value => ({ value, label: t(`background_${value}`) })) } } },
+                choice('background', ['tempo', 'solid', 'weather'], 'list'),
                 // The background's own field: the tariff sensor, the colour, or the weather entity
                 ...(data.background === 'solid' ? [{ name: 'background_color', selector: { color_rgb: {} } }]
                     : data.background === 'weather' ? [{ name: 'weather_entity', selector: { entity: { domain: 'weather' } } }]
@@ -462,22 +545,30 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, ene
     ];
 }
 
-
-/** The appliances' slots: an entity each, its name, icon and tap once it has one; a slot shows once the previous one is filled */
-function consumerFields(data: Record<string, unknown>): SchemaItem[] {
-    const fields: SchemaItem[] = [{ name: 'consumer_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } }];
+/**
+ * The appliances: the threshold, then a folded section each, titled with its
+ * name (else its entity's), holding its sensor, name, icon, charge, always
+ * shown and tap; an empty one after the last, to add one.
+ */
+function consumerFields(lang: Lang, data: Record<string, unknown>, names: EntityName): SchemaItem[] {
+    const t = (key: string) => editorLabel(lang, key);
+    const fields: SchemaItem[] = [{ name: 'consumer_threshold', selector: watts() }];
     for (let n = 1; n <= MAX_CONSUMERS; n++) {
         if (n > 1 && !data[`consumer_${n - 1}_entity`]) break;
-        fields.push({ name: `consumer_${n}_entity`, selector: sensor({ device_class: 'power' }) });
-        if (data[`consumer_${n}_entity`]) {
-            fields.push(
+        const entity = data[`consumer_${n}_entity`];
+        const has = typeof entity === 'string' && entity.length > 0;
+        const title = (data[`consumer_${n}_name`] as string | undefined) || (has ? names(entity) ?? entity : t('consumer').replace('{n}', String(n)));
+        const icon = has ? (data[`consumer_${n}_icon`] as string | undefined) || 'mdi:power-plug-outline' : 'mdi:plus-circle-outline';
+        fields.push(section(title, icon, [
+            { name: `consumer_${n}_entity`, selector: sensor({ device_class: 'power' }) },
+            ...(has ? [
                 { name: `consumer_${n}_name`, selector: { text: {} } },
                 { name: `consumer_${n}_icon`, selector: { icon: {} } },
                 { name: `consumer_${n}_soc_entity`, selector: sensor({ device_class: 'battery' }) },
                 { name: `consumer_${n}_always_show`, selector: { boolean: {} } },
                 { name: `consumer_${n}_tap_action`, selector: { ui_action: {} } },
-            );
-        }
+            ] : []),
+        ]));
     }
     return fields;
 }
@@ -597,6 +688,9 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
             sensors: config.battery?.charge_entity || config.battery?.discharge_entity ? 'split' : 'single',
             ...Object.fromEntries(BATTERY_LISTS.map(key => [key, entityList(config.battery?.[key])])),
             ...Object.fromEntries(ESTIMATE_FIELDS.map(([field, key, def]) => [field, config.battery?.estimate?.[key] ?? def])),
+            // The power it reads: the instant one (average: 0), or a moving average over estimate_average minutes
+            estimate_power: config.battery?.estimate?.average === 0 ? 'instant' : 'average',
+            ...(config.battery?.estimate?.average === 0 ? { estimate_average: DEFAULT_ESTIMATE_AVERAGE } : {}),
             estimate: undefined,
         },
         grid: { ...config.grid, sensors: config.grid?.import_entity || config.grid?.export_entity ? 'split' : 'single' },
@@ -651,6 +745,12 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
             if (b.sensors === 'split') for (const key of one) delete b[key];
             else if (b.sensors === 'single') for (const key of two) delete b[key];
             delete b.sensors;
+            // The power the estimate reads: instant is an average over 0 minutes; a moving average needs a length
+            if (block === 'battery') {
+                if (b.estimate_power === 'instant') b.estimate_average = 0;
+                else if (b.estimate_power === 'average' && b.estimate_average === 0) delete b.estimate_average;
+                delete b.estimate_power;
+            }
             // The estimate's choices: written under estimate, only where they aren't the default
             if (block === 'battery' && ESTIMATE_FIELDS.some(([field]) => field in b)) {
                 const estimate: Record<string, unknown> = {};
@@ -770,7 +870,7 @@ export class EnergySkyCardEditor extends HTMLElement {
         }
         this.form.hass = this._hass;
         const data = formData(this.config);
-        this.form.schema = editorSchema(lang, data, this.energy);
+        this.form.schema = editorSchema(lang, data, this.energy, this.names);
         this.form.computeLabel = item => editorLabel(lang, item.name);
         this.form.computeHelper = item => editorHelper(lang, item.name, this.blockOf(item));
         this.form.data = data;
@@ -778,8 +878,14 @@ export class EnergySkyCardEditor extends HTMLElement {
 
     /** The nested block (battery, grid) a field belongs to, from the schema */
     private blockOf(item: SchemaItem): string | undefined {
-        return this.form?.schema?.find(block => block.name && block.schema?.includes(item))?.name;
+        return blockOfField(this.form?.schema ?? [], item);
     }
+
+    /** An entity's friendly name, for the sections' titles */
+    private names: EntityName = id => {
+        const name = this._hass?.states[id]?.attributes.friendly_name;
+        return typeof name === 'string' && name ? name : undefined;
+    };
 
     private onValue(e: CustomEvent): void {
         e.stopPropagation();
@@ -794,7 +900,7 @@ export class EnergySkyCardEditor extends HTMLElement {
                 const chosen = (value[block] as Record<string, unknown> | undefined)?.sensors;
                 if (chosen) data[block] = { ...(data[block] as object), sensors: chosen };
             }
-            this.form.schema = editorSchema(cardLanguage(this._hass), data, this.energy);
+            this.form.schema = editorSchema(cardLanguage(this._hass), data, this.energy, this.names);
             this.form.data = data;
         }
         this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this.config }, bubbles: true, composed: true }));

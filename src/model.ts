@@ -221,8 +221,10 @@ export function batteryCapacity(config: EnergySkyCardConfig): number | undefined
 
 /** The estimate is rounded to this many minutes, and not shown beyond a day */
 export const ESTIMATE_STEP = 10;
-/** Without smoothing, the estimate reads the battery power's average over this long */
-export const ESTIMATE_AVERAGE_MS = 5 * 60_000;
+/** The estimate reads the battery power's moving average over this many minutes, by default (estimate.average; 0: the instant reading) */
+export const DEFAULT_ESTIMATE_AVERAGE = 5;
+/** The window of the estimate's moving average in ms (0: the instant reading) */
+export const estimateAverageMs = (config: EnergySkyCardConfig): number => (config.battery?.estimate?.average ?? DEFAULT_ESTIMATE_AVERAGE) * 60_000;
 const ESTIMATE_MAX = 24 * 60;
 
 /** When the battery will be full, or down to its reserve: the cell's short text and the title's sentence */
@@ -273,7 +275,12 @@ export interface ViewOptions {
 /** The estimate shown with this view's readings (none while the battery's target is reported reached) */
 export function viewEstimate(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, options: ViewOptions = {}): BatteryEstimate | undefined {
     if (socReached(config, hass)) return undefined;
-    return batteryEstimate(config, hass, loc, options.estimatePower ?? batteryPower(config, hass), options.now);
+    const present = batteryPower(config, hass);
+    // An average over a while says nothing about a battery idle now, or going the other way
+    const threshold = config.battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
+    const average = options.estimatePower;
+    if (average !== undefined && (present === undefined || Math.abs(present) <= threshold || Math.sign(present) !== Math.sign(average))) return undefined;
+    return batteryEstimate(config, hass, loc, average ?? present, options.now);
 }
 
 /** Grid power in W, positive when importing (the sensor's sign flipped with grid.invert) */

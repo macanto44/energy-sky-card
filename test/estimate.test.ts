@@ -4,7 +4,7 @@ import { flowView } from '../src/flow';
 import { formatClock, formatDuration } from '../src/format';
 import { numberLocale, timeLocale } from '../src/localize';
 import { validateConfig } from '../src/energy-sky-card';
-import { editorSchema, formData, nextConfig } from '../src/energy-sky-card-editor';
+import { editorSchema, formData, nextConfig, schemaLeaves } from '../src/energy-sky-card-editor';
 import { entity, makeHass, mountCard as mount, nb } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -76,6 +76,13 @@ describe('the estimate', () => {
     it('uses the power it is given (the card\'s average) over the reading', () => {
         expect(batteryEstimate(with_({ estimate: { charge: 'duration' } }), hass(78, 2000), loc, 900, NOON)?.text).toBe(`2${nb}h${nb}30`);
     });
+
+    it('says nothing when the battery is idle now, or going the other way than its average', () => {
+        const config = with_({ estimate: { charge: 'duration' } });
+        expect(viewEstimate(config, hass(78, 2000), loc, { estimatePower: 900, now: NOON })?.text).toBe(`2${nb}h${nb}30`);
+        expect(viewEstimate(config, hass(78, 0), loc, { estimatePower: 900, now: NOON })).toBeUndefined();
+        expect(viewEstimate(config, hass(78, -500), loc, { estimatePower: 900, now: NOON })).toBeUndefined();
+    });
 });
 
 describe('in the battery cell', () => {
@@ -126,6 +133,34 @@ describe('in the card', () => {
         expect(card.shadowRoot!.querySelector('[data-metric="battery"]')?.getAttribute('title')).toBe(`Pleine dans 2${nb}h${nb}30`);
     });
 
+    it('reads the instant power with average: 0, smoothing or not', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOON);
+        const card = mount({ ...with_({ estimate: { charge: 'duration', average: 0 } }), smoothing: 60 }, hass(78, 900));
+        vi.setSystemTime(NOON + 60_000);
+        card.hass = hass(78, 2000);
+        // 22 % of 10 kWh at 2 000 W: 66 min → 1 h 10
+        expect(card.shadowRoot!.querySelector('[data-metric="battery"] .value-main')?.textContent).toBe(`78${nb}%${nb}↑ · 1${nb}h${nb}10`);
+    });
+
+    it('fills a long average from Home Assistant\'s history, once', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(NOON);
+        const asked: Record<string, unknown>[] = [];
+        const s = (n: number) => NOON / 1000 - n * 60;
+        // 2 000 W for the last hour but its last 10 minutes, 0 W since: about 1 667 W
+        const h = { ...hass(78, 2000), callWS: async (msg: Record<string, unknown>) => {
+            asked.push(msg);
+            return { 'sensor.bat': [{ s: '2000', lu: s(70) }, { s: 'unavailable', lu: s(30) }, { s: '0', lu: s(10) }] };
+        } };
+        const card = mount(with_({ estimate: { charge: 'duration', average: 60 } }), h as never);
+        await vi.waitFor(() => expect(card.shadowRoot!.querySelector('[data-metric="battery"] .value-main')?.textContent).toBe(`78${nb}%${nb}↑ · 1${nb}h${nb}20`));
+        expect(asked).toHaveLength(1);
+        expect(asked[0]).toMatchObject({ type: 'history/history_during_period', entity_ids: ['sensor.bat'], start_time: new Date(NOON - 3600_000).toISOString(), minimal_response: true, no_attributes: true });
+        card.hass = h as never;
+        expect(asked).toHaveLength(1);
+    });
+
     it('shows the line and the title on the battery node', () => {
         vi.useFakeTimers();
         vi.setSystemTime(NOON);
@@ -138,16 +173,32 @@ describe('in the card', () => {
 });
 
 describe('settings', () => {
+    it('choose the instant power or a moving average, 5 minutes by default', () => {
+        const names = (data: Record<string, unknown>) => schemaLeaves(editorSchema('fr', data).find(b => b.name === 'battery')!.schema!).map(f => f.name);
+        expect(names({ battery: { capacity: 10 } })).toEqual(expect.arrayContaining(['estimate_power', 'estimate_average']));
+        expect(names({ battery: { capacity: 10, estimate_power: 'instant' } })).not.toContain('estimate_average');
+        expect(formData(CONFIG).battery).toMatchObject({ estimate_power: 'average', estimate_average: 5 });
+        const instant = with_({ estimate: { average: 0 } });
+        expect(formData(instant).battery).toMatchObject({ estimate_power: 'instant', estimate_average: 5 });
+        const data = (config: EnergySkyCardConfig, battery: Record<string, unknown>) => ({ ...formData(config), battery: { ...(formData(config).battery as object), ...battery } });
+        expect(nextConfig(CONFIG, data(CONFIG, { estimate_power: 'instant' })).battery?.estimate).toEqual({ average: 0 });
+        expect(nextConfig(CONFIG, data(CONFIG, { estimate_average: 60 })).battery?.estimate).toEqual({ average: 60 });
+        expect(nextConfig(instant, data(instant, { estimate_power: 'average' })).battery?.estimate).toBeUndefined();
+        expect(nextConfig(instant, formData(instant)).battery).toEqual(instant.battery);
+    });
+
     it('validates them', () => {
         expect(() => validateConfig(with_({ max_soc: 95, reserve_soc: 10, estimate: { charge: 'duration', discharge: 'off', with_temperature: 'both', flow: false } }))).not.toThrow();
         expect(() => validateConfig(with_({ max_soc: 120 }))).toThrow(/battery.max_soc must be a percentage/);
         expect(() => validateConfig(with_({ estimate: { charge: 'soon' } }))).toThrow(/battery.estimate.charge: time, duration or off/);
         expect(() => validateConfig(with_({ estimate: 'time' }))).toThrow(/battery.estimate must hold/);
         expect(() => validateConfig(with_({ estimate: { flow: 'yes' } }))).toThrow(/battery.estimate.flow must be true or false/);
+        expect(() => validateConfig(with_({ estimate: { average: 60 } }))).not.toThrow();
+        expect(() => validateConfig(with_({ estimate: { average: -1 } }))).toThrow(/battery.estimate.average must be a number of minutes/);
     });
 
     it('shows them in the editor once there is a capacity, and writes only what differs from the default', () => {
-        const names = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.name === 'battery')!.schema!.map(f => f.name);
+        const names = (data: Record<string, unknown>) => schemaLeaves(editorSchema('fr', data).find(b => b.name === 'battery')!.schema!).map(f => f.name);
         expect(names({})).not.toContain('estimate_charge');
         expect(names({ battery: { capacity: 10 } })).toEqual(expect.arrayContaining(['max_soc', 'reserve_soc', 'estimate_charge', 'estimate_discharge', 'estimate_with_temperature', 'estimate_flow']));
         // A capacity per battery stays YAML-only

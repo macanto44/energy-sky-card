@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EDITOR_HELPERS, EDITOR_LABELS, EnergySkyCardEditor, editorHelper, editorLabel, editorSchema, formData, nextConfig, type SchemaItem } from '../src/energy-sky-card-editor';
+import { EDITOR_HELPERS, EDITOR_LABELS, EnergySkyCardEditor, blockOfField, editorHelper, editorLabel, editorSchema, formData, nextConfig, schemaLeaves, type SchemaItem } from '../src/energy-sky-card-editor';
 import { CARD_EDITOR_NAME } from '../src/constants';
 import { CARD_STRINGS, LANGUAGES } from '../src/localize';
 import { FULL_CONFIG, makeHass } from './helpers';
@@ -31,7 +31,7 @@ function mount(config: EnergySkyCardConfig = MINIMAL, language = 'fr') {
 }
 
 /** Every field name in the schema, with its block */
-const fields = (schema: SchemaItem[]) => schema.flatMap(block => (block.schema ?? []).map(f => `${block.name || '.'}/${f.name}`));
+const fields = (schema: SchemaItem[]) => schema.flatMap(block => schemaLeaves(block.schema ?? []).map(f => `${block.name || '.'}/${f.name}`));
 
 describe('schema', () => {
     it('has the blocks of the brief, in order', () => {
@@ -41,11 +41,11 @@ describe('schema', () => {
 
     it('covers every option except the palettes, with nested battery and grid', () => {
         expect(fields(editorSchema('fr'))).toEqual([
-            './production_entity', './production_threshold', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
-            './smoothing', './stale_after',
-            'battery/soc_entity', 'battery/sensors', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities', 'battery/capacity',
+            './production_entity', './daily_production_entities', './forecast_tomorrow_entity',
+            './production_threshold', './production_max', './smoothing', './stale_after',
+            'battery/soc_entity', 'battery/sensors', 'battery/power_entity', 'battery/capacity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
             'grid/sensors', 'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
-            './layout', './night_hero', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
+            './layout', './flow', './night_hero', './cell_1', './cell_2', './cell_3', './cell_4',
             './consumption_entity',
             './background', './tariff_color_entity', './sun_entity', './animate',
             './tap_action', './hold_action', './double_tap_action',
@@ -53,8 +53,8 @@ describe('schema', () => {
     });
 
     it('lets several daily sensors and locks be picked, and uses Home Assistant\'s action picker', () => {
-        const all = editorSchema('fr').flatMap(b => b.schema ?? []);
-        const byName = (block: string, name: string) => editorSchema('fr').find(b => (b.name || b.title) === block)?.schema?.find(f => f.name === name);
+        const all = editorSchema('fr').flatMap(b => schemaLeaves(b.schema ?? []));
+        const byName = (block: string, name: string) => schemaLeaves(editorSchema('fr').find(b => (b.name || b.title) === block)?.schema ?? []).find(f => f.name === name);
         expect(all.find(f => f.name === 'daily_production_entities')?.selector).toEqual({ entity: { domain: 'sensor', multiple: true } });
         expect((byName('battery', 'soc_reached_entities')?.selector as any).entity.multiple).toBe(true);
         expect(all.find(f => f.name === 'tap_action')?.selector).toEqual({ ui_action: {} });
@@ -127,7 +127,7 @@ describe('the 0.2 options', () => {
         change({ grid: { ...FULL_CONFIG.grid, invert: false }, battery: { ...FULL_CONFIG.battery, invert: false } });
         expect(changes.at(-1)?.grid).not.toHaveProperty('invert');
         expect(changes.at(-1)?.battery).not.toHaveProperty('invert');
-        const grid = form.schema!.find(b => b.name === 'grid')!.schema!.find(f => f.name === 'invert')!;
+        const grid = schemaLeaves(form.schema!.find(b => b.name === 'grid')!.schema!).find(f => f.name === 'invert')!;
         expect(form.computeHelper!(grid)).toMatch(/positive à l'achat/);
     });
 
@@ -145,7 +145,7 @@ describe('the 0.2 options', () => {
         expect(fields(form.schema!)).toEqual(expect.arrayContaining(['./cell_1_tap_action', './cell_4_tap_action']));
         expect(form.computeLabel!({ name: 'cell_2_tap_action' })).toBe('Appui sur la case');
         expect(form.computeHelper!({ name: 'cell_2_tap_action' })).toMatch(/ouvre l'entité de la case/);
-        expect(form.schema!.flatMap(b => b.schema ?? []).find(f => f.name === 'cell_2_tap_action')?.selector).toEqual({ ui_action: {} });
+        expect(form.schema!.flatMap(b => schemaLeaves(b.schema ?? [])).find(f => f.name === 'cell_2_tap_action')?.selector).toEqual({ ui_action: {} });
         const url = { action: 'url', url_path: 'https://example.org' };
         change({ cell_2_tap_action: url });
         expect(changes.at(-1)?.cells).toEqual(['battery', { type: 'grid', tap_action: url }, 'voltage', 'tomorrow']);
@@ -159,7 +159,7 @@ describe('the 0.2 options', () => {
         change({ cell_4: 'custom' });
         expect(fields(form.schema!)).toEqual(expect.arrayContaining(['./cell_4_entity', './cell_4_name', './cell_4_icon']));
         expect(form.computeLabel!({ name: 'cell_4_entity' })).toBe('Entité');
-        expect(form.computeLabel!({ name: 'cell_4' })).toBe('Case 4');
+        expect(form.computeLabel!({ name: 'cell_4' })).toBe('Contenu');
         change({ cell_4: 'custom', cell_4_entity: 'sensor.ev_soc', cell_4_name: 'Voiture', cell_4_icon: '' });
         expect(changes.at(-1)?.cells).toEqual(['battery', 'grid', 'voltage', { entity: 'sensor.ev_soc', name: 'Voiture' }]);
         expect(Object.keys(changes.at(-1)!).some(k => k.startsWith('cell_'))).toBe(false);
@@ -178,10 +178,10 @@ describe('the 0.2 options', () => {
 describe('the layout', () => {
     it('offers standard and side in a Layout block of its own, before Cells, standard by default (left out of the YAML)', () => {
         const display = editorSchema('fr').find(b => b.title === 'Disposition')!;
-        expect(display.schema?.map(f => f.name)).toEqual(['layout', 'night_hero', 'flow']);
+        expect(display.schema?.map(f => f.name)).toEqual(['layout', 'flow', 'night_hero']);
         expect(editorLabel('fr', 'layout')).toBe('Format');
         expect((display.schema?.[0].selector as any).select.options.map((o: { value: string }) => o.value)).toEqual(['standard', 'side']);
-        expect(editorSchema('fr').find(b => b.title === 'Cases')!.schema?.[0].name).toBe('cell_1');
+        expect(schemaLeaves(editorSchema('fr').find(b => b.title === 'Cases')!.schema!)[0].name).toBe('cell_1');
         const { form, change, changes } = mount();
         expect(form.data?.layout).toBe('standard');
         change({ animate: false });
@@ -197,7 +197,7 @@ describe('Languages', () => {
             const data = { cell_1: 'custom', cell_2: 'battery', flow: 'tap', consumer_1_entity: 'sensor.boiler' };
             for (const block of editorSchema(lang, data)) {
                 expect(block.title).toBeTruthy();
-                for (const field of block.schema ?? []) {
+                for (const field of schemaLeaves(block.schema ?? [])) {
                     expect(editorLabel(lang, field.name), `${lang} ${field.name}`).not.toBe(field.name);
                     expect(editorHelper(lang, field.name, block.name) === undefined, `${lang} ${field.name}`).toBe(editorHelper('en', field.name, block.name) === undefined);
                 }
@@ -215,8 +215,8 @@ describe('Languages', () => {
             expect(Object.keys(EDITOR_HELPERS[lang]).sort(), lang).toEqual(Object.keys(EDITOR_HELPERS.en).sort());
         }
         expect(editorSchema('de').map(b => b.title)).toEqual(['Produktion', 'Batterie', 'Netz', 'Darstellung', 'Felder', 'Verbraucher', 'Himmel', 'Aktionen']);
-        expect(editorLabel('nl', 'consumer_2_entity')).toBe('Apparaat 2');
-        expect(editorLabel('it', 'cell_3')).toBe('Casella 3');
+        expect(editorLabel('nl', 'consumer_2_entity')).toBe('Vermogen (W)');
+        expect(editorLabel('it', 'cell_3')).toBe('Contenuto');
     });
 });
 
@@ -232,8 +232,8 @@ describe('help under the layout fields', () => {
 describe('the energy flow', () => {
     it('offers none, on a tap or always, under the layout; none by default (left out of the YAML)', () => {
         const display = editorSchema('fr').find(b => b.title === 'Disposition')!;
-        expect(display.schema?.[2].name).toBe('flow');
-        expect((display.schema?.[2].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
+        expect(display.schema?.[1].name).toBe('flow');
+        expect((display.schema?.[1].selector as any).select.options.map((o: { label: string }) => o.label)).toEqual(['Aucun', 'Déplier en touchant le grand chiffre', 'Toujours visible']);
         const { form, change, changes } = mount();
         expect(form.data?.flow).toBe('none');
         change({ animate: false });
@@ -255,9 +255,9 @@ describe('the energy flow', () => {
     });
 
     it('offers a colour picker per source with a flow, showing the default or the card\'s colour', () => {
-        const display = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Disposition')!.schema!.map(f => f.name);
-        expect(display({ flow: 'none' })).toEqual(['layout', 'night_hero', 'flow']);
-        expect(display({ flow: 'always' })).toEqual(['layout', 'night_hero', 'flow', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
+        const display = (data: Record<string, unknown>) => schemaLeaves(editorSchema('fr', data).find(b => b.title === 'Disposition')!.schema!).map(f => f.name);
+        expect(display({ flow: 'none' })).toEqual(['layout', 'flow', 'night_hero']);
+        expect(display({ flow: 'always' })).toEqual(['layout', 'flow', 'night_hero', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
         expect(editorLabel('fr', 'flow_color_consumption')).toBe('Couleur des appareils');
         const data = formData({ ...MINIMAL, flow: 'always', flow_colors: { solar: '#ff8800', grid: 'var(--accent-color)' } });
         expect(data.flow_color_solar).toEqual([255, 136, 0]);
@@ -286,7 +286,7 @@ describe('the energy flow', () => {
 
 describe('the appliances', () => {
     const titles = (data: Record<string, unknown>) => editorSchema('fr', data).map(b => b.title);
-    const block = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Consommateurs')?.schema?.map(f => f.name);
+    const block = (data: Record<string, unknown>) => schemaLeaves(editorSchema('fr', data).find(b => b.title === 'Consommateurs')?.schema ?? []).map(f => f.name);
 
     it('have a block of their own, after Cells, with the home\'s consumption; the appliances only with a flow', () => {
         expect(titles({ flow: 'none' })).toEqual(['Production', 'Batterie', 'Réseau', 'Disposition', 'Cases', 'Consommateurs', 'Ciel', 'Actions']);
@@ -298,7 +298,7 @@ describe('the appliances', () => {
         expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumption_entity', 'consumer_threshold', 'consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_soc_entity', 'consumer_1_always_show', 'consumer_1_tap_action', 'consumer_2_entity']);
         expect(editorLabel('fr', 'consumer_threshold')).toBe('Seuil d\'affichage');
         expect(editorHelper('en', 'consumer_threshold')).toMatch(/10 W when empty/);
-        expect(editorLabel('fr', 'consumer_2_entity')).toBe('Appareil 2');
+        expect(editorLabel('fr', 'consumer_2_entity')).toBe('Puissance (W)');
         expect(editorLabel('en', 'consumer_2_name')).toBe('Name (optional)');
         expect(editorHelper('fr', 'consumer_1_entity')).toMatch(/quatre au plus/);
     });
@@ -323,7 +323,7 @@ describe('the appliances', () => {
 });
 
 describe('the sky', () => {
-    const sky = (data: Record<string, unknown>) => editorSchema('fr', data).find(b => b.title === 'Ciel')!.schema!.map(f => f.name);
+    const sky = (data: Record<string, unknown>) => schemaLeaves(editorSchema('fr', data).find(b => b.title === 'Ciel')!.schema!).map(f => f.name);
 
     it('offers Tempo, solid or weather, then the field that goes with it', () => {
         expect(sky({ background: 'tempo' })).toEqual(['background', 'tariff_color_entity', 'sun_entity', 'animate']);
@@ -358,7 +358,7 @@ describe('pure helpers', () => {
 });
 
 describe('One power sensor or two', () => {
-    const names = (data: Record<string, unknown>, block: string) => editorSchema('fr', data).find(b => b.name === block)!.schema!.map(f => f.name);
+    const names = (data: Record<string, unknown>, block: string) => schemaLeaves(editorSchema('fr', data).find(b => b.name === block)!.schema!).map(f => f.name);
 
     it('shows the chosen sensors\' fields', () => {
         expect(names({}, 'grid').slice(0, 3)).toEqual(['sensors', 'power_entity', 'invert']);
@@ -396,6 +396,61 @@ describe('the sensor choice in the form', () => {
         change({ grid: { ...(form.data!.grid as object), sensors: 'split' } });
         expect(changes.at(-1)?.grid).toBeUndefined();
         expect((form.data!.grid as Record<string, unknown>).sensors).toBe('split');
-        expect(form.schema!.find(b => b.name === 'grid')!.schema!.map(f => f.name)).toContain('import_entity');
+        expect(schemaLeaves(form.schema!.find(b => b.name === 'grid')!.schema!).map(f => f.name)).toContain('import_entity');
+    });
+});
+
+describe('folded sections', () => {
+    const block = (title: string, data: Record<string, unknown> = {}, names = (_: string): string | undefined => undefined) =>
+        editorSchema('fr', data, false, names).find(b => b.title === title)!.schema!;
+    const sections = (items: SchemaItem[]) => items.filter(i => i.type === 'expandable').map(i => i.title);
+    const top = (items: SchemaItem[]) => items.filter(i => i.type !== 'expandable').map(i => i.name);
+
+    it('keep what nearly everyone sets on top, the rest folded, sharing the block\'s values', () => {
+        expect(top(block('Production'))).toEqual(['production_entity', 'daily_production_entities', 'forecast_tomorrow_entity']);
+        expect(sections(block('Production'))).toEqual(['Réglages fins']);
+        expect(top(block('Batterie'))).toEqual(['soc_entity', 'sensors', 'power_entity']);
+        expect(sections(block('Batterie'))).toEqual(['Autonomie', 'Réglages fins']);
+        expect(top(block('Réseau'))).toEqual(['sensors', 'power_entity', 'invert']);
+        expect(sections(block('Réseau'))).toEqual(['Tension et coupures']);
+        expect(sections(block('Disposition', { flow: 'tap' }))).toEqual(['Couleurs du flux']);
+        // Folded: open only the block they're in; flatten: no level of their own in the values
+        const all = editorSchema('fr', { flow: 'tap' }).flatMap(b => b.schema ?? []).filter(i => i.type === 'expandable');
+        expect(all.every(i => i.flatten && !i.expanded)).toBe(true);
+    });
+
+    it('tell the battery\'s and the grid\'s invert apart, through a section', () => {
+        const schema = editorSchema('fr');
+        const invert = (name: string) => schemaLeaves(schema.find(b => b.name === name)!.schema!).find(f => f.name === 'invert')!;
+        expect(blockOfField(schema, invert('battery'))).toBe('battery');
+        expect(blockOfField(schema, invert('grid'))).toBe('grid');
+        expect(blockOfField(schema, schemaLeaves(schema[0].schema!).find(f => f.name === 'smoothing')!)).toBeUndefined();
+    });
+
+    it('give each cell its own, titled with what it shows', () => {
+        const names = (id: string) => id === 'sensor.water' ? 'Eau chaude' : undefined;
+        const cells = block('Cases', { cell_1: 'battery', cell_2: 'custom', cell_2_entity: 'sensor.water', cell_3: 'custom', cell_3_name: 'Cumulus' }, names);
+        expect(cells.map(c => c.title)).toEqual(['Case 1 · Batterie', 'Case 2 · Eau chaude', 'Case 3 · Cumulus', 'Case 4 · Aucune']);
+        expect(cells[0].icon).toBe('mdi:home-battery-outline');
+        expect(cells[0].schema!.map(f => f.name)).toEqual(['cell_1', 'cell_1_tap_action']);
+    });
+
+    it('give each appliance its own, titled with its name, and an empty one to add the next', () => {
+        const names = (id: string) => id === 'sensor.car' ? 'Tesla' : undefined;
+        const items = block('Consommateurs', { flow: 'tap', consumer_1_entity: 'sensor.car', consumer_2_entity: 'sensor.boiler', consumer_2_name: 'Ballon' }, names);
+        expect(top(items)).toEqual(['consumption_entity', 'consumer_threshold']);
+        expect(sections(items)).toEqual(['Tesla', 'Ballon', 'Appareil 3']);
+        expect(items.at(-1)!.icon).toBe('mdi:plus-circle-outline');
+        expect(items.at(-1)!.schema!.map(f => f.name)).toEqual(['consumer_3_entity']);
+    });
+
+    it('take the friendly names from Home Assistant in the editor', () => {
+        const { form } = mount({ ...MINIMAL, flow: 'tap', consumers: [{ entity: 'sensor.car' }] });
+        form.hass = undefined;
+        const editor = form.parentElement as EnergySkyCardEditor;
+        editor.hass = makeHass({ 'sensor.car': { entity_id: 'sensor.car', state: '0', attributes: { friendly_name: 'Voiture' }, last_updated: '', last_changed: '' } } as never);
+        editor.setConfig({ ...MINIMAL, flow: 'tap', consumers: [{ entity: 'sensor.car' }] });
+        const consumers = form.schema!.find(b => b.title === 'Consommateurs')!.schema!;
+        expect(consumers.filter(i => i.type === 'expandable').map(i => i.title)).toEqual(['Voiture', 'Appareil 2']);
     });
 });

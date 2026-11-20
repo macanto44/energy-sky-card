@@ -3,14 +3,14 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
-import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, ESTIMATE_AVERAGE_MS, batteryCapacity, batteryPower, batteryPowerEntities, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey, type ViewOptions } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, batteryCapacity, estimateAverageMs, batteryPower, batteryPowerEntities, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey, type ViewOptions } from './model';
 import { cardLanguage, localize, numberLocale } from './localize';
 import { formatPercent } from './format';
 import { CLOUDS, WEATHER, computeBackground, isHexColor } from './sky';
 import { weatherMarkup } from './weather';
 import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
-import { Smoother, smoothedEntities } from './smoothing';
+import { Smoother, pastReadings, smoothedEntities } from './smoothing';
 import { energyPrefs, stubConfig } from './stub';
 import { canComputeSelfSufficiency, energyMeters, meterIds, nextRefreshIn, selfSufficiency, todaysChanges } from './selfsufficiency';
 import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
@@ -77,8 +77,9 @@ const SPLIT: [string, string, string[]][] = [
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.soc_entity', 'battery.power_entity', 'battery.charge_entity', 'battery.discharge_entity', 'grid.import_entity', 'grid.export_entity'], isEntityOption, 'doit être une entité ou une liste d\'entités', 'must be an entity or a list of entities'],
     [['battery.capacity'], v => v === undefined || isPositive(v) || (Array.isArray(v) && v.length > 0 && v.every(isPositive)), 'doit être un nombre positif (kWh) ou une liste', 'must be a positive number (kWh) or a list of them'],
+    [['battery.estimate.average'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1440), 'doit être un nombre de minutes (0 à 1440)', 'must be a number of minutes (0 to 1440)'],
     [['battery.max_soc', 'battery.reserve_soc'], v => v === undefined || (typeof v === 'number' && v >= 0 && v <= 100), 'doit être un pourcentage (0 à 100)', 'must be a percentage (0 to 100)'],
-    [['battery.estimate'], v => v === undefined || (!!v && typeof v === 'object' && !Array.isArray(v)), 'doit regrouper charge, discharge, with_temperature, flow', 'must hold charge, discharge, with_temperature, flow'],
+    [['battery.estimate'], v => v === undefined || (!!v && typeof v === 'object' && !Array.isArray(v)), 'doit regrouper charge, discharge, with_temperature, flow, average', 'must hold charge, discharge, with_temperature, flow, average'],
     [['battery.invert', 'grid.invert', 'expandable', 'animate', 'battery.estimate.flow'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
     [['production_max', 'production_threshold', 'smoothing', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
@@ -214,9 +215,12 @@ export class EnergySkyCard extends HTMLElement {
     private staleTimer?: ReturnType<typeof setInterval>;
     /** smoothing: the powers' averages, the entities averaged, and a tick while connected so the average moves on between readings */
     private smoother?: Smoother;
-    /** The battery estimate's own average of the battery power (5 min), when there is a capacity and no smoothing */
+    /** The battery estimate's moving average of the battery power (estimate.average, 5 min by default), with a capacity; none for the instant reading */
     private estimateSmoother?: Smoother;
     private estimateIds: string[] = [];
+    /** Its window filled from Home Assistant's history: the read on its way (a newer config or a disconnect drops its answer), and whether it came */
+    private historyRead?: object;
+    private historyDone = false;
     /** What the last view was worked out with beside hass: the estimate's battery power and the time */
     private viewOptions: ViewOptions = {};
     /** Today's self-sufficiency (%), read every 5 minutes while a cell shows it; the read's config, to drop an answer for an older one */
@@ -261,10 +265,13 @@ export class EnergySkyCard extends HTMLElement {
         const smoothing = this.config.smoothing ?? 0;
         this.smoother = smoothing > 0 ? new Smoother(smoothing * 1000) : undefined;
         this.smoothIds = this.smoother ? smoothedEntities(this.config) : [];
-        // The estimate reads an average power: the smoothed one, else its own over ESTIMATE_AVERAGE_MS
+        // The estimate reads the battery power's moving average over estimate.average minutes (0: the instant reading)
         const estimating = !!batteryCapacity(this.config);
-        this.estimateSmoother = estimating && !this.smoother ? new Smoother(ESTIMATE_AVERAGE_MS) : undefined;
+        const averageMs = estimateAverageMs(this.config);
+        this.estimateSmoother = estimating && averageMs > 0 ? new Smoother(averageMs) : undefined;
         this.estimateIds = estimating ? batteryPowerEntities(this.config) : [];
+        this.historyRead = undefined;
+        this.historyDone = false;
         this.viewOptions = {};
         // Today's self-sufficiency: read again for this config
         this.selfSufficiency = undefined;
@@ -274,6 +281,7 @@ export class EnergySkyCard extends HTMLElement {
         this.syncSmoothTimer();
         if (this._hass) this.update();
         this.startSelfSufficiency();
+        this.startEstimateHistory();
     }
 
     /** One tick a second while connected and smoothing */
@@ -291,6 +299,7 @@ export class EnergySkyCard extends HTMLElement {
         this.staleTimer ??= setInterval(() => this.markStale(), 60_000);
         this.syncSmoothTimer();
         this.startSelfSufficiency();
+        this.startEstimateHistory();
         if (this.refs && this.resizeObserver) this.resizeObserver.observe(this.refs.card);
         this.fit();
         // Text measured before the fonts load is narrower or wider than it will be
@@ -305,6 +314,9 @@ export class EnergySkyCard extends HTMLElement {
         clearTimeout(this.selfTimer);
         this.selfTimer = undefined;
         this.selfRead = undefined;
+        // Back on the page, the readings missed meanwhile come from the history again
+        this.historyRead = undefined;
+        this.historyDone = false;
         this.resizeObserver?.disconnect();
         if (this.readyFrame !== undefined) cancelAnimationFrame(this.readyFrame);
         this.readyFrame = undefined;
@@ -340,6 +352,31 @@ export class EnergySkyCard extends HTMLElement {
         this._hass = hass;
         this.update();
         this.startSelfSufficiency();
+        this.startEstimateHistory();
+    }
+
+    /** Fills the estimate's average with the battery power's past readings, once per config and connection */
+    private startEstimateHistory(): void {
+        if (!this.estimateSmoother || !this._hass || !this.isConnected || this.historyRead || this.historyDone) return;
+        void this.readEstimateHistory();
+    }
+
+    private async readEstimateHistory(): Promise<void> {
+        const hass = this._hass!;
+        const smoother = this.estimateSmoother!;
+        const read = {};
+        this.historyRead = read;
+        const past = await pastReadings(hass, this.estimateIds, estimateAverageMs(this.config!), Date.now());
+        if (this.historyRead !== read) return;
+        this.historyRead = undefined;
+        this.historyDone = true;
+        const now = Date.now();
+        for (const id of this.estimateIds) {
+            const readings = past[id];
+            if (readings?.length) smoother.seed(id, readings, this._hass?.states[id]?.attributes.unit_of_measurement, now);
+        }
+        this.renderedKey = '';
+        this.update();
     }
 
     /** Whether a cell shows today's self-sufficiency */
@@ -760,10 +797,11 @@ export class EnergySkyCard extends HTMLElement {
         if (this.estimateIds.length) {
             const now = Date.now();
             options.now = now;
+            // Its moving average, or the instant reading (never the smoothed one: estimate.average decides)
             if (this.estimateSmoother) {
                 this.estimateSmoother.record(this._hass, this.estimateIds, now);
                 options.estimatePower = batteryPower(this.config, this.estimateSmoother.smoothed(this._hass, this.estimateIds, now));
-            }
+            } else options.estimatePower = batteryPower(this.config, this._hass);
             key += `|${options.estimatePower?.toPrecision(2) ?? ''}|${Math.floor(now / 60000)}`;
         }
         key += `|${this.selfSufficiency ?? ''}`;

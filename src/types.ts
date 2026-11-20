@@ -77,6 +77,8 @@ export interface BatteryEstimateConfig {
     with_temperature?: 'replace' | 'both';
     /** In the battery node's label too (default true) */
     flow?: boolean;
+    /** The battery power it reads: its moving average over this many minutes (default 5); 0 the instant reading */
+    average?: number;
 }
 
 export interface EnergySkyCardConfig {

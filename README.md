@@ -191,7 +191,7 @@ hold_action:
 
 ### When the battery will be full
 
-With its capacity, the Battery cell tells when the battery will be full (`78 % ↑ · 14:20`) or how long until its reserve (`64 % ↓ · 5 h 30`), from the battery power's average over 5 minutes (or `smoothing`'s). The whole sentence is in the cell's title. Each part can be changed or turned off:
+With its capacity, the Battery cell tells when the battery will be full (`78 % ↑ · 14:20`) or how long until its reserve (`64 % ↓ · 5 h 30`), from the battery power's moving average over 5 minutes, or the length you choose. The whole sentence is in the cell's title. Each part can be changed or turned off:
 
 ```yaml
 battery:
@@ -203,9 +203,10 @@ battery:
   estimate:
     charge: time      # or duration, off
     discharge: duration
+    average: 60       # minutes; 0 reads the power as it is now
 ```
 
-Nothing shows while the battery is idle, already there, or more than a day away. The times follow your profile's 12 / 24 h format.
+A long average (`average: 60`) keeps the estimate steady through clouds and appliances starting up; when the dashboard opens, the card fills it from Home Assistant's history. `0` follows the power as it is now: quicker, but it jumps. Nothing shows while the battery is idle, going the other way than its average, already there, or more than a day away. The times follow your profile's 12 / 24 h format.
 
 ### Two sensors, several batteries
 
@@ -384,6 +385,7 @@ All under `battery:`.
 | `estimate.discharge` | `duration` | While discharging: `duration` (`64 % ↓ · 5 h 30`), `time` (`04:10`) or `off` |
 | `estimate.with_temperature` | `replace` | With a `temperature_entity`: the estimate takes the temperature's place while it shows (`replace`), or comes after it (`both`) |
 | `estimate.flow` | `true` | The estimate as a small line under the Battery node's power, in the flow |
+| `estimate.average` | `5` | Minutes: the estimate reads the battery power's moving average over this long (filled from Home Assistant's history when the dashboard opens). `0`: the power as it is now |
 | `temperature_entity` | — | The battery's temperature, shown after the charge in its sensor's unit: `78 % ↑ · 24 °C` |
 | `invert` | `false` | `true` if your sensor is positive when **discharging** (it depends on the integration). Only for `power_entity` |
 | `power_threshold` | `20` | Below this power, in W, the battery is idle: no arrow, and no energy in the flow |
@@ -510,7 +512,7 @@ Without `consumption_entity`, the card works out the home's power from the other
 The card reads the `weather_entity`'s state. A state it doesn't know (or `unavailable`) shows as cloudy: check the entity's state in **Developer tools → States**.
 
 **The numbers jump when clouds pass**
-Set `smoothing` (**Power smoothing** in the Production section) to 10 or 20 seconds. If the home's consumption jumps most, set `consumption_entity` too: without it, the card works it out from sensors that don't all report at the same moment.
+Set `smoothing` (**Power smoothing**, in the Production section's « Fine tuning ») to 10 or 20 seconds. If the home's consumption jumps most, set `consumption_entity` too: without it, the card works it out from sensors that don't all report at the same moment.
 
 **The sky shows, but nothing moves**
 Check reduced motion in your system settings, then `animate`. The halo only breathes by day while the panels produce.

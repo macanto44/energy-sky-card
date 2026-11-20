@@ -19,7 +19,33 @@ export function smoothedEntities(config: EnergySkyCardConfig): string[] {
     return [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.length > 0))];
 }
 
-interface Sample { t: number; v: number }
+/** A reading: its time (ms) and value */
+export interface Sample { t: number; v: number }
+
+/**
+ * Each entity's readings over the last windowMs, from Home Assistant's
+ * history (a request to Home Assistant itself): the reading standing at the
+ * start, then each change. Nothing on an error.
+ */
+export async function pastReadings(hass: HomeAssistant, ids: string[], windowMs: number, now: number): Promise<Record<string, Sample[]>> {
+    const call = hass.callWS;
+    if (!call || !ids.length) return {};
+    try {
+        const answer = await call<Record<string, { s?: string; lu?: number; lc?: number }[]>>({
+            type: 'history/history_during_period', start_time: new Date(now - windowMs).toISOString(), entity_ids: ids,
+            minimal_response: true, no_attributes: true, significant_changes_only: false,
+        });
+        const out: Record<string, Sample[]> = {};
+        for (const id of ids) {
+            const states = answer?.[id];
+            if (!Array.isArray(states)) continue;
+            out[id] = states.map(st => ({ t: (st.lu ?? st.lc ?? 0) * 1000, v: Number.parseFloat(st.s ?? '') })).filter(p => p.t > 0 && Number.isFinite(p.v));
+        }
+        return out;
+    } catch {
+        return {};
+    }
+}
 
 /** How often the averages shown are worked out again, at most */
 export const REFRESH_MS = 5_000;
@@ -60,6 +86,28 @@ export class Smoother {
             const from = now - this.windowMs;
             while (s.list.length > 1 && s.list[1].t <= from) s.list.shift();
         }
+    }
+
+    /**
+     * Fills an entity's window with its past readings (Home Assistant's
+     * history, oldest first), so an average over a long window means
+     * something from the first render. The history stands for the time it
+     * covers; the readings recorded since its last one stay.
+     */
+    seed(id: string, past: Sample[], unit: unknown, now: number): void {
+        const history = past.filter(p => Number.isFinite(p.v) && p.t <= now).sort((a, b) => a.t - b.t);
+        if (!history.length) return;
+        const s = this.samples.get(id);
+        // Readings in another unit than today's can't be averaged with them
+        if (s && s.unit !== unit) return;
+        const last = history[history.length - 1].t;
+        const kept = s ? s.list.filter(p => p.t > last) : [];
+        this.samples.set(id, { at: s?.at ?? '', unit, list: [...history, ...kept] });
+        const from = now - this.windowMs;
+        const list = this.samples.get(id)!.list;
+        while (list.length > 1 && list[1].t <= from) list.shift();
+        // Shown at the next render
+        this.heldAt = -Infinity;
     }
 
     /** The time-weighted average of an entity's readings over the window, or undefined without any */
