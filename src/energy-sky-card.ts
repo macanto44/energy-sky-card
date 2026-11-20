@@ -58,7 +58,18 @@ const RENAMED: [string, { fr: string; en: string }][] = [
 const FLOW_COLOR_KEYS: Record<string, string> = {
     solar: FLOW_COLOUR_VARS.sun, grid: FLOW_COLOUR_VARS.grid, battery: FLOW_COLOUR_VARS.batt, consumption: FLOW_COLOUR_VARS.use,
 };
+/** One entity id, or a list of them */
+const isEntityOption = (v: unknown): boolean => v === undefined || (typeof v === 'string' && v.length > 0)
+    || (Array.isArray(v) && v.length > 0 && v.every(x => typeof x === 'string' && x.length > 0));
+const isPositive = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v) && v > 0;
+/** One power sensor, or the two that replace it: never both */
+const SPLIT: [string, string, string[]][] = [
+    ['grid', 'power_entity', ['import_entity', 'export_entity']],
+    ['battery', 'power_entity', ['charge_entity', 'discharge_entity']],
+];
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
+    [['battery.soc_entity', 'battery.power_entity', 'battery.charge_entity', 'battery.discharge_entity', 'grid.import_entity', 'grid.export_entity'], isEntityOption, 'doit être une entité ou une liste d\'entités', 'must be an entity or a list of entities'],
+    [['battery.capacity'], v => v === undefined || isPositive(v) || (Array.isArray(v) && v.length > 0 && v.every(isPositive)), 'doit être un nombre positif (kWh) ou une liste', 'must be a positive number (kWh) or a list of them'],
     [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
     [['production_max', 'production_threshold', 'smoothing', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
@@ -85,6 +96,11 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
     }
     for (const [names, ok, fr, en] of KINDS) {
         for (const name of names) if (!ok(optionAt(c, name))) throw configError(`${name} ${fr}`, `${name} ${en}`);
+    }
+    for (const [block, single, pair] of SPLIT) {
+        if (optionAt(c, `${block}.${single}`) !== undefined && pair.some(name => optionAt(c, `${block}.${name}`) !== undefined)) {
+            throw configError(`${block} : ${single} ou ${pair.join(' / ')}, pas les deux`, `${block}: ${single} or ${pair.join(' / ')}, not both`);
+        }
     }
     if (c.cells !== undefined) {
         if (!Array.isArray(c.cells) || c.cells.length > MAX_CELLS) {

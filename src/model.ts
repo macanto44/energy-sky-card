@@ -84,8 +84,8 @@ export const cellKind = (cell: CellConfig): CellKind | undefined =>
 /** The built-in cells whose entities are set, in their usual order */
 export function defaultCells(config: EnergySkyCardConfig): CellKind[] {
     const kinds: CellKind[] = [];
-    if (config.battery?.soc_entity) kinds.push('battery');
-    if (config.grid?.power_entity) kinds.push('grid');
+    if (batterySocEntities(config).length) kinds.push('battery');
+    if (gridPowerEntities(config).length) kinds.push('grid');
     if (config.grid?.voltage_entity || config.grid?.outage_entity) kinds.push('voltage');
     if (config.forecast_tomorrow_entity) kinds.push('tomorrow');
     return kinds;
@@ -111,8 +111,8 @@ export function configuredCells(config: EnergySkyCardConfig): CellSpec[] {
 /** The entity a tap on a cell opens: the one its value comes from */
 export function cellEntity(config: EnergySkyCardConfig, cell: CellSpec): string | undefined {
     switch (cell.kind) {
-        case 'battery': return config.battery?.soc_entity;
-        case 'grid': return config.grid?.power_entity ?? config.grid?.outage_entity;
+        case 'battery': return batterySocEntities(config)[0];
+        case 'grid': return gridPowerEntities(config)[0] ?? config.grid?.outage_entity;
         case 'voltage': return config.grid?.voltage_entity ?? config.grid?.outage_entity;
         case 'tomorrow': return config.forecast_tomorrow_entity;
         case 'consumption': return config.consumption_entity;
@@ -146,6 +146,36 @@ export function productionPower(config: EnergySkyCardConfig, hass: HomeAssistant
 const signed = (value: number | undefined, invert: boolean | undefined) =>
     value === undefined || !invert ? value : -value;
 
+/** An entity option written as one id or a list, as a list (empty ids dropped) */
+export const entityList = (value: string | string[] | undefined): string[] =>
+    (Array.isArray(value) ? value : value ? [value] : []).filter(id => typeof id === 'string' && id.length > 0);
+
+/** The battery's charge sensors (one per battery) */
+export const batterySocEntities = (config: EnergySkyCardConfig): string[] => entityList(config.battery?.soc_entity);
+
+/** The battery's power sensors: the signed ones, or the charge and discharge ones */
+export const batteryPowerEntities = (config: EnergySkyCardConfig): string[] => [
+    ...entityList(config.battery?.power_entity), ...entityList(config.battery?.charge_entity), ...entityList(config.battery?.discharge_entity),
+];
+
+/** The grid's power sensors: the signed one, or the import and export ones */
+export const gridPowerEntities = (config: EnergySkyCardConfig): string[] => [
+    ...entityList(config.grid?.power_entity), ...entityList(config.grid?.import_entity), ...entityList(config.grid?.export_entity),
+];
+
+/** The sum of these sensors' powers in W (an unavailable one left out), or undefined when none reads */
+function powerSum(ids: string[], hass: HomeAssistant, magnitude = false): number | undefined {
+    const values = ids.map(id => powerW(hass.states[id])).filter((v): v is number => v !== undefined);
+    return values.length ? values.reduce((a, b) => a + (magnitude ? Math.abs(b) : b), 0) : undefined;
+}
+
+/** In - out, each a sum of positive powers; one missing counts 0, both missing is no reading */
+function difference(into: string[], out: string[], hass: HomeAssistant): number | undefined {
+    const a = powerSum(into, hass, true);
+    const b = powerSum(out, hass, true);
+    return a === undefined && b === undefined ? undefined : (a ?? 0) - (b ?? 0);
+}
+
 /** Minutes without a reading before a value is stale, unless stale_after says otherwise */
 export const DEFAULT_STALE_MINUTES = 30;
 
@@ -164,8 +194,8 @@ export function staleReadings(config: EnergySkyCardConfig, hass: HomeAssistant, 
     if (!(minutes > 0)) return stale;
     const ids = [
         ...productionEntities(config), config.consumption_entity,
-        config.battery?.soc_entity, config.battery?.power_entity, config.battery?.temperature_entity,
-        config.grid?.power_entity, config.grid?.voltage_entity,
+        ...batterySocEntities(config), ...batteryPowerEntities(config), config.battery?.temperature_entity,
+        ...gridPowerEntities(config), config.grid?.voltage_entity,
         ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
         ...(config.consumers ?? []).map(c => c.entity),
     ];
@@ -180,12 +210,33 @@ export function staleReadings(config: EnergySkyCardConfig, hass: HomeAssistant, 
 
 /** Grid power in W, positive when importing (the sensor's sign flipped with grid.invert) */
 export function gridPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
-    return signed(powerW(hass.states[config.grid?.power_entity ?? '']), config.grid?.invert);
+    const grid = config.grid;
+    if (grid?.import_entity || grid?.export_entity) return difference(entityList(grid.import_entity), entityList(grid.export_entity), hass);
+    return signed(powerW(hass.states[grid?.power_entity ?? '']), grid?.invert);
 }
 
-/** Battery power in W, positive when charging (flipped with battery.invert) */
+/** Battery power in W, positive when charging (flipped with battery.invert), every battery summed */
 export function batteryPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
-    return signed(powerW(hass.states[config.battery?.power_entity ?? '']), config.battery?.invert);
+    const battery = config.battery;
+    if (battery?.charge_entity || battery?.discharge_entity) return difference(entityList(battery.charge_entity), entityList(battery.discharge_entity), hass);
+    return signed(powerSum(entityList(battery?.power_entity), hass), battery?.invert);
+}
+
+/** The batteries' charge in %: their average, weighted by capacity when there is one per battery; unavailable ones left out */
+export function batterySoc(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
+    const ids = batterySocEntities(config);
+    const capacity = config.battery?.capacity;
+    const weights = Array.isArray(capacity) && capacity.length === ids.length ? capacity : undefined;
+    let sum = 0;
+    let weight = 0;
+    ids.forEach((id, i) => {
+        const soc = numericState(hass.states[id]);
+        if (soc === undefined) return;
+        const w = weights ? weights[i] : 1;
+        sum += soc * w;
+        weight += w;
+    });
+    return weight > 0 ? sum / weight : undefined;
 }
 
 /** Every entity whose change can change what the card shows */
@@ -196,8 +247,8 @@ export function trackedEntities(config: EnergySkyCardConfig): string[] {
         ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
         ...(config.consumers ?? []).map(c => c.entity),
         ...(config.daily_production_entities ?? []),
-        config.battery?.soc_entity, config.battery?.power_entity, config.battery?.temperature_entity, ...(config.battery?.soc_reached_entities ?? []),
-        config.grid?.power_entity, config.grid?.voltage_entity, config.grid?.outage_entity,
+        ...batterySocEntities(config), ...batteryPowerEntities(config), config.battery?.temperature_entity, ...(config.battery?.soc_reached_entities ?? []),
+        ...gridPowerEntities(config), config.grid?.voltage_entity, config.grid?.outage_entity,
         config.forecast_tomorrow_entity, config.tariff_color_entity,
         config.sun_entity ?? 'sun.sun',
     ];
@@ -241,7 +292,7 @@ export function gridOutage(config: EnergySkyCardConfig, hass: HomeAssistant): bo
 }
 
 function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, threshold: number): MetricView {
-    const soc = numericState(hass.states[config.battery?.soc_entity ?? '']);
+    const soc = batterySoc(config, hass);
     const dir = direction(batteryPower(config, hass), threshold);
     const arrow = soc === undefined ? '' : dir === 'up' ? ' ↑' : dir === 'down' ? ' ↓' : '';
     const reached = socReached(config, hass);
@@ -336,8 +387,8 @@ function heroView(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberL
     if (mode === 'consumption' && config.consumption_entity) {
         return { hero: powerParts(powerW(hass.states[config.consumption_entity]), loc), label: localize(loc.lang, 'consumption'), labelShort: localize(loc.lang, 'consumption_short') };
     }
-    if (mode === 'battery' && config.battery?.soc_entity) {
-        const soc = numericState(hass.states[config.battery.soc_entity]);
+    if (mode === 'battery' && batterySocEntities(config).length) {
+        const soc = batterySoc(config, hass);
         return {
             hero: soc === undefined ? { value: NO_VALUE, unit: '' } : { value: formatNumber(Math.round(soc), 0, loc), unit: '%' },
             label: localize(loc.lang, 'battery'),

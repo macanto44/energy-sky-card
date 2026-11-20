@@ -65,6 +65,7 @@ test/
 ├── editor.test.ts           # Schema blocks, labels, config-changed, YAML kept short, palettes kept
 ├── card.test.ts             # Registration, validation, render, in-place updates, background, sizing, stub
 ├── bundles.test.ts          # Sibling bundle URLs
+├── sensors.test.ts          # Grid import / export, battery charge / discharge, several batteries, their validation and pre-fill
 ├── stub.test.ts             # Prefill from the Energy dashboard (both prefs shapes), Tempo, fallback
 └── build.test.ts            # Bundle size and no network
 ```
@@ -90,6 +91,7 @@ test/
 - The battery complement « · SOC atteint » shows when any `battery.soc_reached_entities` entity is on; nothing otherwise. The older names (`battery.lock_entities`, top-level `power_threshold`, `cell_tap`) are gone: `validateConfig` rejects them with the name that replaces them (`RENAMED`).
 - `battery.temperature_entity`: the temperature follows the charge in the battery value (« 78 % ↑ · 24 °C », the sensor's unit, rounded); left out without a reading.
 - Power entities in kW / MW and energy entities in Wh / MWh are converted from their `unit_of_measurement`.
+- Grid and battery power: one signed sensor (`power_entity`, `invert`) or two positive ones (`grid.import_entity` / `export_entity`, `battery.charge_entity` / `discharge_entity`; `gridPower` / `batteryPower` take in − out as magnitudes, a missing one as 0); both forms at once is a config error (`SPLIT`). The battery's options take lists (several batteries): powers summed, `batterySoc` averages the charge, weighted by `battery.capacity` when it is one per battery. Always go through `batterySocEntities`, `batteryPowerEntities`, `gridPowerEntities` (model.ts), never the raw options. Editor: a `sensors` choice (`single` / `split`) per block, form-only, dropped by `nextConfig` with the other form's fields; one battery saved as a string.
 - `production_entity` is a string or a list (summed by `productionPower`, used by the hero, the halo and the flow; below `production_threshold`, if set, it reads 0). `grid.invert` / `battery.invert` flip the sensor's sign (`gridPower`, `batteryPower`).
 - Cells (`configuredCells` in model.ts): `cells` if set (≤ 4, built-in kinds deduplicated, free cells keyed `custom-<index>`), else the built-in ones whose entities are set. A free cell's name and icon are user text: written with textContent / setAttribute only. The editor shows them as four slots (`cell_1` … `cell_4`, plus `_entity` / `_name` / `_icon` for a free one) and writes `cells` only when they differ from the automatic choice.
 - Cell taps: a cell's own `tap_action` (`{ type, tap_action }` for a built-in cell, `tap_action` on a free one; `CellSpec.tapAction`), else its entity's more-info unless the card has a `tap_action`. Such cells get `data-cell-target` (role button and tabindex unless their action is `none`). The gesture listener passes the event path to `actionsFor`, which answers with the cell's entity and its tap (hold / double tap stay the card's). Editor: `cell_n_tap_action` slots (ui_action), a built-in cell saved as an object only when it has one.

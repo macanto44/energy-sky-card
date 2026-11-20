@@ -43,8 +43,8 @@ describe('schema', () => {
         expect(fields(editorSchema('fr'))).toEqual([
             './production_entity', './production_threshold', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
             './smoothing', './stale_after',
-            'battery/soc_entity', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
-            'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
+            'battery/soc_entity', 'battery/sensors', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
+            'grid/sensors', 'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './layout', './night_hero', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
             './consumption_entity',
             './background', './tariff_color_entity', './sun_entity', './animate',
@@ -354,5 +354,38 @@ describe('pure helpers', () => {
         expect(nextConfig({ ...MINIMAL, animate: true }, formData({ ...MINIMAL, animate: true })).animate).toBe(true);
         expect(nextConfig(MINIMAL, formData(MINIMAL))).toEqual(MINIMAL);
         expect(nextConfig(MINIMAL, { ...formData(MINIMAL), animate: false }).animate).toBe(false);
+    });
+});
+
+describe('One power sensor or two', () => {
+    const names = (data: Record<string, unknown>, block: string) => editorSchema('fr', data).find(b => b.name === block)!.schema!.map(f => f.name);
+
+    it('shows the chosen sensors\' fields', () => {
+        expect(names({}, 'grid').slice(0, 3)).toEqual(['sensors', 'power_entity', 'invert']);
+        expect(names({ grid: { sensors: 'split' } }, 'grid').slice(0, 3)).toEqual(['sensors', 'import_entity', 'export_entity']);
+        expect(names({ battery: { sensors: 'split' } }, 'battery')).toEqual(expect.arrayContaining(['charge_entity', 'discharge_entity']));
+        expect(names({ battery: { sensors: 'split' } }, 'battery')).not.toContain('invert');
+        expect(editorLabel('fr', 'sensors_split_grid')).toBe('Deux capteurs : achat et vente');
+    });
+
+    it('reads the config\'s form, and writes only the chosen one', () => {
+        expect((formData({ ...MINIMAL, grid: { import_entity: 'sensor.in' } }).grid as Record<string, unknown>).sensors).toBe('split');
+        expect((formData(MINIMAL).grid as Record<string, unknown>).sensors).toBe('single');
+        const previous = { ...MINIMAL, grid: { power_entity: 'sensor.grid', invert: true } };
+        const next = nextConfig(previous, { ...formData(previous), grid: { sensors: 'split', power_entity: 'sensor.grid', invert: true, import_entity: 'sensor.in', export_entity: 'sensor.out' } });
+        expect(next.grid).toEqual({ import_entity: 'sensor.in', export_entity: 'sensor.out' });
+        const back = nextConfig(next, { ...formData(next), grid: { sensors: 'single', import_entity: 'sensor.in', power_entity: 'sensor.grid' } });
+        expect(back.grid).toEqual({ power_entity: 'sensor.grid' });
+    });
+
+    it('keeps one battery a plain string, several a list, and no empty blocks', () => {
+        const one = nextConfig(MINIMAL, { ...formData(MINIMAL), battery: { sensors: 'single', soc_entity: ['sensor.soc'], power_entity: ['sensor.bat'] } });
+        expect(one.battery).toEqual({ soc_entity: 'sensor.soc', power_entity: 'sensor.bat' });
+        const two = nextConfig(MINIMAL, { ...formData(MINIMAL), battery: { sensors: 'single', soc_entity: ['sensor.a', 'sensor.b'] } });
+        expect(two.battery).toEqual({ soc_entity: ['sensor.a', 'sensor.b'] });
+        const none = nextConfig(MINIMAL, formData(MINIMAL));
+        expect(none.battery).toBeUndefined();
+        expect(none.grid).toBeUndefined();
+        expect(formData({ ...MINIMAL, battery: { soc_entity: 'sensor.soc' } }).battery).toMatchObject({ soc_entity: ['sensor.soc'], sensors: 'single' });
     });
 });

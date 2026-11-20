@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Two sensors instead of one signed sensor: `grid.import_entity` / `export_entity` (power bought and sold) and `battery.charge_entity` / `discharge_entity`, each positive. The editor's Grid and Battery sections offer « One sensor (+ / −) » or « Two sensors »; the pre-fill takes Home Assistant's two power sensors when the Energy dashboard has them.
+- Several batteries: `battery.soc_entity`, `power_entity`, `charge_entity` and `discharge_entity` take a list. One Battery cell and one node: the powers added up, the average charge (weighted by `battery.capacity` when it lists one per battery).
 - The card and its visual editor speak German, Spanish, Italian and Dutch too, following your Home Assistant profile's language (English for any other). Configuration errors stay in French or English.
 - The card is in the Marketplace / HACS default list: search for « Energy Sky Card », no custom repository to add.
 

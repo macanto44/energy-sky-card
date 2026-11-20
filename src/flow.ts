@@ -2,7 +2,7 @@
 // the grid, the battery and the home. Pure: powers → flows → what each node
 // and wire shows, and the drawing's geometry for a width.
 
-import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, gridOutage, gridPower, productionEntities, productionPower } from './model';
+import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, batteryPowerEntities, batterySoc, batterySocEntities, gridOutage, gridPower, gridPowerEntities, productionEntities, productionPower } from './model';
 import { formatPercent, formatPower } from './format';
 import { localize, numberLocale } from './localize';
 import { numericState, powerW } from './utils';
@@ -88,8 +88,8 @@ export interface NodeView {
 export function flowNodeEntity(config: EnergySkyCardConfig, node: NodeKey): string | undefined {
     switch (node) {
         case 'solar': return productionEntities(config)[0];
-        case 'grid': return config.grid?.power_entity;
-        case 'battery': return config.battery?.power_entity || config.battery?.soc_entity;
+        case 'grid': return gridPowerEntities(config)[0];
+        case 'battery': return batteryPowerEntities(config)[0] ?? batterySocEntities(config)[0];
         case 'home': return config.consumption_entity;
     }
 }
@@ -132,7 +132,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
     const consumption = powerW(hass.states[config.consumption_entity ?? '']);
     const flows = energyFlows(solar, grid, battery, consumption);
     const max = config.production_max && config.production_max > 0 ? config.production_max : DEFAULT_PRODUCTION_MAX;
-    const soc = numericState(hass.states[config.battery?.soc_entity ?? '']);
+    const soc = batterySoc(config, hass);
     const into = { sun: flows.wires.sh, grid: flows.wires.gh, batt: flows.wires.bh };
     const total = into.sun + into.grid + into.batt;
     // The sun and the home are always there (the home worked out if need be); the grid and the battery with their entity
@@ -151,7 +151,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
             },
             battery: {
                 present: present('battery'), label: localize(loc.lang, 'battery'),
-                value: config.battery?.power_entity ? formatPower(measured, loc) : formatPercent(soc, loc),
+                value: batteryPowerEntities(config).length ? formatPower(measured, loc) : formatPercent(soc, loc),
                 ring: soc === undefined ? [] : [[Math.min(Math.max(soc, 0), 100) / 100, 'batt']],
                 centre: soc === undefined ? undefined : String(Math.round(soc)),
             },

@@ -68,8 +68,15 @@ export interface EnergySkyCardConfig {
     production_max?: number;
     daily_production_entities?: string[];
     battery?: {
-        soc_entity?: string;
-        power_entity?: string;
+        /** The charge (%), or one per battery: averaged (weighted by capacity when it lists one per battery) */
+        soc_entity?: string | string[];
+        /** One signed power sensor (positive when charging), or one per battery, summed */
+        power_entity?: string | string[];
+        /** Instead of power_entity: the charging and discharging powers, each positive (one per battery, summed) */
+        charge_entity?: string | string[];
+        discharge_entity?: string | string[];
+        /** kWh, or one per battery */
+        capacity?: number | number[];
         /** The battery's temperature, shown after the charge: « 78 % ↑ · 24 °C » */
         temperature_entity?: string;
         /** Entities on when the battery has reached its target charge: « SOC atteint » */
@@ -80,7 +87,11 @@ export interface EnergySkyCardConfig {
         invert?: boolean;
     };
     grid?: {
+        /** One signed power sensor, positive when importing */
         power_entity?: string;
+        /** Instead of power_entity: the import and export powers, each positive */
+        import_entity?: string;
+        export_entity?: string;
         voltage_entity?: string;
         outage_entity?: string;
         outage_states?: string[];

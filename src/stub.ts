@@ -17,6 +17,16 @@ export interface EnergyPrefs {
 interface PowerConfig {
     stat_rate?: string;
     stat_rate_inverted?: string;
+    /** Two positive sensors: from the source (grid import, battery discharge) and to it (export, charge) */
+    stat_rate_from?: string;
+    stat_rate_to?: string;
+}
+
+/** The two positive sensors of a power config, when Home Assistant has them both */
+function powerPair(hass: HomeAssistant, config: PowerConfig | undefined): [string, string] | undefined {
+    const from = config?.stat_rate_from;
+    const to = config?.stat_rate_to;
+    return from && to && hass.states[from] && hass.states[to] ? [from, to] : undefined;
 }
 
 export interface EnergySource {
@@ -94,11 +104,14 @@ export function configFromEnergy(prefs: EnergyPrefs | undefined, hass: HomeAssis
         const meter = battery.stat_energy_from ?? battery.stat_energy_to;
         const soc = (battery.stat_soc && hass.states[battery.stat_soc] ? battery.stat_soc : undefined) ?? first(siblings(hass, meter, deviceClass('battery')));
         const rate = battery.power_config?.stat_rate ?? battery.stat_rate;
-        const power = powerOf(hass, rate, meter);
+        const pair = powerPair(hass, battery.power_config);
+        const power = pair ? undefined : powerOf(hass, rate, meter);
         const temperature = first(siblings(hass, meter, deviceClass('temperature')));
         const b: NonNullable<EnergySkyCardConfig['battery']> = {};
         if (soc) b.soc_entity = soc;
         if (power) b.power_entity = power;
+        // Two sensors: energy comes from the battery when it discharges, goes to it when it charges
+        if (pair) Object.assign(b, { charge_entity: pair[1], discharge_entity: pair[0] });
         // Home Assistant's battery power is positive when discharging; the card's, when charging
         if (power && rate && power === rate) b.invert = true;
         if (temperature) b.temperature_entity = temperature;
@@ -111,7 +124,9 @@ export function configFromEnergy(prefs: EnergyPrefs | undefined, hass: HomeAssis
         const inverted = grid.power_config?.stat_rate_inverted;
         const rate = grid.power_config?.stat_rate ?? grid.stat_rate ?? grid.power?.[0]?.stat_rate;
         const g: NonNullable<EnergySkyCardConfig['grid']> = {};
-        if (inverted && hass.states[inverted]) Object.assign(g, { power_entity: inverted, invert: true });
+        const pair = powerPair(hass, grid.power_config);
+        if (pair) Object.assign(g, { import_entity: pair[0], export_entity: pair[1] });
+        else if (inverted && hass.states[inverted]) Object.assign(g, { power_entity: inverted, invert: true });
         else {
             // Home Assistant's grid power is positive when importing, like the card's
             const power = powerOf(hass, rate, meter);

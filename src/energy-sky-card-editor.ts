@@ -5,7 +5,7 @@
 
 import { CARD_EDITOR_NAME } from './constants';
 import { cardLanguage, type Lang } from './localize';
-import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, isBuiltinObject, isCustom } from './model';
+import { CELL_KINDS, DEFAULT_OUTAGE_STATES, MAX_CELLS, MAX_CONSUMERS, cellKind, defaultCells, entityList, isBuiltinObject, isCustom } from './model';
 import { isAction } from './actions';
 import { DEFAULT_PRODUCTION_MAX, DEFAULT_SOLID_COLOR, FLOW_COLOURS } from './sky';
 import type { CellConfig, CellKind, ConsumerConfig, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
@@ -45,6 +45,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         background_color: 'Couleur du fond', weather_entity: 'Entité météo',
         power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
+        sensors: 'Capteurs de puissance', sensors_single: 'Un capteur (+ / −)', sensors_split_grid: 'Deux capteurs : achat et vente', sensors_split_battery: 'Deux capteurs : charge et décharge', import_entity: 'Achat (W)', export_entity: 'Vente (W)', charge_entity: 'Puissance de charge (W)', discharge_entity: 'Puissance de décharge (W)',
         loading: 'Chargement de l\'éditeur…',
     },
     en: {
@@ -68,6 +69,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         background_color: 'Background colour', weather_entity: 'Weather entity',
         power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
+        sensors: 'Power sensors', sensors_single: 'One sensor (+ / −)', sensors_split_grid: 'Two sensors: import and export', sensors_split_battery: 'Two sensors: charge and discharge', import_entity: 'Import (W)', export_entity: 'Export (W)', charge_entity: 'Charging power (W)', discharge_entity: 'Discharging power (W)',
         loading: 'Loading the editor…',
     },
     de: {
@@ -91,6 +93,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         background_color: 'Hintergrundfarbe', weather_entity: 'Wetter-Entität',
         power_threshold: 'Schwelle für die Pfeile ↑ / ↓', animate: 'Animationen',
         tap_action: 'Tippen', hold_action: 'Gedrückt halten', double_tap_action: 'Doppelt tippen',
+        sensors: 'Leistungssensoren', sensors_single: 'Ein Sensor (+ / −)', sensors_split_grid: 'Zwei Sensoren: Bezug und Einspeisung', sensors_split_battery: 'Zwei Sensoren: Laden und Entladen', import_entity: 'Bezug (W)', export_entity: 'Einspeisung (W)', charge_entity: 'Ladeleistung (W)', discharge_entity: 'Entladeleistung (W)',
         loading: 'Editor wird geladen…',
     },
     es: {
@@ -114,6 +117,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         background_color: 'Color de fondo', weather_entity: 'Entidad meteorológica',
         power_threshold: 'Umbral de las flechas ↑ / ↓', animate: 'Animaciones',
         tap_action: 'Toque', hold_action: 'Toque largo', double_tap_action: 'Doble toque',
+        sensors: 'Sensores de potencia', sensors_single: 'Un sensor (+ / −)', sensors_split_grid: 'Dos sensores: compra y venta', sensors_split_battery: 'Dos sensores: carga y descarga', import_entity: 'Compra (W)', export_entity: 'Venta (W)', charge_entity: 'Potencia de carga (W)', discharge_entity: 'Potencia de descarga (W)',
         loading: 'Cargando el editor…',
     },
     it: {
@@ -137,6 +141,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         background_color: 'Colore di sfondo', weather_entity: 'Entità meteo',
         power_threshold: 'Soglia delle frecce ↑ / ↓', animate: 'Animazioni',
         tap_action: 'Tocco', hold_action: 'Tocco prolungato', double_tap_action: 'Doppio tocco',
+        sensors: 'Sensori di potenza', sensors_single: 'Un sensore (+ / −)', sensors_split_grid: 'Due sensori: prelievo e immissione', sensors_split_battery: 'Due sensori: carica e scarica', import_entity: 'Prelievo (W)', export_entity: 'Immissione (W)', charge_entity: 'Potenza di carica (W)', discharge_entity: 'Potenza di scarica (W)',
         loading: 'Caricamento dell\'editor…',
     },
     nl: {
@@ -160,6 +165,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         background_color: 'Achtergrondkleur', weather_entity: 'Weerentiteit',
         power_threshold: 'Drempel voor de pijlen ↑ / ↓', animate: 'Animaties',
         tap_action: 'Tikken', hold_action: 'Lang indrukken', double_tap_action: 'Dubbel tikken',
+        sensors: 'Vermogenssensoren', sensors_single: 'Eén sensor (+ / −)', sensors_split_grid: 'Twee sensoren: afname en teruglevering', sensors_split_battery: 'Twee sensoren: laden en ontladen', import_entity: 'Afname (W)', export_entity: 'Teruglevering (W)', charge_entity: 'Laadvermogen (W)', discharge_entity: 'Ontlaadvermogen (W)',
         loading: 'Editor laden…',
     },
 };
@@ -191,6 +197,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Par défaut : ouvre l\'entité de l\'appareil.',
         consumer_threshold: 'En dessous de cette puissance, un appareil n\'apparaît pas dans le flux. 10 W si vide ; 0 les montre toujours.',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
+        soc_entity: 'Plusieurs batteries : une entité par batterie ; la carte affiche leur charge moyenne et additionne leurs puissances.', import_entity: 'Deux capteurs positifs ; s\'il en manque un, il compte pour 0.', charge_entity: 'Deux capteurs positifs ; s\'il en manque un, il compte pour 0.',
     },
     en: {
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
@@ -205,6 +212,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'By default: opens the appliance\'s entity.',
         consumer_threshold: 'Below this power an appliance stays out of the flow. 10 W when empty; 0 always shows them.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
+        soc_entity: 'Several batteries: one entity each; the card shows their average charge and adds up their powers.', import_entity: 'Two positive sensors; a missing one counts as 0.', charge_entity: 'Two positive sensors; a missing one counts as 0.',
     },
     de: {
         soc_reached_entities: 'Ein/Aus-Entitäten (input_boolean, binary_sensor, switch), die auf „on“ gehen, wenn die Batterie die gewünschte Ladung erreicht hat, z. B. ein input_boolean, das eine Automatisierung setzt. Ist eine davon „on“, zeigt das Feld Batterie „· SOC erreicht“; sonst nichts.',
@@ -219,6 +227,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Standard: öffnet die Entität des Geräts.',
         consumer_threshold: 'Unter dieser Leistung erscheint ein Gerät nicht im Fluss. Leer: 10 W; 0 zeigt sie immer.',
         cell_tap_action: 'Standard: öffnet die Entität des Feldes, oder führt das „Tippen“ der Karte aus, falls gewählt (Block Aktionen).',
+        soc_entity: 'Mehrere Batterien: je eine Entität; die Karte zeigt die mittlere Ladung und addiert die Leistungen.', import_entity: 'Zwei positive Sensoren; ein fehlender zählt als 0.', charge_entity: 'Zwei positive Sensoren; ein fehlender zählt als 0.',
     },
     es: {
         soc_reached_entities: 'Entidades on / off (input_boolean, binary_sensor, switch) que pasan a «on» cuando la batería alcanza la carga que buscas, por ejemplo un input_boolean activado por una automatización. Si alguna está en «on», la casilla Batería muestra «· SOC alcanzado»; si no, nada.',
@@ -233,6 +242,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Por defecto: abre la entidad del aparato.',
         consumer_threshold: 'Por debajo de esta potencia, un aparato no aparece en el flujo. 10 W si está vacío; 0 los muestra siempre.',
         cell_tap_action: 'Por defecto: abre la entidad de la casilla, o ejecuta el «Toque» de la tarjeta si está elegido (bloque Acciones).',
+        soc_entity: 'Varias baterías: una entidad por batería; la tarjeta muestra su carga media y suma sus potencias.', import_entity: 'Dos sensores positivos; si falta uno, cuenta como 0.', charge_entity: 'Dos sensores positivos; si falta uno, cuenta como 0.',
     },
     it: {
         soc_reached_entities: 'Entità on / off (input_boolean, binary_sensor, switch) che passano a «on» quando la batteria ha raggiunto la carica desiderata, ad esempio un input_boolean attivato da un\'automazione. Se una è «on», la casella Batteria mostra «· SOC raggiunto»; altrimenti niente.',
@@ -247,6 +257,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Predefinito: apre l\'entità dell\'apparecchio.',
         consumer_threshold: 'Sotto questa potenza un apparecchio non compare nel flusso. 10 W se vuoto; 0 li mostra sempre.',
         cell_tap_action: 'Predefinito: apre l\'entità della casella, o esegue il «Tocco» della scheda se impostato (blocco Azioni).',
+        soc_entity: 'Più batterie: un\'entità per batteria; la scheda mostra la carica media e somma le potenze.', import_entity: 'Due sensori positivi; se ne manca uno, conta 0.', charge_entity: 'Due sensori positivi; se ne manca uno, conta 0.',
     },
     nl: {
         soc_reached_entities: 'Aan/uit-entiteiten (input_boolean, binary_sensor, switch) die „on” worden zodra de batterij de gewenste lading heeft bereikt, bijvoorbeeld een input_boolean die een automatisering aanzet. Staat er één op „on”, dan toont het vak Batterij „· SOC bereikt”; anders niets.',
@@ -261,6 +272,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Standaard: opent de entiteit van het apparaat.',
         consumer_threshold: 'Onder dit vermogen verschijnt een apparaat niet in de stroom. Leeg: 10 W; 0 toont ze altijd.',
         cell_tap_action: 'Standaard: opent de entiteit van het vak, of voert het „Tikken” van de kaart uit als dat is ingesteld (blok Acties).',
+        soc_entity: 'Meerdere batterijen: één entiteit per batterij; de kaart toont de gemiddelde lading en telt de vermogens op.', import_entity: 'Twee positieve sensoren; een ontbrekende telt als 0.', charge_entity: 'Twee positieve sensoren; een ontbrekende telt als 0.',
     },
 };
 
@@ -293,10 +305,24 @@ function cellFields(lang: Lang, data: Record<string, unknown>): SchemaItem[] {
     ]);
 }
 
+/** Whether a block's power comes from two sensors (the form's choice) */
+const split = (data: Record<string, unknown>, block: 'grid' | 'battery'): boolean =>
+    (data[block] as Record<string, unknown> | undefined)?.sensors === 'split';
+
+/** The battery's entity options, as lists for the form's multiple selectors */
+const BATTERY_LISTS = ['soc_entity', 'power_entity', 'charge_entity', 'discharge_entity'] as const;
+/** The two-sensor fields of each block, and the one-sensor ones they replace */
+const SPLIT_FIELDS = { grid: [['import_entity', 'export_entity'], ['power_entity', 'invert']], battery: [['charge_entity', 'discharge_entity'], ['power_entity', 'invert']] } as const;
+
 /** The form; data (the form's current values) decides which free-cell fields show */
 export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): SchemaItem[] {
     const t = (key: string) => editorLabel(lang, key);
     const heroOptions = (['production', 'consumption', 'battery'] as const).map(value => ({ value, label: t(`hero_${value}`) }));
+    // One signed power sensor, or two positive ones (import / export, charge / discharge)
+    const sensorsChoice = (block: 'grid' | 'battery'): SchemaItem => ({
+        name: 'sensors',
+        selector: { select: { mode: 'list', options: [{ value: 'single', label: t('sensors_single') }, { value: 'split', label: t(`sensors_split_${block}`) }] } },
+    });
     return [
         {
             name: '', type: 'expandable', flatten: true, expanded: true, title: t('production'), icon: 'mdi:solar-power-variant-outline',
@@ -313,10 +339,13 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
         {
             name: 'battery', type: 'expandable', title: t('battery'), icon: 'mdi:home-battery-outline',
             schema: [
-                { name: 'soc_entity', selector: sensor() },
-                { name: 'power_entity', selector: sensor() },
+                { name: 'soc_entity', selector: sensor({ multiple: true }) },
+                sensorsChoice('battery'),
+                ...(split(data, 'battery')
+                    ? [{ name: 'charge_entity', selector: sensor({ multiple: true }) }, { name: 'discharge_entity', selector: sensor({ multiple: true }) }]
+                    : [{ name: 'power_entity', selector: sensor({ multiple: true }) }]),
                 { name: 'temperature_entity', selector: sensor({ device_class: 'temperature' }) },
-                { name: 'invert', selector: { boolean: {} } },
+                ...(split(data, 'battery') ? [] : [{ name: 'invert', selector: { boolean: {} } }]),
                 { name: 'power_threshold', selector: { number: { min: 0, max: 1000, step: 1, mode: 'box', unit_of_measurement: 'W' } } },
                 { name: 'soc_reached_entities', selector: { entity: { multiple: true, domain: ['input_boolean', 'binary_sensor', 'switch'] } } },
             ],
@@ -324,8 +353,10 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}): Sc
         {
             name: 'grid', type: 'expandable', title: t('grid'), icon: 'mdi:transmission-tower',
             schema: [
-                { name: 'power_entity', selector: sensor() },
-                { name: 'invert', selector: { boolean: {} } },
+                sensorsChoice('grid'),
+                ...(split(data, 'grid')
+                    ? [{ name: 'import_entity', selector: sensor() }, { name: 'export_entity', selector: sensor() }]
+                    : [{ name: 'power_entity', selector: sensor() }, { name: 'invert', selector: { boolean: {} } }]),
                 { name: 'voltage_entity', selector: sensor() },
                 { name: 'outage_entity', selector: { entity: {} } },
                 { name: 'outage_states', selector: { select: { multiple: true, custom_value: true, options: DEFAULT_OUTAGE_STATES } } },
@@ -502,6 +533,12 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         background: config.background ?? 'tempo',
         background_color: fromHex(config.background_color ?? DEFAULT_SOLID_COLOR),
         production_entity: production === undefined ? [] : Array.isArray(production) ? production : [production],
+        battery: {
+            ...config.battery,
+            sensors: config.battery?.charge_entity || config.battery?.discharge_entity ? 'split' : 'single',
+            ...Object.fromEntries(BATTERY_LISTS.map(key => [key, entityList(config.battery?.[key])])),
+        },
+        grid: { ...config.grid, sensors: config.grid?.import_entity || config.grid?.export_entity ? 'split' : 'single' },
         ...cellSlots(config),
         ...consumerSlots(config),
     };
@@ -547,6 +584,15 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
     }
     for (const block of ['battery', 'grid'] as const) {
         const b = merged[block] as Record<string, unknown> | undefined;
+        if (b) {
+            // The form's choice: keep the chosen sensors' fields, drop the others
+            const [two, one] = SPLIT_FIELDS[block];
+            if (b.sensors === 'split') for (const key of one) delete b[key];
+            else if (b.sensors === 'single') for (const key of two) delete b[key];
+            delete b.sensors;
+            // One battery stays a plain string in YAML
+            if (block === 'battery') for (const key of BATTERY_LISTS) if (Array.isArray(b[key]) && (b[key] as unknown[]).length === 1) b[key] = (b[key] as unknown[])[0];
+        }
         // false is the default: no need to write it
         if (b?.invert === false) delete b.invert;
         if (b && !Object.keys(b).length) delete merged[block];

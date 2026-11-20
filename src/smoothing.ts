@@ -7,13 +7,13 @@
 // times a second, and averages redone each time would creep towards every new
 // reading, which reads as lag, not as calm.
 import type { EnergySkyCardConfig, HassEntity, HomeAssistant } from './types';
-import { productionEntities } from './model';
+import { batteryPowerEntities, gridPowerEntities, productionEntities } from './model';
 
 /** The power entities smoothed: production, home, battery, grid and appliances */
 export function smoothedEntities(config: EnergySkyCardConfig): string[] {
     const ids = [
         ...productionEntities(config),
-        config.consumption_entity, config.battery?.power_entity, config.grid?.power_entity,
+        config.consumption_entity, ...batteryPowerEntities(config), ...gridPowerEntities(config),
         ...(config.consumers ?? []).map(c => c.entity),
     ];
     return [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.length > 0))];

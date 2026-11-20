@@ -189,6 +189,29 @@ hold_action:
   navigation_path: /energy
 ```
 
+### Two sensors, several batteries
+
+If your meter gives the power bought and the power sold as two sensors, or you have more than one battery, there's no template to write. In the editor, pick « Two sensors » in the Grid or Battery section.
+
+```yaml
+type: custom:energy-sky-card
+production_entity: sensor.solar_power
+battery:
+  soc_entity:
+    - sensor.battery_1_soc
+    - sensor.battery_2_soc
+  charge_entity:
+    - sensor.battery_1_charge_power
+    - sensor.battery_2_charge_power
+  discharge_entity:
+    - sensor.battery_1_discharge_power
+    - sensor.battery_2_discharge_power
+  capacity: [10, 5]
+grid:
+  import_entity: sensor.grid_import_power
+  export_entity: sensor.grid_export_power
+```
+
 ### Your appliances in the flow
 
 Up to four, around the home, with the flow shown:
@@ -331,10 +354,12 @@ All under `battery:`.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `soc_entity` | — | The battery's charge, in %. Without it, no Battery cell |
-| `power_entity` | — | The battery's power, in W, positive when charging: the `↑` / `↓` arrows and the flow |
+| `soc_entity` | — | The battery's charge, in %. Without it, no Battery cell. Several batteries: a list, and the card shows their average charge |
+| `power_entity` | — | The battery's power, in W, positive when charging: the `↑` / `↓` arrows and the flow. Several batteries: a list, added up |
+| `charge_entity` / `discharge_entity` | — | Instead of `power_entity`, when your battery has two sensors: the charging and the discharging power, each positive (a missing one counts as 0). Lists for several batteries |
+| `capacity` | — | In kWh. With one per battery (a list), the average charge is weighted by capacity |
 | `temperature_entity` | — | The battery's temperature, shown after the charge in its sensor's unit: `78 % ↑ · 24 °C` |
-| `invert` | `false` | `true` if your sensor is positive when **discharging** (it depends on the integration) |
+| `invert` | `false` | `true` if your sensor is positive when **discharging** (it depends on the integration). Only for `power_entity` |
 | `power_threshold` | `20` | Below this power, in W, the battery is idle: no arrow, and no energy in the flow |
 | `soc_reached_entities` | — | On / off entities (`input_boolean`, `binary_sensor`, `switch`) that say the battery has reached its target charge. When any is on, the cell reads `· SOC reached`; otherwise nothing |
 
@@ -344,8 +369,9 @@ All under `grid:`.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `power_entity` | — | Power exchanged with the grid, in W, positive when buying. Without it, no Grid cell and no Grid node |
-| `invert` | `false` | `true` if your sensor is positive when **selling** |
+| `power_entity` | — | Power exchanged with the grid, in W, positive when buying. Without it (or the two below), no Grid cell and no Grid node |
+| `import_entity` / `export_entity` | — | Instead of `power_entity`, when your meter has two sensors: the power bought and the power sold, each positive (a missing one counts as 0) |
+| `invert` | `false` | `true` if your sensor is positive when **selling**. Only for `power_entity` |
 | `voltage_entity` | — | Grid voltage, in V, for the Voltage cell |
 | `outage_entity` | — | A grid-loss alarm. While it's in one of `outage_states`, the Voltage cell reads `Outage` |
 | `outage_states` | `[warning, alarm]` | The states of `outage_entity` that mean an outage |
