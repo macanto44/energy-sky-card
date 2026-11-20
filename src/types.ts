@@ -61,6 +61,20 @@ export type SkyMode = 'tempo' | 'solid' | 'weather';
 /** The energy flow under the card: unfolded by a tap on the big number, or always shown */
 export type FlowMode = 'tap' | 'always';
 
+/** How the battery's estimate shows: a clock time, a duration, or not at all */
+export type EstimateForm = 'time' | 'duration' | 'off';
+
+export interface BatteryEstimateConfig {
+    /** While charging: time (default, « 14:20 »), duration (« 2 h 10 ») or off */
+    charge?: EstimateForm;
+    /** While discharging: duration (default, « 5 h 30 »), time (« 04:10 ») or off */
+    discharge?: EstimateForm;
+    /** With a temperature: replace it (default) or show both */
+    with_temperature?: 'replace' | 'both';
+    /** In the battery node's label too (default true) */
+    flow?: boolean;
+}
+
 export interface EnergySkyCardConfig {
     type: string;
     /** One power sensor, or several summed (micro-inverters + a string inverter) */
@@ -75,8 +89,13 @@ export interface EnergySkyCardConfig {
         /** Instead of power_entity: the charging and discharging powers, each positive (one per battery, summed) */
         charge_entity?: string | string[];
         discharge_entity?: string | string[];
-        /** kWh, or one per battery */
+        /** kWh, or one per battery: turns the estimate on (full at… / reserve in…) */
         capacity?: number | number[];
+        /** The charge (%) the estimate aims for when charging (100 by default) */
+        max_soc?: number;
+        /** The charge (%) the estimate stops at when discharging (0 by default) */
+        reserve_soc?: number;
+        estimate?: BatteryEstimateConfig;
         /** The battery's temperature, shown after the charge: « 78 % ↑ · 24 °C » */
         temperature_entity?: string;
         /** Entities on when the battery has reached its target charge: « SOC atteint » */

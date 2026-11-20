@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Battery estimate: with `battery.capacity` (kWh), the Battery cell tells when the battery will be full (`78 % ↑ · 14:20`) or how long until its reserve (`64 % ↓ · 5 h 30`), and the flow shows it under the Battery node's power; the whole sentence (« Full at 14:20 ») is in the title. Read from the battery power's 5 minute average (or `smoothing`'s), rounded to 10 minutes, nothing while idle or beyond a day. `max_soc`, `reserve_soc` and `estimate` (`charge` / `discharge`: `time`, `duration` or `off`; `with_temperature`: `replace` or `both`; `flow`) set it, all in the editor's Battery section once a capacity is set.
 - Two sensors instead of one signed sensor: `grid.import_entity` / `export_entity` (power bought and sold) and `battery.charge_entity` / `discharge_entity`, each positive. The editor's Grid and Battery sections offer « One sensor (+ / −) » or « Two sensors »; the pre-fill takes Home Assistant's two power sensors when the Energy dashboard has them.
 - Several batteries: `battery.soc_entity`, `power_entity`, `charge_entity` and `discharge_entity` take a list. One Battery cell and one node: the powers added up, the average charge (weighted by `battery.capacity` when it lists one per battery).
 - The card and its visual editor speak German, Spanish, Italian and Dutch too, following your Home Assistant profile's language (English for any other). Configuration errors stay in French or English.

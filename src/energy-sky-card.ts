@@ -3,7 +3,7 @@
 import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_DOC_URL, CARD_VERSION } from './constants';
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
-import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey } from './model';
+import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, ESTIMATE_AVERAGE_MS, batteryCapacity, batteryPower, batteryPowerEntities, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey, type ViewOptions } from './model';
 import { localize } from './localize';
 import { cardLanguage } from './localize';
 import { CLOUDS, WEATHER, computeBackground, isHexColor } from './sky';
@@ -47,6 +47,9 @@ const CHOICES: [string, string[]][] = [
     ['layout', ['standard', 'side']],
     ['flow', ['tap', 'always']],
     ['background', ['tempo', 'solid', 'weather']],
+    ['battery.estimate.charge', ['time', 'duration', 'off']],
+    ['battery.estimate.discharge', ['duration', 'time', 'off']],
+    ['battery.estimate.with_temperature', ['replace', 'both']],
 ];
 /** Older option names, no longer read, and what replaces them */
 const RENAMED: [string, { fr: string; en: string }][] = [
@@ -70,7 +73,9 @@ const SPLIT: [string, string, string[]][] = [
 const KINDS: [string[], (v: unknown) => boolean, string, string][] = [
     [['battery.soc_entity', 'battery.power_entity', 'battery.charge_entity', 'battery.discharge_entity', 'grid.import_entity', 'grid.export_entity'], isEntityOption, 'doit être une entité ou une liste d\'entités', 'must be an entity or a list of entities'],
     [['battery.capacity'], v => v === undefined || isPositive(v) || (Array.isArray(v) && v.length > 0 && v.every(isPositive)), 'doit être un nombre positif (kWh) ou une liste', 'must be a positive number (kWh) or a list of them'],
-    [['battery.invert', 'grid.invert', 'expandable', 'animate'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
+    [['battery.max_soc', 'battery.reserve_soc'], v => v === undefined || (typeof v === 'number' && v >= 0 && v <= 100), 'doit être un pourcentage (0 à 100)', 'must be a percentage (0 to 100)'],
+    [['battery.estimate'], v => v === undefined || (!!v && typeof v === 'object' && !Array.isArray(v)), 'doit regrouper charge, discharge, with_temperature, flow', 'must hold charge, discharge, with_temperature, flow'],
+    [['battery.invert', 'grid.invert', 'expandable', 'animate', 'battery.estimate.flow'], v => v === undefined || typeof v === 'boolean', 'doit valoir true ou false', 'must be true or false'],
     [['daily_production_entities', 'battery.soc_reached_entities', 'grid.outage_states'], isStringList, 'doit être une liste', 'must be a list'],
     [['production_max', 'production_threshold', 'smoothing', 'battery.power_threshold', 'consumer_threshold', 'stale_after'], v => v === undefined || (typeof v === 'number' && Number.isFinite(v) && v >= 0), 'doit être un nombre positif', 'must be a positive number'],
 ];
@@ -163,7 +168,7 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
 }
 
 /** A node of the flow: its pill, texts and ring segments */
-interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }
+interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; sub: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[] }
 
 /** The elements updated in place on every change */
 interface Refs {
@@ -203,6 +208,11 @@ export class EnergySkyCard extends HTMLElement {
     private staleTimer?: ReturnType<typeof setInterval>;
     /** smoothing: the powers' averages, the entities averaged, and a tick while connected so the average moves on between readings */
     private smoother?: Smoother;
+    /** The battery estimate's own average of the battery power (5 min), when there is a capacity and no smoothing */
+    private estimateSmoother?: Smoother;
+    private estimateIds: string[] = [];
+    /** What the last view was worked out with beside hass: the estimate's battery power and the time */
+    private viewOptions: ViewOptions = {};
     private smoothIds: string[] = [];
     private smoothTimer?: ReturnType<typeof setInterval>;
     /** The hass the card shows: smoothed powers with smoothing, else hass itself */
@@ -240,6 +250,11 @@ export class EnergySkyCard extends HTMLElement {
         const smoothing = this.config.smoothing ?? 0;
         this.smoother = smoothing > 0 ? new Smoother(smoothing * 1000) : undefined;
         this.smoothIds = this.smoother ? smoothedEntities(this.config) : [];
+        // The estimate reads an average power: the smoothed one, else its own over ESTIMATE_AVERAGE_MS
+        const estimating = !!batteryCapacity(this.config);
+        this.estimateSmoother = estimating && !this.smoother ? new Smoother(ESTIMATE_AVERAGE_MS) : undefined;
+        this.estimateIds = estimating ? batteryPowerEntities(this.config) : [];
+        this.viewOptions = {};
         this.syncSmoothTimer();
         if (this._hass) this.update();
     }
@@ -505,12 +520,14 @@ export class EnergySkyCard extends HTMLElement {
     private updateFlow(): void {
         const flow = this.refs?.flow;
         if (!flow) return;
-        const view = flowView(this.config!, this.shown ?? this._hass!);
+        const view = flowView(this.config!, this.shown ?? this._hass!, this.viewOptions);
         for (const [key, node] of flow.nodes) {
             const v = view.nodes[key];
             if (node.el.hidden === v.present) node.el.hidden = !v.present;
             setText(node.label, v.label);
             setText(node.value, v.value);
+            setText(node.sub, v.sub ?? '');
+            node.el.dataset.note = v.note ?? '';
             setText(node.centre, v.centre ?? '');
             node.el.toggleAttribute('data-centre', v.centre !== undefined);
             node.el.toggleAttribute('data-alert', !!v.alert);
@@ -638,7 +655,8 @@ export class EnergySkyCard extends HTMLElement {
         };
         this.writeContext(false);
         if (!side) {
-            if (!attempt(true, FORM_LEVELS)) attempt(false, FORM_LEVELS.slice(-1));
+            // Still too wide in its tight form (a 12 h clock after the charge): without the complement, then with an ellipsis
+            if (!attempt(true, FORM_LEVELS) && !attempt(true, [3])) attempt(false, FORM_LEVELS.slice(-1));
             this.writeContext(!context.hidden && tooWide(context));
             return;
         }
@@ -668,11 +686,23 @@ export class EnergySkyCard extends HTMLElement {
             // The averages move between readings: render when what they show changes
             key += '|' + this.smoothIds.map(id => Number(shown.states[id]?.state).toPrecision(3)).join('|');
         }
+        // The estimate: its average power, and the minute (a clock time moves on with it)
+        const options: ViewOptions = {};
+        if (this.estimateIds.length) {
+            const now = Date.now();
+            options.now = now;
+            if (this.estimateSmoother) {
+                this.estimateSmoother.record(this._hass, this.estimateIds, now);
+                options.estimatePower = batteryPower(this.config, this.estimateSmoother.smoothed(this._hass, this.estimateIds, now));
+            }
+            key += `|${options.estimatePower?.toPrecision(2) ?? ''}|${Math.floor(now / 60000)}`;
+        }
         if (key === this.renderedKey) return;
         this.renderedKey = key;
         this.shown = shown;
+        this.viewOptions = options;
 
-        const view = this.view = buildView(this.config, shown);
+        const view = this.view = buildView(this.config, shown, options);
         const refs = this.refs;
         this.paintSky();
         setText(refs.heroValue, view.hero.value);
@@ -721,7 +751,7 @@ export class EnergySkyCard extends HTMLElement {
             const icon = text ? 'mdi:clock-alert-outline' : metric.icon ?? el.icon.dataset.icon;
             if (!el.icon.dataset.icon) el.icon.dataset.icon = el.icon.getAttribute('icon') ?? '';
             if (icon && el.icon.getAttribute('icon') !== icon) el.icon.setAttribute('icon', icon);
-            const title = [this.side ? metric.label : '', text ?? ''].filter(Boolean).join(' · ');
+            const title = [this.side ? metric.label : '', metric.note ?? '', text ?? ''].filter(Boolean).join(' · ');
             setAttr(el.el, 'title', title || null);
         }
         const flow = this.refs.flow;
@@ -729,7 +759,9 @@ export class EnergySkyCard extends HTMLElement {
         for (const [key, node] of flow.nodes) {
             const text = note(flowNodeEntity(this.config, key));
             node.el.toggleAttribute('data-stale', !!text);
-            setAttr(node.el, 'title', text ?? null);
+            // The battery's estimate sentence (updateFlow), then the age of a quiet reading
+            const title = [node.el.dataset.note ?? '', text ?? ''].filter(Boolean).join(' · ');
+            setAttr(node.el, 'title', title || null);
         }
         (this.config.consumers ?? []).forEach((consumer, i) => {
             const node = flow.consumers[i];
@@ -817,7 +849,7 @@ function flowMarkup(consumers: number): string {
     const node = (attrs: string, icon: string) => `
         <div class="node" ${attrs}>
             <span class="disc"><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17"></circle>${'<circle class="seg" cx="20" cy="20" r="17"></circle>'.repeat(3)}</svg><ha-icon${icon ? ` icon="${icon}"` : ''}></ha-icon><span class="centre"></span></span>
-            <span class="ntext"><span class="nlab line"></span><span class="nval line"></span></span>
+            <span class="ntext"><span class="nlab line"></span><span class="nval line"></span><span class="nsub line"></span></span>
         </div>`;
     const nodes = NODES.map(([key, icon]) => node(`data-node="${key}"`, icon)).join('')
         + Array.from({ length: consumers }, (_, i) => node(`data-consumer="${i}"`, '')).join('');
@@ -826,7 +858,7 @@ function flowMarkup(consumers: number): string {
 
 /** A flow node's text and ring elements */
 function nodeRefs(el: HTMLElement): FlowNodeRefs {
-    return { el, label: find(el, '.nlab'), value: find(el, '.nval'), centre: find(el, '.centre'), segs: [...el.querySelectorAll<SVGCircleElement>('.seg')] };
+    return { el, label: find(el, '.nlab'), value: find(el, '.nval'), sub: find(el, '.nsub'), centre: find(el, '.centre'), segs: [...el.querySelectorAll<SVGCircleElement>('.seg')] };
 }
 
 /** A node's ring: its segments around the disc, each a share of the circle in its source's colour */

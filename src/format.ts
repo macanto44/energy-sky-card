@@ -61,6 +61,25 @@ export function formatPercent(value: number | undefined, locale: NumberLocale): 
     return `${formatNumber(Math.round(value), 0, locale)}${SPACED_PERCENT.includes(locale.lang) ? ' ' : ''}%`;
 }
 
+/** A clock time, « 14:20 » (or « 2:20 PM »), in the profile's time format */
+export function formatClock(date: Date, locale: NumberLocale): string {
+    const { locale: tag, hour12 } = locale.time ?? {};
+    const options: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', ...(hour12 === undefined ? {} : { hour12 }) };
+    try {
+        return new Intl.DateTimeFormat(tag, options).format(date);
+    } catch {
+        return new Intl.DateTimeFormat(undefined, options).format(date);
+    }
+}
+
+/** A duration in minutes: « 40 min », « 2 h », « 5 h 30 » (no break inside) */
+export function formatDuration(minutes: number): string {
+    if (minutes < 60) return `${minutes}\u00a0min`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m ? `${h}\u00a0h\u00a0${String(m).padStart(2, '0')}` : `${h}\u00a0h`;
+}
+
 /** A temperature rounded to the degree, with its sensor's unit: "24 °C" */
 export function formatTemperature(degrees: number | undefined, unit: string, locale: NumberLocale): string {
     if (degrees === undefined || !Number.isFinite(degrees)) return NO_VALUE;

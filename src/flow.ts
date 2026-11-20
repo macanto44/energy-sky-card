@@ -2,9 +2,9 @@
 // the grid, the battery and the home. Pure: powers → flows → what each node
 // and wire shows, and the drawing's geometry for a width.
 
-import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, batteryPowerEntities, batterySoc, batterySocEntities, gridOutage, gridPower, gridPowerEntities, productionEntities, productionPower } from './model';
+import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, batteryPowerEntities, batterySoc, batterySocEntities, gridOutage, gridPower, gridPowerEntities, productionEntities, productionPower, viewEstimate, type ViewOptions } from './model';
 import { formatPercent, formatPower } from './format';
-import { localize, numberLocale } from './localize';
+import { localize, numberLocale, type NumberLocale } from './localize';
 import { numericState, powerW } from './utils';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
 import type { EnergySkyCardConfig, HomeAssistant } from './types';
@@ -82,6 +82,16 @@ export interface NodeView {
     centre?: string;
     /** Something's wrong: the grid is down */
     alert?: boolean;
+    /** A third, small line: the battery's estimate, « 14:20 » */
+    sub?: string;
+    /** Its sentence, for the node's title: « Pleine à 14:20 » */
+    note?: string;
+}
+
+/** The battery node's estimate (unless estimate.flow is false): its line under the power, and its sentence */
+function batteryNote(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, options: ViewOptions): Pick<NodeView, 'sub' | 'note'> {
+    const estimate = config.battery?.estimate?.flow === false ? undefined : viewEstimate(config, hass, loc, options);
+    return estimate ? { sub: estimate.text, note: estimate.title } : {};
 }
 
 /** The entity a node opens: the first production sensor, grid power, battery power (else its charge), consumption */
@@ -119,7 +129,7 @@ export interface FlowView {
     off: WireKey[];
 }
 
-export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): FlowView {
+export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant, options: ViewOptions = {}): FlowView {
     const loc = numberLocale(hass);
     const solar = productionPower(config, hass);
     // A grid outage moves nothing through the grid, whatever its sensor says
@@ -150,7 +160,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant): Flow
                 ring: outage ? [[1, 'alert']] : [], alert: outage,
             },
             battery: {
-                present: present('battery'), label: localize(loc.lang, 'battery'),
+                present: present('battery'), label: localize(loc.lang, 'battery'), ...batteryNote(config, hass, loc, options),
                 value: batteryPowerEntities(config).length ? formatPower(measured, loc) : formatPercent(soc, loc),
                 ring: soc === undefined ? [] : [[Math.min(Math.max(soc, 0), 100) / 100, 'batt']],
                 centre: soc === undefined ? undefined : String(Math.round(soc)),

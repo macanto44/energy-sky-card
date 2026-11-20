@@ -4,7 +4,7 @@ export const CONFIG = {
   production_entity: 'sensor.production_pv',
   production_max: 6000,
   daily_production_entities: ['sensor.sofar_jour', 'sensor.cabanon_jour'],
-  battery: { soc_entity: 'sensor.soc', power_entity: 'sensor.bat_power', temperature_entity: 'sensor.bat_temp', soc_reached_entities: ['input_boolean.soc_reached'] },
+  battery: { soc_entity: 'sensor.soc', power_entity: 'sensor.bat_power', temperature_entity: 'sensor.bat_temp', soc_reached_entities: ['input_boolean.soc_reached'], capacity: 10 },
   grid: { power_entity: 'sensor.grid', voltage_entity: 'sensor.voltage', outage_entity: 'sensor.gridlost' },
   forecast_tomorrow_entity: 'sensor.tomorrow',
   tariff_color_entity: 'sensor.tempo',

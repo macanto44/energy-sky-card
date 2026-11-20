@@ -5,7 +5,8 @@ import type { HomeAssistant } from './types';
 export type CardString =
     | 'produced' | 'battery' | 'grid'
     | 'solar' | 'home' | 'stale'
-    | 'voltage' | 'outage' | 'tomorrow' | 'soc_reached' | 'soc_reached_short' | 'consumption' | 'consumption_short';
+    | 'voltage' | 'outage' | 'tomorrow' | 'soc_reached' | 'soc_reached_short' | 'consumption' | 'consumption_short'
+    | 'full_at' | 'full_in' | 'reserve_at' | 'reserve_in' | 'empty_at' | 'empty_in';
 
 const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString, string>> = {
     fr: {
@@ -14,6 +15,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Pas de nouvelle valeur depuis {age}',
         voltage: 'Tension', outage: 'Coupure', tomorrow: 'Prévu demain',
         soc_reached: 'SOC atteint', soc_reached_short: 'SOC ✓', consumption: 'Consommation', consumption_short: 'Conso.',
+        full_at: 'Pleine à {time}', full_in: 'Pleine dans {time}', reserve_at: 'Réserve atteinte à {time}', reserve_in: 'Réserve dans {time}', empty_at: 'Vide à {time}', empty_in: 'Vide dans {time}',
     },
     en: {
         produced: '{value} kWh produced',
@@ -21,6 +23,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'No new reading for {age}',
         voltage: 'Voltage', outage: 'Outage', tomorrow: 'Tomorrow',
         soc_reached: 'SOC reached', soc_reached_short: 'SOC ✓', consumption: 'Consumption', consumption_short: 'Use',
+        full_at: 'Full at {time}', full_in: 'Full in {time}', reserve_at: 'Reserve at {time}', reserve_in: 'Reserve in {time}', empty_at: 'Empty at {time}', empty_in: 'Empty in {time}',
     },
     de: {
         produced: '{value} kWh erzeugt',
@@ -28,6 +31,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Kein neuer Wert seit {age}',
         voltage: 'Spannung', outage: 'Ausfall', tomorrow: 'Morgen',
         soc_reached: 'SOC erreicht', soc_reached_short: 'SOC ✓', consumption: 'Verbrauch', consumption_short: 'Verbr.',
+        full_at: 'Voll um {time}', full_in: 'Voll in {time}', reserve_at: 'Reserve um {time}', reserve_in: 'Reserve in {time}', empty_at: 'Leer um {time}', empty_in: 'Leer in {time}',
     },
     es: {
         produced: '{value} kWh producidos',
@@ -35,6 +39,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Sin valor nuevo desde hace {age}',
         voltage: 'Tensión', outage: 'Corte', tomorrow: 'Mañana',
         soc_reached: 'SOC alcanzado', soc_reached_short: 'SOC ✓', consumption: 'Consumo', consumption_short: 'Cons.',
+        full_at: 'Llena a las {time}', full_in: 'Llena en {time}', reserve_at: 'Reserva a las {time}', reserve_in: 'Reserva en {time}', empty_at: 'Vacía a las {time}', empty_in: 'Vacía en {time}',
     },
     it: {
         produced: '{value} kWh prodotti',
@@ -42,6 +47,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Nessun nuovo valore da {age}',
         voltage: 'Tensione', outage: 'Blackout', tomorrow: 'Domani',
         soc_reached: 'SOC raggiunto', soc_reached_short: 'SOC ✓', consumption: 'Consumo', consumption_short: 'Cons.',
+        full_at: 'Piena alle {time}', full_in: 'Piena tra {time}', reserve_at: 'Riserva alle {time}', reserve_in: 'Riserva tra {time}', empty_at: 'Scarica alle {time}', empty_in: 'Scarica tra {time}',
     },
     nl: {
         produced: '{value} kWh opgewekt',
@@ -49,6 +55,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         stale: 'Geen nieuwe waarde sinds {age}',
         voltage: 'Spanning', outage: 'Storing', tomorrow: 'Morgen',
         soc_reached: 'SOC bereikt', soc_reached_short: 'SOC ✓', consumption: 'Verbruik', consumption_short: 'Verbr.',
+        full_at: 'Vol om {time}', full_in: 'Vol over {time}', reserve_at: 'Reserve om {time}', reserve_in: 'Reserve over {time}', empty_at: 'Leeg om {time}', empty_in: 'Leeg over {time}',
     },
 };
 
@@ -97,8 +104,21 @@ function sepFor(language: string | undefined): string {
 export interface NumberLocale {
     lang: Lang;
     decimal: string;
+    /** Clock times: the locale to format them in (undefined: the browser's) and 12 / 24 h when the profile says */
+    time?: { locale?: string; hour12?: boolean };
+}
+
+/** The profile's time format: 12 h, 24 h, the language's or the system's */
+export function timeLocale(hass: Pick<HomeAssistant, 'language' | 'locale'> | undefined): NonNullable<NumberLocale['time']> {
+    const language = hass?.locale?.language || hass?.language || 'en';
+    switch (hass?.locale?.time_format) {
+        case '12': return { locale: language, hour12: true };
+        case '24': return { locale: language, hour12: false };
+        case 'system': return {};
+        default: return { locale: language };
+    }
 }
 
 export function numberLocale(hass: Pick<HomeAssistant, 'language' | 'locale'> | undefined): NumberLocale {
-    return { lang: cardLanguage(hass), decimal: decimalSeparator(hass) };
+    return { lang: cardLanguage(hass), decimal: decimalSeparator(hass), time: timeLocale(hass) };
 }

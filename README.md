@@ -189,6 +189,24 @@ hold_action:
   navigation_path: /energy
 ```
 
+### When the battery will be full
+
+With its capacity, the Battery cell tells when the battery will be full (`78 % ↑ · 14:20`) or how long until its reserve (`64 % ↓ · 5 h 30`), from the battery power's average over 5 minutes (or `smoothing`'s). The whole sentence is in the cell's title. Each part can be changed or turned off:
+
+```yaml
+battery:
+  soc_entity: sensor.battery_soc
+  power_entity: sensor.battery_power
+  capacity: 10        # kWh
+  max_soc: 95
+  reserve_soc: 10
+  estimate:
+    charge: time      # or duration, off
+    discharge: duration
+```
+
+Nothing shows while the battery is idle, already there, or more than a day away. The times follow your profile's 12 / 24 h format.
+
 ### Two sensors, several batteries
 
 If your meter gives the power bought and the power sold as two sensors, or you have more than one battery, there's no template to write. In the editor, pick « Two sensors » in the Grid or Battery section.
@@ -357,7 +375,13 @@ All under `battery:`.
 | `soc_entity` | — | The battery's charge, in %. Without it, no Battery cell. Several batteries: a list, and the card shows their average charge |
 | `power_entity` | — | The battery's power, in W, positive when charging: the `↑` / `↓` arrows and the flow. Several batteries: a list, added up |
 | `charge_entity` / `discharge_entity` | — | Instead of `power_entity`, when your battery has two sensors: the charging and the discharging power, each positive (a missing one counts as 0). Lists for several batteries |
-| `capacity` | — | In kWh. With one per battery (a list), the average charge is weighted by capacity |
+| `capacity` | — | In kWh, or a list (one per battery: the average charge is then weighted by capacity). Turns the estimate on: when the battery will be full, how long until its reserve |
+| `max_soc` | `100` | The charge (%) the estimate aims for while charging |
+| `reserve_soc` | `0` | The charge (%) the estimate stops at while discharging |
+| `estimate.charge` | `time` | While charging: `time` (`78 % ↑ · 14:20`), `duration` (`2 h 10`) or `off` |
+| `estimate.discharge` | `duration` | While discharging: `duration` (`64 % ↓ · 5 h 30`), `time` (`04:10`) or `off` |
+| `estimate.with_temperature` | `replace` | With a `temperature_entity`: the estimate takes the temperature's place while it shows (`replace`), or comes after it (`both`) |
+| `estimate.flow` | `true` | The estimate as a small line under the Battery node's power, in the flow |
 | `temperature_entity` | — | The battery's temperature, shown after the charge in its sensor's unit: `78 % ↑ · 24 °C` |
 | `invert` | `false` | `true` if your sensor is positive when **discharging** (it depends on the integration). Only for `power_entity` |
 | `power_threshold` | `20` | Below this power, in W, the battery is idle: no arrow, and no energy in the flow |

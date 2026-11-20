@@ -376,6 +376,9 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 .ntext { min-width: 0; display: flex; flex-direction: column; }
 .nlab { font-size: 9.5px; font-weight: 600; line-height: 12px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.78; }
 .nval { font-size: 15px; font-weight: 500; line-height: 19px; font-variant-numeric: tabular-nums; }
+/* The battery's estimate, a small third line under its power (« 14:20 »); none elsewhere */
+.nsub { font-size: 10px; font-weight: 500; line-height: 11px; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.nsub:empty { display: none; }
 .flow[data-narrow] .nval { font-size: 13.5px; }
 .flow[data-narrow] .nlab { font-size: 8.5px; }
 .flow[data-narrow] .node { gap: 6px; padding: 0 8px 0 5px; }

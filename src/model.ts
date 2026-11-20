@@ -4,7 +4,7 @@
 import type { BuiltinCell, CellConfig, CellKind, CustomCell, EnergySkyCardConfig, HomeAssistant } from './types';
 import { energyKWh, numericState, powerW } from './utils';
 import { localize, numberLocale, type NumberLocale } from './localize';
-import { NO_VALUE, formatEnergy, joinParts, formatKWhValue, formatNumber, formatPercent, formatPower, formatTemperature, formatVoltage, powerParts, type ValueParts } from './format';
+import { NO_VALUE, formatClock, formatDuration, formatEnergy, joinParts, formatKWhValue, formatNumber, formatPercent, formatPower, formatTemperature, formatVoltage, powerParts, type ValueParts } from './format';
 
 export const DEFAULT_POWER_THRESHOLD = 20;
 export const DEFAULT_OUTAGE_STATES = ['warning', 'alarm'];
@@ -42,6 +42,8 @@ export interface MetricView {
     bare?: string;
     /** The icon, for a free cell (its config's, else its entity's) */
     icon?: string;
+    /** A sentence for the cell's title: the battery's estimate, « Pleine à 14:20 » */
+    note?: string;
 }
 
 /**
@@ -208,6 +210,68 @@ export function staleReadings(config: EnergySkyCardConfig, hass: HomeAssistant, 
     return stale;
 }
 
+/** The batteries' capacity in kWh, all of them (undefined without one) */
+export function batteryCapacity(config: EnergySkyCardConfig): number | undefined {
+    const capacity = config.battery?.capacity;
+    const total = Array.isArray(capacity) ? capacity.reduce((a, b) => a + b, 0) : capacity;
+    return total !== undefined && total > 0 ? total : undefined;
+}
+
+/** The estimate is rounded to this many minutes, and not shown beyond a day */
+export const ESTIMATE_STEP = 10;
+/** Without smoothing, the estimate reads the battery power's average over this long */
+export const ESTIMATE_AVERAGE_MS = 5 * 60_000;
+const ESTIMATE_MAX = 24 * 60;
+
+/** When the battery will be full, or down to its reserve: the cell's short text and the title's sentence */
+export interface BatteryEstimate {
+    /** « 14:20 » or « 5 h 30 » */
+    text: string;
+    /** « Pleine à 14:20 », « Réserve dans 5 h 30 » */
+    title: string;
+}
+
+/**
+ * The battery's estimate: with a capacity, the time to max_soc while
+ * charging or to reserve_soc while discharging, at the present power (power,
+ * the card's average of it). Nothing when idle, beyond a day, already there,
+ * without a reading, or turned off for that direction.
+ */
+export function batteryEstimate(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, power = batteryPower(config, hass), now = Date.now()): BatteryEstimate | undefined {
+    const battery = config.battery;
+    const capacity = batteryCapacity(config);
+    const soc = batterySoc(config, hass);
+    const threshold = battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
+    if (!capacity || soc === undefined || power === undefined || Math.abs(power) <= threshold) return undefined;
+    const charging = power > 0;
+    const form = (charging ? battery?.estimate?.charge : battery?.estimate?.discharge) ?? (charging ? 'time' : 'duration');
+    if (form === 'off') return undefined;
+    const reserve = battery?.reserve_soc ?? 0;
+    const percent = charging ? (battery?.max_soc ?? 100) - soc : soc - reserve;
+    if (percent <= 0) return undefined;
+    const exact = percent / 100 * capacity * 1000 / Math.abs(power) * 60;
+    if (exact > ESTIMATE_MAX) return undefined;
+    const step = ESTIMATE_STEP * 60000;
+    // A clock time on the step (« 14:20 »), a duration rounded to it, at least one step
+    const text = form === 'time'
+        ? formatClock(new Date(Math.round((now + exact * 60000) / step) * step), loc)
+        : formatDuration(Math.max(ESTIMATE_STEP, Math.round(exact / ESTIMATE_STEP) * ESTIMATE_STEP));
+    const key = charging ? 'full' : reserve > 0 ? 'reserve' : 'empty';
+    return { text, title: localize(loc.lang, `${key}_${form === 'time' ? 'at' : 'in'}`, { time: text }) };
+}
+
+/** What the view is worked out with, beside hass: the battery power the estimate uses (the card's average) and the time */
+export interface ViewOptions {
+    estimatePower?: number;
+    now?: number;
+}
+
+/** The estimate shown with this view's readings (none while the battery's target is reported reached) */
+export function viewEstimate(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, options: ViewOptions = {}): BatteryEstimate | undefined {
+    if (socReached(config, hass)) return undefined;
+    return batteryEstimate(config, hass, loc, options.estimatePower ?? batteryPower(config, hass), options.now);
+}
+
 /** Grid power in W, positive when importing (the sensor's sign flipped with grid.invert) */
 export function gridPower(config: EnergySkyCardConfig, hass: HomeAssistant): number | undefined {
     const grid = config.grid;
@@ -291,7 +355,7 @@ export function gridOutage(config: EnergySkyCardConfig, hass: HomeAssistant): bo
     return states.includes(String(hass.states[id]?.state ?? '').toLowerCase());
 }
 
-function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, threshold: number): MetricView {
+function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberLocale, threshold: number, options: ViewOptions): MetricView {
     const soc = batterySoc(config, hass);
     const dir = direction(batteryPower(config, hass), threshold);
     const arrow = soc === undefined ? '' : dir === 'up' ? ' ↑' : dir === 'down' ? ' ↓' : '';
@@ -300,13 +364,20 @@ function batteryMetric(config: EnergySkyCardConfig, hass: HomeAssistant, loc: Nu
     const temp = numericState(tempEntity);
     const charge = formatPercent(soc, loc) + arrow;
     const unit = String(tempEntity?.attributes.unit_of_measurement ?? '');
+    // After the charge: the estimate, the temperature, or both (estimate.with_temperature)
+    const estimate = viewEstimate(config, hass, loc, options);
+    const both = config.battery?.estimate?.with_temperature === 'both';
+    const showTemp = temp !== undefined && (!estimate || both);
+    const parts = [...(showTemp ? [formatTemperature(temp, unit, loc)] : []), ...(estimate ? [estimate.text] : [])];
+    const tightParts = [...(showTemp ? [`${formatNumber(Math.round(temp), 0, loc)}°`] : []), ...(estimate ? [estimate.text] : [])];
     return {
         key: 'battery',
         label: localize(loc.lang, 'battery'),
-        value: temp === undefined ? charge : `${charge} · ${formatTemperature(temp, unit, loc)}`,
+        value: [charge, ...parts].join(' · '),
         extra: reached ? ` · ${localize(loc.lang, 'soc_reached')}` : '',
         extraShort: reached ? ` · ${localize(loc.lang, 'soc_reached_short')}` : '',
-        ...(temp === undefined ? {} : { tight: { value: `${charge}\u202F·\u202F${formatNumber(Math.round(temp), 0, loc)}°`, extra: reached ? '\u202F✓' : '' }, bare: charge }),
+        ...(parts.length ? { tight: { value: [charge, ...tightParts].join(' · '), extra: reached ? ' ✓' : '' }, bare: charge } : {}),
+        ...(estimate ? { note: estimate.title } : {}),
     };
 }
 
@@ -397,7 +468,7 @@ function heroView(config: EnergySkyCardConfig, hass: HomeAssistant, loc: NumberL
     return { hero: powerParts(productionPower(config, hass), loc) };
 }
 
-export function buildView(config: EnergySkyCardConfig, hass: HomeAssistant): CardView {
+export function buildView(config: EnergySkyCardConfig, hass: HomeAssistant, options: ViewOptions = {}): CardView {
     const loc = numberLocale(hass);
     const threshold = config.battery?.power_threshold ?? DEFAULT_POWER_THRESHOLD;
     const produced = config.daily_production_entities?.length
@@ -405,7 +476,7 @@ export function buildView(config: EnergySkyCardConfig, hass: HomeAssistant): Car
         : undefined;
     const metrics = configuredCells(config).map(spec => {
         switch (spec.kind) {
-            case 'battery': return batteryMetric(config, hass, loc, threshold);
+            case 'battery': return batteryMetric(config, hass, loc, threshold, options);
             case 'grid': return gridMetric(config, hass, loc);
             case 'voltage': return voltageMetric(config, hass, loc);
             case 'tomorrow': return tomorrowMetric(config, hass, loc);

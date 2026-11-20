@@ -43,7 +43,7 @@ describe('schema', () => {
         expect(fields(editorSchema('fr'))).toEqual([
             './production_entity', './production_threshold', './production_max', './daily_production_entities', './forecast_tomorrow_entity',
             './smoothing', './stale_after',
-            'battery/soc_entity', 'battery/sensors', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities',
+            'battery/soc_entity', 'battery/sensors', 'battery/power_entity', 'battery/temperature_entity', 'battery/invert', 'battery/power_threshold', 'battery/soc_reached_entities', 'battery/capacity',
             'grid/sensors', 'grid/power_entity', 'grid/invert', 'grid/voltage_entity', 'grid/outage_entity', 'grid/outage_states',
             './layout', './night_hero', './flow', './cell_1', './cell_2', './cell_3', './cell_4',
             './consumption_entity',
