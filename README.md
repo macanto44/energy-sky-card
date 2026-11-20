@@ -67,11 +67,11 @@ Choose what's behind the numbers (`background`, or **Background** in the editor'
 |---|---|---|
 | ![A blue sky card on a Bleu day](docs/images/bleu.png) | ![A grey-blue sky card on a Blanc day: the battery full](docs/images/blanc.png) | ![A red sky card on a Rouge day: the battery discharging](docs/images/rouge.png) |
 
-A sun halo in the corner grows with your production: faint on a grey morning, bright at noon (with the weather sky, when the sun is out). After sunset, the sky turns to night; with the weather, clouds and rain stay, and the stars only shine through a clear sky.
+The real sky, where you live. The sun stands where it is: low in the east in the morning, high at noon, low in the west in the evening (from `sun.sun`), and shines as hard as your panels produce: pale on a grey morning, dazzling at full power, with fine rays in a clear sky. As it sinks it turns gold and flattens, the bottom of the sky glows rose at dawn and amber at dusk (less under clouds), and night falls degree by degree, the first stars before the last light. At night the moon rises and sets as it does above your roof, at its true phase, its lit side turned towards the sun, its light paling the stars. Clouds pass in front of both. With the weather sky, rain slants with the real wind (`wind_speed`, `wind_bearing`) and splashes on the card's edge, lightning lights the clouds from inside, and when the sun comes back after a shower a rainbow shows for a while, as long as the sun is low enough for one. Sun and moon always keep clear of the numbers: the card measures where the text is and moves them away, and every sky is tested for readable white text. The side layout keeps a simpler halo.
 
 ## Quiet, not busy.
 
-The halo breathes slowly while the panels produce, and cloud shadows drift across the card (under the weather sky: clouds, rain, snow, fog or lightning, as outside). At night, stars twinkle over the whole sky and a shooting star passes now and then. Nothing ever moves behind the text, and nothing moves at all when the card is off-screen, the tab is hidden, your device asks for reduced motion, or you set `animate: false`. Day and night cross-fade over three seconds.
+The sun's glow breathes slowly while the panels produce, and cloud shadows drift across the card (under the weather sky: clouds, rain, snow, fog or lightning, as outside). At night, stars twinkle over the whole sky and a shooting star passes now and then. Nothing ever moves behind the text, and nothing moves at all when the card is off-screen, the tab is hidden, your device asks for reduced motion, or you set `animate: false`. Day and night cross-fade over three seconds.
 
 ## What it shows.
 

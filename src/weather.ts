@@ -19,15 +19,20 @@ const CUMULUS = [
     [[20, 36, 10], [34, 28, 14], [52, 24, 18], [70, 31, 12]],
 ];
 
-/** One cumulus in a card-wide band that drifts across, at its own pace (faster in the wind) */
+/**
+ * One cumulus in a card-wide band that drifts across, at its own pace (faster
+ * in the wind). Every third one is further away: smaller, slower, fainter
+ * (class far), so the clouds pass at two depths.
+ */
 function cloud(rnd: () => number, i: number, windy: boolean): string {
     const puffs = CUMULUS[i % 2];
-    const width = 26 + rnd() * 22, top = rnd() * 62 - 6, left = (i * 37) % 60 + 10;
-    const period = windy ? 35 + rnd() * 15 : 55 + rnd() * 25;
+    const far = i % 3 === 2;
+    const width = (26 + rnd() * 22) * (far ? 0.6 : 1), top = rnd() * 62 - 6, left = (i * 37) % 60 + 10;
+    const period = (windy ? 35 + rnd() * 15 : 55 + rnd() * 25) * (far ? 1.6 : 1);
     const first = puffs[0][0], last = puffs[puffs.length - 1][0];
     const shape = puffs.map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r}"></circle>`).join('')
         + `<rect x="${first}" y="30" width="${last - first}" height="14" rx="7"></rect>`;
-    return `<div class="cloudband" style="animation-duration:${n1(period)}s;animation-delay:-${n1(rnd() * period)}s">`
+    return `<div class="cloudband${far ? ' far' : ''}" style="animation-duration:${n1(period)}s;animation-delay:-${n1(rnd() * period)}s">`
         + `<svg class="cumulus" viewBox="0 0 100 50" style="left:${left}%;top:${n1(top)}%;width:${n1(width)}%"><g>${shape}</g></svg></div>`;
 }
 
@@ -47,6 +52,11 @@ export function weatherMarkup(key: string): string {
     for (let i = 0; i < look.rain; i++) {
         const period = 0.55 + rnd() * 0.35;
         out += `<i class="drop" style="left:${n1(rnd() * 115)}%;opacity:${(0.35 + rnd() * 0.5).toFixed(2)};animation-duration:${period.toFixed(2)}s;animation-delay:-${(rnd() * period).toFixed(2)}s"></i>`;
+    }
+    // Where the drops land: a splash on the bottom edge for every few of them
+    for (let i = 0; i < Math.round(look.rain / 4); i++) {
+        const period = 0.7 + rnd() * 0.5;
+        out += `<i class="splash" style="left:${n1(rnd() * 98)}%;animation-duration:${period.toFixed(2)}s;animation-delay:-${(rnd() * period).toFixed(2)}s"></i>`;
     }
     for (let i = 0; i < look.snow; i++) {
         const size = 2 + rnd() * 2.6, period = 6 + rnd() * 6;

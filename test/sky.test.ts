@@ -4,7 +4,7 @@ import {
     gradientAt, sideGradientAt, hexToRgb, tariffPalette, type Palette, type Rgb,
 } from '../src/sky';
 import { SHOOTING_STARS, coveredBy, generateStars, starReach, starsMarkup } from '../src/stars';
-import { DEFAULT_SOLID_COLOR, FOG_ALPHA, WEATHER, solidPalette, textContrast, weatherKey } from '../src/sky';
+import { DEFAULT_SOLID_COLOR, FOG_ALPHA, MOONLIGHT, SUN_BLOOM, SUN_BREATHE, SUN_CLEARANCE, SUN_GLOW, TWILIGHT, WEATHER, solidPalette, textContrast, twilightAlpha, twilightRgb, weatherKey } from '../src/sky';
 import { weatherMarkup } from '../src/weather';
 import { ANNEX_B, FULL_CONFIG, makeHass } from './helpers';
 
@@ -203,7 +203,11 @@ describe('the weather sky', () => {
         const rain = weatherMarkup('rainy');
         expect(rain).toBe(weatherMarkup('rainy'));
         expect(rain.match(/class="drop"/g)?.length).toBe(WEATHER.rainy.rain);
-        expect(rain.match(/class="cloudband"/g)?.length).toBe(WEATHER.rainy.clouds);
+        // Every third cloud further away
+        expect(rain.match(/class="cloudband( far)?"/g)?.length).toBe(WEATHER.rainy.clouds);
+        expect(rain.match(/class="cloudband far"/g)?.length).toBe(Math.floor(WEATHER.rainy.clouds / 3));
+        // A splash on the bottom edge for every four drops
+        expect(rain.match(/class="splash"/g)?.length).toBe(WEATHER.rainy.rain / 4);
         expect(weatherMarkup('snowy').match(/class="flake"/g)?.length).toBe(WEATHER.snowy.snow);
         expect(weatherMarkup('fog').match(/class="fogband"/g)?.length).toBe(4);
         expect(weatherMarkup('lightning-rainy')).toContain('class="flash"');
@@ -273,5 +277,60 @@ describe('keeping particles off the text', () => {
     it('reaches as far as a star grows, plus a gap', () => {
         expect(starReach({ x: 0, y: 0, size: 2, opacity: 1, twinkle: false, delay: 0 })).toBe(4);
         expect(starReach({ x: 0, y: 0, size: 2, opacity: 1, twinkle: true, delay: 0 })).toBe(4.4);
+    });
+});
+
+/*
+ * The sun, dawn and dusk, the moon (standard layout). The card keeps the
+ * sun's centre SUN_CLEARANCE px from the hero, the context line and the
+ * cells (energy-sky-card.ts, placeSky): here, every sky's text at those
+ * distances, with the sun at full production and its bloom at the peak of
+ * its breath. Dawn and dusk tint every sky, day and night, at full strength.
+ */
+describe('contrast with the sun, the twilight and the moon', () => {
+    const lit = (base: Rgb, d: number, p = 1): Rgb => {
+        const glow = SUN_GLOW.alpha(p) * Math.max(0, 1 - d / SUN_GLOW.radius);
+        const bloom = SUN_BLOOM.alpha(p) * Math.max(0, 1 - d / (SUN_BLOOM.radius * SUN_BREATHE));
+        return composite(composite(base, SUN_GLOW.rgb.map(c => c / 255) as Rgb, glow), SUN_BLOOM.rgb.map(c => c / 255) as Rgb, bloom);
+    };
+    const DAY: [string, Palette][] = [
+        ...Object.entries(DEFAULT_PALETTES),
+        ...Object.entries(WEATHER).filter(([, look]) => look.halo).map(([key, look]) => [`weather ${key}`, look.day] as [string, Palette]),
+    ];
+    const ALL: [string, Palette][] = [
+        ...DAY, ...Object.entries(WEATHER).map(([key, look]) => [`weather ${key}`, look.day] as [string, Palette]),
+        ['night', NIGHT_PALETTE], ...Object.entries(WEATHER).map(([key, look]) => [`weather ${key} night`, look.night] as [string, Palette]),
+        ['solid', solidPalette(DEFAULT_SOLID_COLOR)],
+    ];
+
+    for (const [name, palette] of DAY) {
+        it(`keeps the text readable around the sun on ${name}`, () => {
+            const at = (y: number) => gradientAt(palette, y);
+            expect(minAt([0.076, 0.2, 0.377], y => contrastRatio(WHITE, lit(at(y), SUN_CLEARANCE.hero)))).toBeGreaterThanOrEqual(3);
+            expect(minAt([0.36, 0.43, 0.497], y => contrastRatio(WHITE, lit(at(y), SUN_CLEARANCE.context)))).toBeGreaterThanOrEqual(4.5);
+            expect(minAt([0.643, 0.763, 0.852, 0.975], y => contrastRatio(WHITE, lit(at(y), SUN_CLEARANCE.cells)))).toBeGreaterThanOrEqual(4.5);
+            expect(minAt([0.57, 0.643, 0.78, 0.855], y => { const b = lit(at(y), SUN_CLEARANCE.cells); return contrastRatio(composite(b, WHITE, 0.75), b); })).toBeGreaterThanOrEqual(3);
+        });
+    }
+
+    for (const [name, palette] of ALL) {
+        it(`keeps the text readable under dawn and dusk on ${name}`, () => {
+            for (const tone of [TWILIGHT.dawn, TWILIGHT.dusk]) {
+                const at = (y: number) => composite(gradientAt(palette, y), twilightRgb(tone, y), twilightAlpha(y));
+                expect(minAt([0.076, 0.2, 0.377], y => contrastRatio(WHITE, at(y)))).toBeGreaterThanOrEqual(3);
+                expect(minAt([0.36, 0.43, 0.497, 0.643, 0.763, 0.852, 0.975], y => contrastRatio(WHITE, at(y)))).toBeGreaterThanOrEqual(4.5);
+                expect(minAt([0.57, 0.643, 0.78, 0.855], y => contrastRatio(composite(at(y), WHITE, 0.75), at(y)))).toBeGreaterThanOrEqual(3);
+            }
+        });
+    }
+
+    it('keeps the night\'s text readable in the moonlight', () => {
+        const glow = (d: number) => MOONLIGHT.alpha(1) * Math.max(0, 1 - d / MOONLIGHT.radius);
+        for (const [, palette] of ALL.filter(([name]) => name.includes('night'))) {
+            const at = (y: number, d: number) => composite(gradientAt(palette, y), MOONLIGHT.rgb.map(c => c / 255) as Rgb, glow(d));
+            expect(minAt([0.076, 0.2, 0.377], y => contrastRatio(WHITE, at(y, SUN_CLEARANCE.hero)))).toBeGreaterThanOrEqual(3);
+            expect(minAt([0.36, 0.43, 0.497], y => contrastRatio(WHITE, at(y, SUN_CLEARANCE.context)))).toBeGreaterThanOrEqual(4.5);
+            expect(minAt([0.643, 0.763, 0.852, 0.975], y => contrastRatio(WHITE, at(y, SUN_CLEARANCE.cells)))).toBeGreaterThanOrEqual(4.5);
+        }
     });
 });

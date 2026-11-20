@@ -18,6 +18,8 @@ export interface HomeAssistant {
     locale?: { language?: string; number_format?: string; time_format?: string };
     /** The entity registry's display entries (device, integration) */
     entities?: Record<string, { entity_id: string; device_id?: string | null; platform?: string }>;
+    /** Home Assistant's place: where the sun and the moon are worked out from */
+    config?: { latitude?: number; longitude?: number };
     /** A websocket command (energy/get_prefs for the card picker's starting config) */
     callWS?: <T>(msg: { type: string; [key: string]: unknown }) => Promise<T>;
 }

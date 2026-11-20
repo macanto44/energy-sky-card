@@ -1,9 +1,13 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
-import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOW_COLOURS, FOG_ALPHA, SIDE_HALO, SIDE_SKY_FROM } from '../sky';
+import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOW_COLOURS, FOG_ALPHA, MOONLIGHT, SIDE_HALO, SIDE_SKY_FROM, SUN_BLOOM, SUN_BREATHE, SUN_GLOW, TWILIGHT } from '../sky';
 import { FLOW_HEIGHT, MAX_CONSUMERS, NODE_HEIGHT, WIRE_KEYS } from '../flow';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
+const rgb = (c: readonly number[]) => c.join(', ');
+/** The dawn / dusk glow, from the bottom: its low colour, 55 % of it in its mid colour at 45 %, none from 85 % */
+const twilight = (tone: { low: readonly number[]; mid: readonly number[] }) =>
+    `linear-gradient(0deg, rgba(${rgb(tone.low)}, ${TWILIGHT.alpha}) 0%, rgba(${rgb(tone.mid)}, ${TWILIGHT.alpha * 0.55}) 45%, rgba(${rgb(tone.mid)}, 0) 85%)`;
 const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
 /** Side layout: the gradient from SIDE_SKY_FROM down, its first stop a mix of the top two */
 const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90d5) ${pct(1 - SIDE_SKY_FROM / 0.6)}, var(--esc-c1, #2169b0)) 0%, var(--esc-c1, #2169b0) ${pct((0.6 - SIDE_SKY_FROM) / (1 - SIDE_SKY_FROM))}, var(--esc-c2, #1d4f87) 100%)`;
@@ -48,9 +52,9 @@ ha-card {
 }
 /* The sky: two layers, day and night, one shown at a time */
 .sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.layer { position: absolute; inset: 0; opacity: 0; }
-:host([data-mode="day"]) .layer.day,
-:host([data-mode="night"]) .layer.night { opacity: 1; }
+/* The night underneath, the day over it, fading with the sun's height (--esc-day: 1 day … 0 night) */
+.layer { position: absolute; inset: 0; }
+.layer.day { opacity: var(--esc-day, 1); }
 .layer.day { background: linear-gradient(180deg, var(--esc-c0, #4b90d5) 0%, var(--esc-c1, #2169b0) 60%, var(--esc-c2, #1d4f87) 100%); }
 .layer.night { background: linear-gradient(180deg, var(--esc-n0, #1d2b4d) 0%, var(--esc-n1, #121b36) 60%, var(--esc-n2, #0b1026) 100%); }
 /*
@@ -64,12 +68,16 @@ ha-card {
 .cloudband { position: absolute; inset: 0; }
 .cumulus { position: absolute; filter: blur(0.6px); }
 .cumulus g { fill: #f4f7fb; opacity: var(--esc-cloud-a, 0.12); }
+/* Far clouds: smaller, slower, fainter, softer (the card sets their size and pace) */
+.cloudband.far .cumulus { filter: blur(1.2px); }
+.cloudband.far .cumulus g { opacity: calc(var(--esc-cloud-a, 0.12) * 0.6); }
 /* The side layout is short: smaller clouds, so one doesn't fill its height */
 :host([data-layout="side"]) .cumulus { transform: scale(0.5); transform-origin: 0 0; }
 .drop { position: absolute; top: 0; width: 1.2px; height: 16px; background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.55)); display: none; }
 .flake { position: absolute; top: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.85); display: none; }
 .fogband { position: absolute; left: -40%; width: 180%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, ${FOG_ALPHA}), rgba(255, 255, 255, 0)); }
-.flash { position: absolute; inset: 0; background: #f4f2ff; opacity: 0; }
+/* Lightning lights a cloud from inside, and the sky a little */
+.flash { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse 34% 26% at var(--esc-flash-x, 70%) 14%, rgba(236, 236, 255, 0.85), rgba(236, 236, 255, 0) 100%), linear-gradient(rgba(244, 242, 255, 0.22), rgba(244, 242, 255, 0.22)); }
 :host([data-sky="weather"]) .drift { display: none; }
 /* At night, the stars get through a clear sky only, or a few between clouds */
 :host([data-stars="none"]) .layer.night .star, :host([data-stars="none"]) .layer.night .shooting { display: none; }
@@ -86,9 +94,72 @@ ha-card {
     border-radius: 50%;
     background: #fff;
     transform: translate(-50%, -50%);
-    opacity: var(--esc-o, 1);
+    opacity: calc(var(--esc-o, 1) * var(--esc-stars, 1));
 }
-.star.twinkle { opacity: calc(var(--esc-o, 1) * 0.6); }
+.star.twinkle { opacity: calc(var(--esc-o, 1) * var(--esc-stars, 1) * 0.6); }
+/*
+ * Dawn and dusk (standard and side): a glow rising from the bottom while the
+ * sun is low, rose at dawn, amber at dusk (--esc-twilight: its strength,
+ * already lowered by the weather).
+ */
+.tint { position: absolute; inset: 0; opacity: var(--esc-twilight, 0); background: ${twilight(TWILIGHT.dusk)}; }
+:host([data-dawn]) .tint { background: ${twilight(TWILIGHT.dawn)}; }
+/*
+ * The sun (standard layout; the side layout keeps the halo): placed by the
+ * card (--esc-sun-x / -y, px), clear of the text. The sky lit around it, a
+ * bloom that breathes, a white core, fine rays that shimmer and turn very
+ * slowly. --esc-p: the production share; --esc-warm: its glow's colour,
+ * white-gold high up, amber by the horizon, where it also flattens.
+ */
+.sun, .moon, .moonlight { position: absolute; left: var(--esc-sun-x, 80%); top: var(--esc-sun-y, 20px); width: 0; height: 0; opacity: var(--esc-sun-o, 0); }
+.sun > i { position: absolute; border-radius: 50%; }
+.sun .glow { width: ${SUN_GLOW.radius * 2}px; height: ${SUN_GLOW.radius * 2}px; margin: -${SUN_GLOW.radius}px; background: radial-gradient(closest-side, rgba(var(--esc-warm, ${rgb(SUN_GLOW.rgb)}), calc(${SUN_GLOW.alpha(0)} + ${SUN_GLOW.alpha(1) - SUN_GLOW.alpha(0)} * var(--esc-p, 0))), rgba(var(--esc-warm, ${rgb(SUN_GLOW.rgb)}), 0)); }
+.sun .bloom { width: ${SUN_BLOOM.radius * 2}px; height: ${SUN_BLOOM.radius * 2}px; margin: -${SUN_BLOOM.radius}px; background: radial-gradient(closest-side, rgba(var(--esc-bloom, ${rgb(SUN_BLOOM.rgb)}), calc(${SUN_BLOOM.alpha(0)} + ${SUN_BLOOM.alpha(1) - SUN_BLOOM.alpha(0)} * var(--esc-p, 0))), rgba(var(--esc-warm, ${rgb(SUN_BLOOM.rgb)}), 0)); }
+.sun .core {
+    width: 15px; height: 15px; margin: -7.5px;
+    background: radial-gradient(circle, var(--esc-core, #fff) 0 50%, var(--esc-rim, #fff4d6) 82%, var(--esc-edge, #ffe6a8) 100%);
+    box-shadow: 0 0 3px 1px var(--esc-core, #fff), 0 0 12px 4px rgba(var(--esc-warm, 255, 244, 214), 0.75), 0 0 28px 9px rgba(var(--esc-warm, 255, 236, 190), calc(0.2 + 0.3 * var(--esc-p, 0)));
+    transform: scale(var(--esc-sun-scale, 1), calc(var(--esc-sun-scale, 1) * var(--esc-flat, 1)));
+}
+.sun .rays { width: 0; height: 0; }
+.sun .rays b {
+    position: absolute; left: -0.6px; top: calc(var(--esc-ray, 60px) * var(--l, 1) / -2); width: 1.2px; height: calc(var(--esc-ray, 60px) * var(--l, 1)); border-radius: 1px;
+    background: linear-gradient(180deg, rgba(255, 252, 240, 0), rgba(255, 252, 240, 0.85) 50%, rgba(255, 252, 240, 0));
+    filter: blur(0.6px); transform: rotate(var(--a)); opacity: calc(0.25 + 0.4 * var(--esc-p, 0));
+}
+.sun:not([data-rays]) .rays, .sun[data-rays="6"] .rays b:nth-child(n+7) { display: none; }
+/* The moon: its phase drawn by the card, lit side turned towards the sun (--esc-moon-r); moonlight around it */
+.moon, .moonlight { left: var(--esc-moon-x, 80%); top: var(--esc-moon-y, 20px); opacity: var(--esc-moon-o, 0); }
+.moon svg { position: absolute; width: 28px; height: 28px; left: -14px; top: -14px; overflow: visible; transform: rotate(var(--esc-moon-r, 0deg)); filter: drop-shadow(0 0 4px rgba(240, 236, 222, 0.55)) drop-shadow(0 0 14px rgba(200, 212, 255, 0.25)); }
+.moonlight::before { content: ''; position: absolute; width: ${MOONLIGHT.radius * 2}px; height: ${MOONLIGHT.radius * 2}px; margin: -${MOONLIGHT.radius}px; border-radius: 50%; background: radial-gradient(closest-side, rgba(${rgb(MOONLIGHT.rgb)}, calc(${MOONLIGHT.alpha(0)} + ${MOONLIGHT.alpha(1) - MOONLIGHT.alpha(0)} * var(--esc-moon-lit, 0))), rgba(${rgb(MOONLIGHT.rgb)}, 0)); }
+/* The side layout keeps the halo: no room for a sun or a moon clear of its text */
+:host([data-layout="side"]) .sun, :host([data-layout="side"]) .moon, :host([data-layout="side"]) .moonlight, :host(:not([data-layout="side"])) .halo { display: none; }
+/*
+ * A rainbow after the rain, while the sun is low enough (below 42°): the
+ * sun is then behind you, so it doesn't show. Its arc rises as the sun
+ * sinks; it fades out above the context line and stays right of the hero
+ * (--esc-bow-x / -y / -fade, px, set by the card).
+ */
+.rainbow {
+    position: absolute; display: none; left: var(--esc-bow-x, 60%); top: var(--esc-bow-y, 20px); width: 300px; height: 300px; margin-left: -150px; border-radius: 50%;
+    background: radial-gradient(circle, transparent 57%, rgba(255, 90, 90, 0.3) 59.5%, rgba(255, 170, 60, 0.3) 61.5%, rgba(255, 235, 90, 0.28) 63.5%, rgba(90, 210, 120, 0.27) 65.5%, rgba(80, 140, 255, 0.27) 67.5%, rgba(150, 100, 230, 0.25) 69.5%, transparent 71.5%);
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(var(--esc-bow-fade, 90px) - 50px), transparent var(--esc-bow-fade, 90px));
+    mask-image: linear-gradient(180deg, #000 calc(var(--esc-bow-fade, 90px) - 50px), transparent var(--esc-bow-fade, 90px));
+}
+:host([data-rainbow]:not([data-layout="side"])) .rainbow { display: block; }
+:host([data-rainbow]) .sun { display: none; }
+/* Raindrops landing: a splash on the card's bottom edge */
+.splash { position: absolute; bottom: 2px; width: 10px; height: 4px; border-radius: 50%; border-top: 1.4px solid rgba(255, 255, 255, 0.5); opacity: 0; display: none; }
+/* A full battery: a golden sheen crosses its node now and then */
+.node[data-full] { overflow: hidden; }
+.node[data-full]::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, rgba(255, 214, 120, 0) 36%, rgba(255, 214, 120, 0.38) 50%, rgba(255, 214, 120, 0) 64%); transform: translateX(-110%); }
+/* A day at 100 % self-sufficiency: the evening's first shooting star is golden */
+:host([data-golden]) .shooting:first-of-type { background: linear-gradient(90deg, rgba(255, 214, 120, 0), #ffd678 80%, #fff8e0); height: 2px; }
+/* Touch screens (phones, tablets): the far clouds and the blurs go, for the battery's sake */
+@media (pointer: coarse) {
+    .cumulus, .sun .rays b { filter: none; }
+    .cloudband.far { display: none; }
+}
 /* Particles the card hid because they would touch text */
 .sky [hidden] { display: none; }
 /* Shooting stars, each on its own path and rhythm (set inline); hidden unless animated */
@@ -123,8 +194,8 @@ ha-card {
     to { opacity: calc(var(--esc-halo-alpha, 0) * 1); transform: scale(1.12); }
 }
 @keyframes esc-twinkle {
-    from { opacity: calc(var(--esc-o, 1) * 0.15); transform: translate(-50%, -50%) scale(0.6); }
-    to { opacity: var(--esc-o, 1); transform: translate(-50%, -50%) scale(1.4); }
+    from { opacity: calc(var(--esc-o, 1) * var(--esc-stars, 1) * 0.15); transform: translate(-50%, -50%) scale(0.6); }
+    to { opacity: calc(var(--esc-o, 1) * var(--esc-stars, 1)); transform: translate(-50%, -50%) scale(1.4); }
 }
 /* One pass in the first 8 % of each period (0.9 s of 11 s), quiet the rest of the time */
 @keyframes esc-shoot {
@@ -134,10 +205,17 @@ ha-card {
     100% { opacity: 0; transform: rotate(var(--esc-shoot-angle, 20deg)) translateX(var(--esc-shoot-run, 110px)) scaleX(1); }
 }
 /* Rain slanting down; snow drifting down, swaying; fog bands breathing to and fro; lightning: two quick flashes in 7 s */
-@keyframes esc-rain { from { transform: translate(0, -30px) rotate(14deg); } to { transform: translate(-70px, 300px) rotate(14deg); } }
+/* Rain slanting with the wind (--esc-rain-dx / -rot, from the weather's wind), splashing as it lands */
+@keyframes esc-rain { from { transform: translate(0, -30px) rotate(var(--esc-rain-rot, 12deg)); } to { transform: translate(var(--esc-rain-dx, -70px), 300px) rotate(var(--esc-rain-rot, 12deg)); } }
+@keyframes esc-splash { 0% { transform: scale(0.2); opacity: 0.85; } 100% { transform: scale(1.6); opacity: 0; } }
+/* The sun: its bloom breathes, its rays shimmer and turn; a full battery's sheen */
+@keyframes esc-sun-breathe { from { transform: scale(0.9); opacity: 0.78; } to { transform: scale(${SUN_BREATHE}); opacity: 1; } }
+@keyframes esc-sun-turn { to { transform: rotate(360deg); } }
+@keyframes esc-ray { from { opacity: calc(0.12 + 0.2 * var(--esc-p, 0)); } to { opacity: calc(0.35 + 0.5 * var(--esc-p, 0)); } }
+@keyframes esc-sheen { 0% { transform: translateX(-110%); } 22%, 100% { transform: translateX(110%); } }
 @keyframes esc-snow { 0% { transform: translate(0, -10px); } 25% { transform: translate(9px, 70px); } 50% { transform: translate(-7px, 145px); } 75% { transform: translate(8px, 215px); } 100% { transform: translate(0, 290px); } }
 @keyframes esc-fog { from { transform: translateX(-12%); opacity: 0.7; } to { transform: translateX(12%); opacity: 1; } }
-@keyframes esc-flash { 0%, 60%, 100% { opacity: 0; } 61% { opacity: 0.35; } 62% { opacity: 0.06; } 63.5% { opacity: 0.28; } 66% { opacity: 0; } }
+@keyframes esc-flash { 0%, 60%, 100% { opacity: 0; } 61% { opacity: 0.8; } 62% { opacity: 0.15; } 63.5% { opacity: 0.65; } 66% { opacity: 0; } }
 /* A cloud's band crossing the card, left to right */
 @keyframes esc-drift {
     from { transform: translateX(-110%); }
@@ -150,8 +228,13 @@ ${animated('[data-mode="day"][data-producing]', '.halo', 'animation: esc-breathe
 ${animated('[data-mode="night"]', '.star.twinkle', 'animation: esc-twinkle 2s ease-in-out infinite alternate;')}
 ${animated('[data-mode="night"]', '.shooting', 'animation: esc-shoot var(--esc-shoot-period, 11s) ease-out var(--esc-shoot-delay, 4s) infinite;')}
 ${animated('[data-mode="day"]', '.drift', 'animation: esc-drift 60s linear infinite;')}
-${animated('[data-sky="weather"]', '.cloudband', 'animation: esc-drift 60s linear infinite;')}
+${animated('[data-sky="weather"]', '.cloudband', 'animation: esc-drift 60s linear infinite var(--esc-wind-dir, normal);')}
 ${animated('[data-sky="weather"]', '.drop', 'display: block; animation: esc-rain 0.7s linear infinite;')}
+${animated('[data-sky="weather"]', '.splash', 'display: block; animation: esc-splash 0.9s ease-out infinite;')}
+${animated('[data-mode="day"][data-producing]', '.sun .bloom', 'animation: esc-sun-breathe 3s ease-in-out infinite alternate;')}
+${animated('[data-mode="day"]', '.sun .rays', 'animation: esc-sun-turn 240s linear infinite;')}
+${animated('[data-mode="day"]', '.sun .rays b', 'animation: esc-ray var(--s, 3s) ease-in-out var(--d, 0s) infinite alternate;')}
+${animated('[data-expanded]', '.node[data-full]::after', 'animation: esc-sheen 8s ease-in-out 1s infinite;')}
 ${animated('[data-sky="weather"]', '.flake', 'display: block; animation: esc-snow 8s linear infinite;')}
 ${animated('[data-sky="weather"]', '.fogband', 'animation: esc-fog 18s ease-in-out infinite alternate;')}
 ${animated('[data-sky="weather"]', '.flash', 'animation: esc-flash 7s infinite;')}
@@ -160,7 +243,7 @@ ${animated('[data-sky="weather"]', '.flash', 'animation: esc-flash 7s infinite;'
 /* The flow's comets, along their wire (their keyframes are drawn for the width by layoutFlow), only unfolded */
 ${animated('[data-expanded]', '.wire:not([data-level="0"]) .comet', 'display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow);')}
 @media (prefers-reduced-motion: reduce) {
-    .halo, .star, .shooting, .drift, .layer, .comet, .cloudband, .drop, .flake, .fogband, .flash { animation: none !important; transition: none !important; }
+    .halo, .star, .shooting, .drift, .layer, .comet, .cloudband, .drop, .flake, .fogband, .flash, .splash, .sun *, .node::after { animation: none !important; transition: none !important; }
 }
 /* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
 :host([data-compact]) .content { padding: 14px 20px 12px; }

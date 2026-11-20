@@ -51,6 +51,42 @@ export const SIDE_HALO = { x: 0, y: -30, radius: 100 } as const;
  */
 export const CLOUD_RGB = [8, 18, 40] as const;
 export const CLOUD_MAX_ALPHA = 0.2;
+/**
+ * The sun (standard layout; the side layout keeps the halo): the sky lit
+ * around it and a bloom, each a disc whose alpha falls linearly from its
+ * centre to its radius (px), stronger with the production share p; the
+ * bloom breathes up to SUN_BREATHE × its size. The card keeps the sun at
+ * least SUN_CLEARANCE px from each kind of text, and test/sky.test.ts holds
+ * every palette to its contrast there.
+ */
+export const SUN_GLOW = { radius: 84, rgb: [255, 246, 226] as Rgb, alpha: (p: number) => 0.08 + 0.14 * p };
+export const SUN_BLOOM = { radius: 44, rgb: [255, 252, 240] as Rgb, alpha: (p: number) => 0.35 + 0.4 * p };
+export const SUN_BREATHE = 1.06;
+export const SUN_CLEARANCE = { hero: 52, context: 86, cells: 86 } as const;
+/** Moonlight: a cool glow around the moon, stronger as it fills */
+export const MOONLIGHT = { radius: 120, rgb: [205, 215, 255] as Rgb, alpha: (lit: number) => 0.05 + 0.1 * lit };
+/**
+ * Dawn and dusk: a glow rising from the bottom of the card while the sun is
+ * low, rose at dawn, amber at dusk; its alpha at the bottom (strength 1),
+ * 55 % of it at mid-height, none above 15 % of the height
+ */
+export const TWILIGHT = {
+    alpha: 0.6,
+    dawn: { low: [190, 96, 120] as Rgb, mid: [140, 100, 160] as Rgb },
+    dusk: { low: [196, 84, 36] as Rgb, mid: [170, 90, 70] as Rgb },
+};
+/** The tint's alpha at a height y (0 top … 1 bottom), for strength 1 */
+export function twilightAlpha(y: number): number {
+    if (y <= 0.15) return 0;
+    if (y <= 0.55) return TWILIGHT.alpha * 0.55 * (y - 0.15) / 0.4;
+    return TWILIGHT.alpha * (0.55 + 0.45 * (y - 0.55) / 0.45);
+}
+/** The tint's colour at a height y, from its mid colour to its low one */
+export function twilightRgb(tone: { low: Rgb; mid: Rgb }, y: number): Rgb {
+    const t = Math.min(Math.max((y - 0.55) / 0.45, 0), 1);
+    return tone.mid.map((c, i) => (c + (tone.low[i] - c) * t) / 255) as Rgb;
+}
+
 /** Three clouds: width and height (% of the card), top (%), one crossing in s, phase offset in s */
 export const CLOUDS = [
     { width: 110, height: 38, top: 2, period: 47, delay: 9 },
@@ -159,7 +195,7 @@ export const FOG_ALPHA = 0.12;
  * enough for white text with its clouds or fog passing behind it (tested).
  */
 export const WEATHER: Record<string, WeatherLook> = {
-    sunny: { day: ['#4b90d5', '#2169b0', '#1d4f87'], night: NIGHT_PALETTE, clouds: 0, cloudAlpha: 0, nightCloudAlpha: 0, rain: 0, snow: 0, halo: true, stars: 'all' },
+    sunny: { day: ['#3f8de0', '#1b65bd', '#164a8c'], night: NIGHT_PALETTE, clouds: 0, cloudAlpha: 0, nightCloudAlpha: 0, rain: 0, snow: 0, halo: true, stars: 'all' },
     partlycloudy: { day: ['#4d78a6', '#2a5b8b', '#20446c'], night: ['#202c47', '#141c31', '#0d1222'], clouds: 3, cloudAlpha: 0.12, nightCloudAlpha: 0.1, rain: 0, snow: 0, halo: true, stars: 'few' },
     cloudy: { day: ['#647285', '#475567', '#35404f'], night: ['#262c3a', '#1a1f2b', '#11141c'], clouds: 6, cloudAlpha: 0.14, nightCloudAlpha: 0.1, rain: 0, snow: 0, stars: 'none' },
     rainy: { day: ['#5a6879', '#405062', '#2f3a48'], night: ['#20252f', '#161a22', '#0e1117'], clouds: 5, cloudAlpha: 0.13, nightCloudAlpha: 0.08, rain: 40, snow: 0, stars: 'none' },

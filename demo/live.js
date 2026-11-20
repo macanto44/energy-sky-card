@@ -1,6 +1,7 @@
 // The live demo (GitHub Pages): one card on the demo's sample readings, set from the controls,
 // with the YAML that makes it.
-import { ATTRIBUTES, CONFIG, CONSUMERS, SCENARIOS } from './scenarios.js';
+import { ATTRIBUTES, CONFIG, CONSUMERS, MOMENT, SCENARIOS, setClock, placeFor, sunAttributes } from './scenarios.js';
+setClock(new URLSearchParams(location.search).get('at') ?? MOMENT);
 
 const form = document.getElementById('controls');
 const cell = document.getElementById('cell');
@@ -59,13 +60,13 @@ function render() {
   let t = 0;
   for (const [id, state] of Object.entries({ ...SCENARIOS[o.scenario], 'weather.home': o.wx })) {
     const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
-    states[id] = { entity_id: id, state: String(state), attributes: ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
+    states[id] = { entity_id: id, state: String(state), attributes: id === 'sun.sun' ? sunAttributes(o.scenario) : ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
   }
   // A new card for a new config, as Home Assistant does
   if (card) card.remove();
   card = document.createElement('energy-sky-card');
   card.setConfig(config);
-  card.hass = { states, language: o.lang, locale: { language: o.lang, number_format: 'language' } };
+  card.hass = { states, language: o.lang, locale: { language: o.lang, number_format: 'language' }, config: placeFor(o.scenario) };
   // In a dashboard the grid sets the height; with a flow, the card sets its own
   cell.style.width = `${o.width}px`;
   cell.style.height = config.flow ? 'auto' : o.layout === 'side' ? '120px' : '248px';

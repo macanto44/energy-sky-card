@@ -43,8 +43,8 @@ const check = (ok, message) => {
     if (!ok) failures++;
 };
 
-const cards = probe('', [], 500, cs => cs.length === 16 && cs.some(c => c.motion === 'paused'));
-check(cards.length === 16, `16 demo cards rendered (got ${cards.length})`);
+const cards = probe('', [], 500, cs => cs.length === 18 && cs.some(c => c.motion === 'paused'));
+check(cards.length === 18, `18 demo cards rendered (got ${cards.length})`);
 for (const c of cards) {
     if (c.motion === 'on') check(Number(c.running) > 0 && Number(c.paused) === 0, `${c.name}: on screen, animating (${c.running} running)`);
     else if (c.motion === 'paused') check(Number(c.running) === 0, `${c.name}: off-screen, nothing running (${c.paused} paused)`);

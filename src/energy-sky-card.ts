@@ -6,7 +6,8 @@ import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, batteryCapacity, estimateAverageMs, batteryPower, batteryPowerEntities, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey, type ViewOptions } from './model';
 import { cardLanguage, localize, numberLocale } from './localize';
 import { formatPercent } from './format';
-import { CLOUDS, WEATHER, computeBackground, isHexColor } from './sky';
+import { CLOUDS, SUN_CLEARANCE, WEATHER, computeBackground, isHexColor, type Background } from './sky';
+import { celestial, moonMarkup, type Celestial } from './celestial';
 import { weatherMarkup } from './weather';
 import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
@@ -177,6 +178,30 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
 /** A node of the flow: its pill, texts and ring segments */
 interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; sub: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[]; subTexts?: [string, string] }
 
+/** The sun's twelve rays (shown: six, or all twelve at high production): their angle, length (every other one shorter), shimmer */
+const RAYS = Array.from({ length: 12 }, (_, i) => {
+    const angle = i < 6 ? i * 30 : (i - 6) * 30 + 15;
+    return `<b style="--a:${angle}deg;--l:${i % 2 ? 0.62 : 1};--s:${(2.6 + (i * 0.7) % 2.3).toFixed(1)}s;--d:-${(i * 0.9).toFixed(1)}s"></b>`;
+}).join('');
+/** The weathers a rainbow can follow */
+const RAINY = new Set(['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy']);
+/** m/s per unit of the weather entity's wind_speed_unit */
+const WIND_UNITS: Record<string, number> = { 'km/h': 1 / 3.6, 'm/s': 1, mph: 0.447, kn: 0.514, 'ft/s': 0.305 };
+
+/**
+ * How far (px) a raindrop drifts sideways on its way down: the wind's speed
+ * across the view (east on the left in the north, on the right in the
+ * south; wind_bearing is where it comes from), a slight slant in still air
+ */
+export function windAcross(attributes: Record<string, unknown> | undefined, latitude: number | undefined): number {
+    const speed = Number(attributes?.wind_speed), bearing = Number(attributes?.wind_bearing);
+    if (!Number.isFinite(speed) || !Number.isFinite(bearing)) return -70;
+    const ms = speed * (WIND_UNITS[String(attributes?.wind_speed_unit ?? 'km/h')] ?? 1 / 3.6);
+    const across = Math.sin(bearing * Math.PI / 180) * ms * 9 * ((latitude ?? 45) >= 0 ? 1 : -1);
+    const dx = Math.round(Math.max(-170, Math.min(170, across)));
+    return Math.abs(dx) < 12 ? -12 : dx;
+}
+
 /** The elements updated in place on every change */
 interface Refs {
     card: HTMLElement;
@@ -238,6 +263,11 @@ export class EnergySkyCard extends HTMLElement {
     private flowWidth = 0;
     /** The weather drawn in the sky (its WEATHER key), redrawn only when the condition changes */
     private weatherDrawn = '';
+    /** The sky at the last paint (the sun, the moon, the twilight), the moon's phase drawn, the rainbow's end (ms) and the weather seen before */
+    private heavens?: Celestial;
+    private moonDrawn = '';
+    private rainbowUntil = 0;
+    private lastWeather = '';
     /** The appliances in the flow (above their threshold), by index: the corners hold these only */
     private shownConsumers: number[] = [];
     /** The last view, its text in full (the fit writes a shorter form when needed) */
@@ -296,7 +326,11 @@ export class EnergySkyCard extends HTMLElement {
 
     connectedCallback(): void {
         this.motion.start();
-        this.staleTimer ??= setInterval(() => this.markStale(), 60_000);
+        // Every minute: readings gone quiet, and the sun and the moon moving on
+        this.staleTimer ??= setInterval(() => {
+            this.markStale();
+            if (this.refs && this._hass) this.paintSky();
+        }, 60_000);
         this.syncSmoothTimer();
         this.startSelfSufficiency();
         this.startEstimateHistory();
@@ -448,9 +482,12 @@ export class EnergySkyCard extends HTMLElement {
             <style>${CARD_CSS}</style>
             <ha-card>
                 <div class="sky" aria-hidden="true">
-                    <div class="layer day"><div class="halo"></div>${cloudsMarkup()}</div>
                     <div class="layer night">${starsMarkup()}</div>
-                    ${config.background === 'weather' ? '<div class="wx"></div>' : ''}
+                    <div class="layer day"><div class="halo"></div>${cloudsMarkup()}</div>
+                    <div class="tint"></div>
+                    <div class="moonlight"></div><div class="moon"></div>
+                    <div class="sun"><i class="glow"></i><i class="bloom"></i><i class="rays">${RAYS}</i><i class="core"></i></div>
+                    ${config.background === 'weather' ? '<div class="rainbow"></div><div class="wx"></div>' : ''}
                 </div>
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
@@ -562,6 +599,7 @@ export class EnergySkyCard extends HTMLElement {
     fit(): void {
         this.fitLayout();
         this.layoutFlow();
+        this.placeSky();
         for (const node of this.refs?.flow?.nodes.values() ?? []) this.fitSub(node);
         this.clearText();
     }
@@ -655,6 +693,7 @@ export class EnergySkyCard extends HTMLElement {
             node.centre.toggleAttribute('data-long', (v.centre ?? '').length > 2);
             node.el.toggleAttribute('data-centre', v.centre !== undefined);
             node.el.toggleAttribute('data-alert', !!v.alert);
+            node.el.toggleAttribute('data-full', !!v.full);
             drawRing(node.segs, v.ring);
         }
         view.consumers.forEach((v, i) => {
@@ -925,6 +964,7 @@ export class EnergySkyCard extends HTMLElement {
             this.weatherDrawn = bg.weather;
             wx.innerHTML = weatherMarkup(bg.weather);
         }
+        this.paintHeavens(bg);
         // The day / night cross-fade is for changes, not for the first paint
         if (!this.hasAttribute('data-ready') && this.readyFrame === undefined) {
             this.readyFrame = requestAnimationFrame(() => {
@@ -932,6 +972,115 @@ export class EnergySkyCard extends HTMLElement {
                 this.setAttribute('data-ready', '');
             });
         }
+    }
+
+    /**
+     * The day fading into night with the sun's height, the dawn or dusk glow,
+     * the sun and the moon (placed by placeSky), the wind in the rain, the
+     * rainbow after a shower, the golden shooting star
+     */
+    private paintHeavens(bg: Background): void {
+        const hass = this.shown ?? this._hass!;
+        const now = Date.now();
+        const sky = this.heavens = celestial(this.config!, hass, bg, now);
+        const card = this.refs!.card;
+        const set = (name: string, value: string | number) => card.style.setProperty(name, String(value));
+        const r2 = (v: number) => Math.round(v * 100) / 100;
+        set('--esc-day', r2(sky.day));
+        set('--esc-stars', r2(sky.stars));
+        set('--esc-twilight', r2(sky.twilight));
+        this.toggleAttribute('data-dawn', sky.dawn);
+        const sun = this.root.querySelector<HTMLElement>('.sun');
+        if (sun && sky.sun) {
+            const w = sky.sun.warmth;
+            const tone = (hi: number[], lo: number[]) => hi.map((c, i) => Math.round(c + (lo[i] - c) * w));
+            set('--esc-p', r2(sky.sun.p));
+            set('--esc-warm', tone([255, 246, 226], [255, 170, 100]).join(', '));
+            set('--esc-bloom', tone([255, 252, 240], [255, 206, 150]).join(', '));
+            set('--esc-core', `rgb(${tone([255, 255, 255], [255, 222, 176]).join(', ')})`);
+            set('--esc-rim', `rgb(${tone([255, 244, 214], [255, 207, 154]).join(', ')})`);
+            set('--esc-edge', `rgb(${tone([255, 230, 168], [255, 146, 72]).join(', ')})`);
+            set('--esc-flat', r2(1 - 0.14 * w));
+            set('--esc-sun-scale', r2(1 + 0.15 * w));
+            setAttr(sun, 'data-rays', sky.sun.rays ? String(sky.sun.rays) : null);
+        }
+        const moon = this.root.querySelector<HTMLElement>('.moon');
+        if (moon && sky.moon) {
+            // The phase, redrawn when it shows a change (about every 7 hours)
+            const key = sky.moon.lit.toFixed(2);
+            if (key !== this.moonDrawn) {
+                this.moonDrawn = key;
+                moon.innerHTML = moonMarkup(sky.moon.lit, 'esc-moon');
+            }
+            set('--esc-moon-r', `${sky.moon.rotate}deg`);
+            set('--esc-moon-lit', r2(sky.moon.lit));
+        }
+        // The wind in the rain and the clouds: its speed across the view, from the weather entity
+        const weather = this.config!.weather_entity ? hass.states[this.config!.weather_entity] : undefined;
+        const wind = windAcross(weather?.attributes, hass.config?.latitude);
+        set('--esc-rain-dx', `${wind}px`);
+        set('--esc-rain-rot', `${r2(Math.atan2(-wind, 330) * 180 / Math.PI)}deg`);
+        set('--esc-wind-dir', wind > 0 ? 'normal' : 'reverse');
+        // A rainbow when the sun comes back after rain, for ten minutes, while the sun is below 42°
+        const state = bg.weather ?? '';
+        if (RAINY.has(this.lastWeather) && ['sunny', 'partlycloudy', 'windy'].includes(state)) this.rainbowUntil = now + 10 * 60_000;
+        if (state) this.lastWeather = state;
+        const alt = Number(hass.states[this.config!.sun_entity ?? 'sun.sun']?.attributes?.elevation);
+        const bow = now < this.rainbowUntil && ['sunny', 'partlycloudy', 'windy'].includes(state) && bg.mode === 'day' && !(alt >= 42);
+        this.toggleAttribute('data-rainbow', bow);
+        if (bow) set('--esc-bow-alt', Number.isFinite(alt) ? Math.max(alt, 0) : 20);
+        // A day at 100 % self-sufficiency: a golden shooting star that evening
+        this.toggleAttribute('data-golden', (this.selfSufficiency ?? 0) >= 99.5);
+        this.placeSky();
+    }
+
+    /**
+     * Where the sun and the moon go: their place on the day's arc (east on
+     * the left of their zone, high up at the top), in the top right, kept
+     * SUN_CLEARANCE px from the hero, the context line and the cells: moved
+     * up, then right, when the sky would put them nearer; hidden when there
+     * is no room. The rainbow keeps right of the hero and fades out above
+     * the context line. Measured, so it holds for any size, value or language.
+     */
+    private placeSky(): void {
+        const card = this.refs?.card;
+        const sky = this.heavens;
+        if (!card || !sky) return;
+        const box = card.getBoundingClientRect();
+        const W = box.width, H = Math.min(box.height, this.side ? 120 : 248);
+        const set = (name: string, value: string | number) => card.style.setProperty(name, String(value));
+        const rel = (r: { left: number; right: number; top: number; bottom: number }) => ({ left: r.left - box.left, right: r.right - box.left, top: r.top - box.top, bottom: r.bottom - box.top });
+        const measured = (sel: string) => [...this.root.querySelectorAll(sel)].map(el => rel(el.getBoundingClientRect())).filter(b => b.right > b.left);
+        const hero = measured('.hero-value, .hero-unit'), context = measured('.context-text'), cells = measured('.metric');
+        const clear = (x: number, y: number) => ([[hero, SUN_CLEARANCE.hero], [context, SUN_CLEARANCE.context], [cells, SUN_CLEARANCE.cells]] as const)
+            .every(([boxes, gap]) => boxes.every(b => Math.hypot(Math.max(b.left - x, 0, x - b.right), Math.max(b.top - y, 0, y - b.bottom)) >= gap + 1));
+        const heroRight = Math.max(0, ...hero.map(b => b.right));
+        const xMin = Math.max(W * 0.5, heroRight + 24), xMax = W - 24, yTop = 20, yLow = Math.max(yTop, H * 0.36);
+        /** The nearest clear place to (u, v): up first, then towards the right */
+        const place = (u: number, v: number): [number, number] | undefined => {
+            if (!W) return [xMin + u * (xMax - xMin), yLow - v * (yLow - yTop)];
+            let x = xMin + u * Math.max(0, xMax - xMin), y = yLow - v * (yLow - yTop);
+            for (; y >= yTop && !clear(x, y); y -= 4);
+            if (y >= yTop) return [x, y];
+            for (y = yTop; x <= xMax && !clear(x, y); x += 4);
+            return x <= xMax ? [x, y] : undefined;
+        };
+        const sunAt = sky.sun && place(sky.sun.u, sky.sun.v);
+        set('--esc-sun-o', sunAt && sky.sun ? Math.round(sky.sun.opacity * 100) / 100 : 0);
+        if (sunAt) { set('--esc-sun-x', `${Math.round(sunAt[0])}px`); set('--esc-sun-y', `${Math.round(sunAt[1])}px`); }
+        let moonAt = sky.moon && place(sky.moon.u, sky.moon.v);
+        // Not on top of the sun
+        if (moonAt && sunAt && sky.sun && sky.sun.opacity > 0 && Math.hypot(moonAt[0] - sunAt[0], moonAt[1] - sunAt[1]) < 40) moonAt = undefined;
+        set('--esc-moon-o', moonAt && sky.moon ? Math.round(sky.moon.opacity * 100) / 100 : 0);
+        if (moonAt) { set('--esc-moon-x', `${Math.round(moonAt[0])}px`); set('--esc-moon-y', `${Math.round(moonAt[1])}px`); }
+        // The rainbow: its arc's top 42° minus the sun's height above the horizon; right of the hero (its inner radius 85 px)
+        const alt = Number(card.style.getPropertyValue('--esc-bow-alt')) || 20;
+        const contextTop = Math.min(H * 0.36, ...context.map(b => b.top));
+        set('--esc-bow-x', `${Math.round(Math.max(W - 60, heroRight + 12 + 107))}px`);
+        // The lower the sun, the higher the arc: its top 23 px from the card's top at sunset, 83 px with the sun at 42°
+        const bowTop = Math.round(-20 + Math.min(alt, 42) / 42 * 60);
+        set('--esc-bow-y', `${bowTop}px`);
+        set('--esc-bow-fade', `${Math.round(contextTop - 8 - bowTop)}px`);
     }
 
     /** Sections view: full width, four rows (248 px), never under three; the side layout two rows (120 px) */

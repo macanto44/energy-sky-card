@@ -1,5 +1,6 @@
 // The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, flowonly, sky=weather&wx=…|sky=solid&color=…, h=…, bare, probe, seek)
-import { ATTRIBUTES, CONSUMERS, SCENARIOS, SCENARIO_CONFIGS, CONFIG } from './scenarios.js';
+import { ATTRIBUTES, CONSUMERS, MOMENT, SCENARIOS, SCENARIO_CONFIGS, CONFIG, setClock, placeFor, sunAttributes } from './scenarios.js';
+setClock(new URLSearchParams(location.search).get('at') ?? MOMENT);
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
 const lang = params.get('lang') || 'fr';
@@ -28,9 +29,9 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     let t = 0;
     for (const [id, state] of Object.entries({ ...overrides, 'weather.home': params.get('wx') || 'sunny' })) {
       const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
-      states[id] = { entity_id: id, state: String(state), attributes: ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
+      states[id] = { entity_id: id, state: String(state), attributes: id === 'sun.sun' ? sunAttributes(name) : ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
     }
-    card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' } };
+    card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' }, config: placeFor(name) };
     fig.querySelector('.cell').appendChild(card);
     if (expand) card.expanded = true;
     // ?flowonly: the flow alone, without the top of the card (the README's animation)

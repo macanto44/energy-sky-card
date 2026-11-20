@@ -28,6 +28,28 @@ export const CONSUMERS = [
   { entity: 'sensor.heat_pump', name: 'Heat pump', icon: 'mdi:heat-pump-outline' },
 ];
 
+/** Where the sun stands in each scenario: sun.sun's elevation and azimuth (degrees) */
+export const SUN = { nuit: [-22, 300], bleu: [38, 200], blanc: [12, 108], rouge: [58, 182], soir: [1.5, 262], extremes: [55, 175], options: [-22, 300], charge: [-40, 10], coupure: [-22, 300] };
+/** Home Assistant's place for a scenario: the night ones only, so the demo's evening moon doesn't show in its daytime skies */
+export const placeFor = name => SUN[name] && SUN[name][0] < 0 ? PLACE : undefined;
+/** The demo's place (Paris), for the moon */
+export const PLACE = { latitude: 48.85, longitude: 2.35 };
+/** The demo's moment, for the moon (?at=… or ?at=now changes it): a waxing crescent in the evening sky */
+export const MOMENT = '2024-01-16T19:00:00Z';
+
+/** Fixes the clock at a moment (the demo only), moving on from there */
+export function setClock(at) {
+  if (!at || at === 'now') return;
+  const t = Date.parse(at);
+  if (!Number.isFinite(t)) return;
+  const start = Date.now();
+  const real = Date.now.bind(Date);
+  Date.now = () => t + (real() - start);
+}
+
+/** sun.sun's attributes in a scenario */
+export const sunAttributes = name => SUN[name] ? { elevation: SUN[name][0], azimuth: SUN[name][1] } : {};
+
 /** Entity attributes, where a reading needs its unit */
 export const ATTRIBUTES = { 'sensor.heat_pump_temp': { unit_of_measurement: '°C' }, 'sensor.bat_temp': { unit_of_measurement: '°C' } };
 
@@ -47,6 +69,8 @@ export const SCENARIOS = {
   bleu: { ...base, 'sun.sun': 'above_horizon', 'sensor.production_pv': 3249, 'sensor.sofar_jour': 5.1, 'sensor.cabanon_jour': 2.14, 'sensor.soc': 78, 'sensor.bat_power': 900, 'sensor.grid': -1830 },
   blanc: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Blanc', 'sensor.production_pv': 860, 'sensor.sofar_jour': 1.4, 'sensor.cabanon_jour': 0.3, 'sensor.soc': 100, 'input_boolean.soc_reached': 'on', 'sensor.grid': 5, 'sensor.bat_temp': 'unavailable' },
   rouge: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 5980, 'sensor.sofar_jour': 18.7, 'sensor.cabanon_jour': 3.2, 'sensor.soc': 64, 'sensor.bat_power': -2300, 'sensor.grid': -3450 },
+  // Sunset: the sun on the horizon, the battery taking over
+  soir: { ...base, 'sun.sun': 'above_horizon', 'sensor.production_pv': 180, 'sensor.sofar_jour': 19.6, 'sensor.cabanon_jour': 3.1, 'sensor.soc': 92, 'sensor.bat_power': -420, 'sensor.grid': 0 },
   extremes: { ...base, 'sun.sun': 'above_horizon', 'sensor.tempo': 'Rouge', 'sensor.production_pv': 12345, 'sensor.sofar_jour': 98.7, 'sensor.cabanon_jour': 24.6, 'sensor.soc': 100, 'sensor.bat_power': -4321, 'sensor.bat_temp': -12.6, 'input_boolean.soc_reached': 'on', 'sensor.grid': -12345, 'sensor.voltage': 252.4, 'sensor.tomorrow': 123.45, 'sensor.heat_pump': 12345 },
   // 0.2 options (config below): night, consumption as the hero, a free cell with a long name
   options: { ...base, 'sensor.home': 1870, 'sensor.sofar_jour': 18.7, 'sensor.cabanon_jour': 3.2, 'sensor.heat_pump_temp': 48.6 },

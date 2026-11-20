@@ -82,6 +82,8 @@ export interface NodeView {
     centre?: string;
     /** Something's wrong: the grid is down */
     alert?: boolean;
+    /** The battery full and resting: a golden sheen crosses its node */
+    full?: boolean;
     /** A third, small line: the battery's estimate, its sentence « Pleine à 14:20 » */
     sub?: string;
     /** The same where the sentence doesn't fit: the charge reached and when, « → 100 % 14:20 » */
@@ -168,6 +170,7 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant, optio
                 value: batteryPowerEntities(config).length ? formatPower(measured, loc) : formatPercent(soc, loc),
                 ring: soc === undefined ? [] : [[Math.min(Math.max(soc, 0), 100) / 100, 'batt']],
                 centre: soc === undefined ? undefined : String(Math.round(soc)),
+                full: soc !== undefined && soc >= 99 && !battery,
             },
             home: {
                 present: present('home'), label: localize(loc.lang, 'home'), value: formatPower(flows.home, loc),
