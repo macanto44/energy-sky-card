@@ -201,7 +201,7 @@ export function staleReadings(config: EnergySkyCardConfig, hass: HomeAssistant, 
         ...batterySocEntities(config), ...batteryPowerEntities(config), config.battery?.temperature_entity,
         ...gridPowerEntities(config), config.grid?.voltage_entity,
         ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
-        ...(config.consumers ?? []).map(c => c.entity),
+        ...(config.consumers ?? []).flatMap(c => [c.entity, c.soc_entity]),
     ];
     for (const id of ids) {
         const reported = Date.parse(hass.states[id ?? '']?.last_reported ?? '');
@@ -313,7 +313,7 @@ export function trackedEntities(config: EnergySkyCardConfig): string[] {
         ...productionEntities(config),
         config.consumption_entity,
         ...(config.cells ?? []).filter(isCustom).map(c => c.entity),
-        ...(config.consumers ?? []).map(c => c.entity),
+        ...(config.consumers ?? []).flatMap(c => [c.entity, c.soc_entity]),
         ...(config.daily_production_entities ?? []),
         ...batterySocEntities(config), ...batteryPowerEntities(config), config.battery?.temperature_entity, ...(config.battery?.soc_reached_entities ?? []),
         ...gridPowerEntities(config), config.grid?.voltage_entity, config.grid?.outage_entity,

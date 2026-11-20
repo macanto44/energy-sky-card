@@ -249,6 +249,8 @@ consumers:
   - entity: sensor.ev_charger_power
     name: Car
     icon: mdi:car-electric
+    soc_entity: sensor.car_battery_level   # its charge in the ring
+    always_show: true                       # shown even while it isn't charging
     tap_action:
       action: navigate
       navigation_path: /car
@@ -407,7 +409,7 @@ All under `grid:`.
 | `layout` | `standard` | `standard`: the cells under the big number, four rows (248 px). `side`: the cells on the right, one line each, the icon standing for the name, two rows (120 px) |
 | `flow` | none | The energy flow under the card: `tap` (unfolded by a tap on the big number or its line) or `always` (always shown). See [The energy flow](#the-energy-flow). 0.3.3's `expandable: true` still reads as `flow: tap` |
 | `consumer_threshold` | `10` | Below this power, in W, an appliance stays out of the flow (as does one without a reading); the others take its place. `0` always shows them |
-| `consumers` | — | Up to four appliances in the energy flow, around the home (needs `flow`): each `{ entity, name, icon, tap_action }`, the entity a power sensor. `name` and `icon` default to the entity's. See [The energy flow](#the-energy-flow) |
+| `consumers` | — | Up to four appliances in the energy flow, around the home (needs `flow`): each `{ entity, name, icon, tap_action, soc_entity, always_show }`, the entity a power sensor. `name` and `icon` default to the entity's. `soc_entity`: a charge (%), a car's say, shown in the appliance's ring in green with the number in its disc. `always_show: true` keeps it in the flow below `consumer_threshold`. See [The energy flow](#the-energy-flow) |
 | `cells` | automatic | Up to four cells, in order. Without it: Battery, Grid, Voltage and Tomorrow, those whose entities are set. See below |
 
 Each entry in `cells` is one of:

@@ -69,6 +69,7 @@ test/
 ├── estimate.test.ts         # Battery estimate: formats, calculation, cell, flow node, the card's 5 min average, settings
 ├── selfsufficiency.test.ts  # Meters, the sum, the statistics request, the cell (read by the card, tap → /energy), the editor's offer
 ├── sensors.test.ts          # Grid import / export, battery charge / discharge, several batteries, their validation and pre-fill
+├── charge.test.ts           # An appliance's soc_entity (ring, disc, title) and always_show
 ├── stub.test.ts             # Prefill from the Energy dashboard (both prefs shapes), Tempo, fallback
 └── build.test.ts            # Bundle size and no network
 ```
@@ -101,6 +102,7 @@ test/
 - Cell taps: a cell's own `tap_action` (`{ type, tap_action }` for a built-in cell, `tap_action` on a free one; `CellSpec.tapAction`), else its entity's more-info unless the card has a `tap_action`. Such cells get `data-cell-target` (role button and tabindex unless their action is `none`). The gesture listener passes the event path to `actionsFor`, which answers with the cell's entity and its tap (hold / double tap stay the card's). Editor: `cell_n_tap_action` slots (ui_action), a built-in cell saved as an object only when it has one.
 - `getStubConfig` is async (HA awaits it): `stub.ts` reads `energy/get_prefs` in both shapes (grid `flow_from[]` / `power[]`, or `stat_rate` / `power_config`), takes sensors on the meters' devices from `hass.entities`, and sets `battery.invert` when the power is HA's `stat_rate` (positive discharging).
 - Self-sufficiency cell (`self_sufficiency`, no entity): the card reads `energy/get_prefs` and each meter's `change` since midnight (`recorder/statistic_during_period`, `calendar: day`), 5 min apart or just after midnight (`nextRefreshIn`), only while a cell shows it and connected; `selfRead` drops an answer for an older config. The sum is the Energy dashboard gauge's: `1 − min(1, bought / used)`, used = the home meter, else bought + solar + discharged − sold − charged. Passed to `buildView` as `ViewOptions.selfSufficiency`; « — » until read. Tap: `/energy` unless the cell has its own `tap_action` or the card a `tap_action`. The editor offers it when the dashboard has a grid meter (asked once), or when a cell already shows it.
+- An appliance's charge (`consumers[].soc_entity`, `ConsumerView.soc`): the ring shows it in the battery's colour (`batt`) and the disc its number (`data-centre`), in place of its share of the home; the title (`data-title`, which `markStale` builds on) and aria-label add it. `always_show` keeps it `shown` below the threshold. Editor slots `consumer_<n>_soc_entity` / `_always_show`.
 - `night_hero` (consumption / battery) only applies below the horizon and when its entity is set; the context line then starts with the hero's name, shortened when too wide (`data-short-context`).
 
 ## Sizing

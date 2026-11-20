@@ -112,8 +112,10 @@ export interface ConsumerView {
     /** Its share of the home's power, 0 … 1 (its ring) */
     share: number;
     level: 0 | 1 | 2 | 3 | 4;
-    /** In the flow: its power reaches consumer_threshold (with 0, always) */
+    /** In the flow: its power reaches consumer_threshold (with 0, or always_show, always) */
     shown: boolean;
+    /** Its charge (%), with a soc_entity: the ring and the number in the disc instead of its share */
+    soc?: number;
 }
 
 export { MAX_CONSUMERS };
@@ -176,13 +178,15 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant, optio
             const power = pos(reading);
             const threshold = config.consumer_threshold ?? DEFAULT_CONSUMER_THRESHOLD;
             const own = (key: string) => typeof entity?.attributes[key] === 'string' ? entity.attributes[key] as string : undefined;
+            const soc = c.soc_entity ? numericState(hass.states[c.soc_entity]) : undefined;
             return {
                 label: c.name || own('friendly_name') || c.entity,
                 icon: c.icon || own('icon') || CONSUMER_ICON,
                 value: formatPower(powerW(entity), loc),
                 share: flows.home ? Math.min(power / flows.home, 1) : 0,
                 level: flowLevel(power),
-                shown: threshold <= 0 || (reading !== undefined && power >= threshold),
+                shown: threshold <= 0 || !!c.always_show || (reading !== undefined && power >= threshold),
+                ...(soc === undefined ? {} : { soc: Math.min(Math.max(soc, 0), 100) }),
             };
         }),
         levels,

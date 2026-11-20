@@ -17,14 +17,14 @@ const base = {
   'sensor.grid': 748, 'sensor.voltage': 233.98, 'sensor.gridlost': 'no_alarm',
   'sensor.tomorrow': 12.56, 'sensor.tempo': 'Bleu', 'sun.sun': 'below_horizon',
   // Appliances (?consumers=n)
-  'sensor.boiler': 1600, 'sensor.pool': 500, 'sensor.car': 0, 'sensor.heat_pump': 300,
+  'sensor.boiler': 1600, 'sensor.pool': 500, 'sensor.car': 0, 'sensor.car_soc': 64, 'sensor.heat_pump': 300,
 };
 
 /** The appliances ?consumers=n adds, the first n */
 export const CONSUMERS = [
   { entity: 'sensor.boiler', name: 'Boiler', icon: 'mdi:water-boiler' },
   { entity: 'sensor.pool', name: 'Pool', icon: 'mdi:pool' },
-  { entity: 'sensor.car', name: 'Car', icon: 'mdi:car-electric' },
+  { entity: 'sensor.car', name: 'Car', icon: 'mdi:car-electric', soc_entity: 'sensor.car_soc', always_show: true },
   { entity: 'sensor.heat_pump', name: 'Heat pump', icon: 'mdi:heat-pump-outline' },
 ];
 

@@ -47,6 +47,10 @@ export interface ConsumerConfig {
     name?: string;
     icon?: string;
     tap_action?: Record<string, unknown>;
+    /** A charge (%) to show in the appliance's ring, a car's battery say */
+    soc_entity?: string;
+    /** Stays in the flow below consumer_threshold (with its charge) */
+    always_show?: boolean;
 }
 
 /** What the hero shows at night: production (0 W, the default), the home's consumption, or the battery */

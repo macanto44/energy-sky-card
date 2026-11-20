@@ -4,8 +4,8 @@ import { CARD_NAME, CARD_EDITOR_NAME, CARD_DISPLAY_NAME, CARD_DESCRIPTION, CARD_
 import { loadEditorBundle } from './bundles';
 import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, ESTIMATE_AVERAGE_MS, batteryCapacity, batteryPower, batteryPowerEntities, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey, type ViewOptions } from './model';
-import { localize } from './localize';
-import { cardLanguage } from './localize';
+import { cardLanguage, localize, numberLocale } from './localize';
+import { formatPercent } from './format';
 import { CLOUDS, WEATHER, computeBackground, isHexColor } from './sky';
 import { weatherMarkup } from './weather';
 import { coveredBy, starsMarkup, type Box } from './stars';
@@ -135,11 +135,13 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             throw configError(`consumers : une liste de ${MAX_CONSUMERS} appareils au plus`, `consumers: a list of at most ${MAX_CONSUMERS} appliances`);
         }
         for (const consumer of c.consumers as unknown[]) {
-            const o = (consumer && typeof consumer === 'object' ? consumer : {}) as { entity?: unknown; tap_action?: unknown };
+            const o = (consumer && typeof consumer === 'object' ? consumer : {}) as { entity?: unknown; tap_action?: unknown; soc_entity?: unknown; always_show?: unknown };
             if (typeof o.entity !== 'string' || !o.entity) throw configError('consumers : chaque appareil a une entity', 'consumers: each appliance needs an entity');
             if (o.tap_action !== undefined && !isAction(o.tap_action)) {
                 throw configError('consumers : tap_action doit avoir une action (more-info, navigate, url…)', 'consumers: tap_action needs an action (more-info, navigate, url…)');
             }
+            if (o.soc_entity !== undefined && (typeof o.soc_entity !== 'string' || !o.soc_entity)) throw configError('consumers : soc_entity doit être une entité', 'consumers: soc_entity must be an entity');
+            if (o.always_show !== undefined && typeof o.always_show !== 'boolean') throw configError('consumers : always_show doit valoir true ou false', 'consumers: always_show must be true or false');
         }
     }
     if (c.background_color !== undefined && !isHexColor(c.background_color)) {
@@ -600,12 +602,17 @@ export class EnergySkyCard extends HTMLElement {
             if (!node) return;
             // The name is the user's: text and attributes only
             setText(node.label, v.label);
-            setAttr(node.el, 'title', v.label);
-            setAttr(node.el, 'aria-label', `${v.label} ${v.value}`);
+            // With a charge (a car): « Voiture · 7,2 kW · 64 % », the charge in the ring and the disc, in the battery's colour
+            const charge = v.soc === undefined ? '' : formatPercent(v.soc, numberLocale(this._hass));
+            node.el.dataset.title = [v.label, charge && v.value, charge].filter(Boolean).join(' · ');
+            setAttr(node.el, 'title', node.el.dataset.title);
+            setAttr(node.el, 'aria-label', [v.label, v.value, charge].filter(Boolean).join(' '));
             setText(node.value, v.value);
             setAttr(node.icon, 'icon', v.icon);
             node.el.toggleAttribute('data-idle', v.level === 0);
-            drawRing(node.segs, [[v.share, 'use']]);
+            setText(node.centre, v.soc === undefined ? '' : String(Math.round(v.soc)));
+            node.el.toggleAttribute('data-centre', v.soc !== undefined);
+            drawRing(node.segs, v.soc === undefined ? [[v.share, 'use']] : [[v.soc / 100, 'batt']]);
             setAttr(node.wire, 'data-level', String(v.level));
             // Out of the flow at once; back in when the corners are laid out again (below)
             if (!v.shown) {
@@ -829,10 +836,11 @@ export class EnergySkyCard extends HTMLElement {
         (this.config.consumers ?? []).forEach((consumer, i) => {
             const node = flow.consumers[i];
             if (!node) return;
-            const text = note(consumer.entity);
+            const text = note(consumer.entity) ?? (consumer.soc_entity ? note(consumer.soc_entity) : undefined);
             node.el.toggleAttribute('data-stale', !!text);
-            const name = node.label.textContent ?? '';
-            setAttr(node.el, 'title', text ? `${name} · ${text}` : name);
+            // The title updateFlow wrote (name, power and charge), then how long a reading has been quiet
+            const own = node.el.dataset.title ?? node.label.textContent ?? '';
+            setAttr(node.el, 'title', text ? `${own} · ${text}` : own);
         });
     }
 

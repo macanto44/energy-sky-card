@@ -48,6 +48,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
         capacity: 'Capacité (kWh)', max_soc: 'Charge visée (%)', reserve_soc: 'Réserve (%)', estimate_charge: 'Estimation en charge', estimate_discharge: 'Estimation en décharge', estimate_time: 'Heure (14:20)', estimate_duration: 'Durée (2 h 10)', estimate_off: 'Aucune', estimate_with_temperature: 'Avec la température', estimate_replace: 'L\'estimation remplace la température', estimate_both: 'Les deux', estimate_flow: 'Estimation dans le flux',
+        consumer_soc_entity: 'Charge (%, facultatif)', consumer_always_show: 'Toujours dans le flux',
         sensors: 'Capteurs de puissance', sensors_single: 'Un capteur (+ / −)', sensors_split_grid: 'Deux capteurs : achat et vente', sensors_split_battery: 'Deux capteurs : charge et décharge', import_entity: 'Achat (W)', export_entity: 'Vente (W)', charge_entity: 'Puissance de charge (W)', discharge_entity: 'Puissance de décharge (W)',
         loading: 'Chargement de l\'éditeur…',
     },
@@ -73,6 +74,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
         capacity: 'Capacity (kWh)', max_soc: 'Target charge (%)', reserve_soc: 'Reserve (%)', estimate_charge: 'Estimate while charging', estimate_discharge: 'Estimate while discharging', estimate_time: 'Time (14:20)', estimate_duration: 'Duration (2 h 10)', estimate_off: 'None', estimate_with_temperature: 'With the temperature', estimate_replace: 'The estimate replaces the temperature', estimate_both: 'Both', estimate_flow: 'Estimate in the flow',
+        consumer_soc_entity: 'Charge (%, optional)', consumer_always_show: 'Always in the flow',
         sensors: 'Power sensors', sensors_single: 'One sensor (+ / −)', sensors_split_grid: 'Two sensors: import and export', sensors_split_battery: 'Two sensors: charge and discharge', import_entity: 'Import (W)', export_entity: 'Export (W)', charge_entity: 'Charging power (W)', discharge_entity: 'Discharging power (W)',
         loading: 'Loading the editor…',
     },
@@ -98,6 +100,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         power_threshold: 'Schwelle für die Pfeile ↑ / ↓', animate: 'Animationen',
         tap_action: 'Tippen', hold_action: 'Gedrückt halten', double_tap_action: 'Doppelt tippen',
         capacity: 'Kapazität (kWh)', max_soc: 'Ziel-Ladung (%)', reserve_soc: 'Reserve (%)', estimate_charge: 'Schätzung beim Laden', estimate_discharge: 'Schätzung beim Entladen', estimate_time: 'Uhrzeit (14:20)', estimate_duration: 'Dauer (2 h 10)', estimate_off: 'Keine', estimate_with_temperature: 'Mit der Temperatur', estimate_replace: 'Die Schätzung ersetzt die Temperatur', estimate_both: 'Beides', estimate_flow: 'Schätzung im Fluss',
+        consumer_soc_entity: 'Ladung (%, optional)', consumer_always_show: 'Immer im Fluss',
         sensors: 'Leistungssensoren', sensors_single: 'Ein Sensor (+ / −)', sensors_split_grid: 'Zwei Sensoren: Bezug und Einspeisung', sensors_split_battery: 'Zwei Sensoren: Laden und Entladen', import_entity: 'Bezug (W)', export_entity: 'Einspeisung (W)', charge_entity: 'Ladeleistung (W)', discharge_entity: 'Entladeleistung (W)',
         loading: 'Editor wird geladen…',
     },
@@ -123,6 +126,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         power_threshold: 'Umbral de las flechas ↑ / ↓', animate: 'Animaciones',
         tap_action: 'Toque', hold_action: 'Toque largo', double_tap_action: 'Doble toque',
         capacity: 'Capacidad (kWh)', max_soc: 'Carga objetivo (%)', reserve_soc: 'Reserva (%)', estimate_charge: 'Estimación al cargar', estimate_discharge: 'Estimación al descargar', estimate_time: 'Hora (14:20)', estimate_duration: 'Duración (2 h 10)', estimate_off: 'Ninguna', estimate_with_temperature: 'Con la temperatura', estimate_replace: 'La estimación sustituye a la temperatura', estimate_both: 'Las dos', estimate_flow: 'Estimación en el flujo',
+        consumer_soc_entity: 'Carga (%, opcional)', consumer_always_show: 'Siempre en el flujo',
         sensors: 'Sensores de potencia', sensors_single: 'Un sensor (+ / −)', sensors_split_grid: 'Dos sensores: compra y venta', sensors_split_battery: 'Dos sensores: carga y descarga', import_entity: 'Compra (W)', export_entity: 'Venta (W)', charge_entity: 'Potencia de carga (W)', discharge_entity: 'Potencia de descarga (W)',
         loading: 'Cargando el editor…',
     },
@@ -148,6 +152,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         power_threshold: 'Soglia delle frecce ↑ / ↓', animate: 'Animazioni',
         tap_action: 'Tocco', hold_action: 'Tocco prolungato', double_tap_action: 'Doppio tocco',
         capacity: 'Capacità (kWh)', max_soc: 'Carica obiettivo (%)', reserve_soc: 'Riserva (%)', estimate_charge: 'Stima in carica', estimate_discharge: 'Stima in scarica', estimate_time: 'Ora (14:20)', estimate_duration: 'Durata (2 h 10)', estimate_off: 'Nessuna', estimate_with_temperature: 'Con la temperatura', estimate_replace: 'La stima sostituisce la temperatura', estimate_both: 'Entrambe', estimate_flow: 'Stima nel flusso',
+        consumer_soc_entity: 'Carica (%, facoltativa)', consumer_always_show: 'Sempre nel flusso',
         sensors: 'Sensori di potenza', sensors_single: 'Un sensore (+ / −)', sensors_split_grid: 'Due sensori: prelievo e immissione', sensors_split_battery: 'Due sensori: carica e scarica', import_entity: 'Prelievo (W)', export_entity: 'Immissione (W)', charge_entity: 'Potenza di carica (W)', discharge_entity: 'Potenza di scarica (W)',
         loading: 'Caricamento dell\'editor…',
     },
@@ -173,6 +178,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         power_threshold: 'Drempel voor de pijlen ↑ / ↓', animate: 'Animaties',
         tap_action: 'Tikken', hold_action: 'Lang indrukken', double_tap_action: 'Dubbel tikken',
         capacity: 'Capaciteit (kWh)', max_soc: 'Doellading (%)', reserve_soc: 'Reserve (%)', estimate_charge: 'Schatting bij laden', estimate_discharge: 'Schatting bij ontladen', estimate_time: 'Tijd (14:20)', estimate_duration: 'Duur (2 h 10)', estimate_off: 'Geen', estimate_with_temperature: 'Met de temperatuur', estimate_replace: 'De schatting vervangt de temperatuur', estimate_both: 'Beide', estimate_flow: 'Schatting in de stroom',
+        consumer_soc_entity: 'Lading (%, optioneel)', consumer_always_show: 'Altijd in de stroom',
         sensors: 'Vermogenssensoren', sensors_single: 'Eén sensor (+ / −)', sensors_split_grid: 'Twee sensoren: afname en teruglevering', sensors_split_battery: 'Twee sensoren: laden en ontladen', import_entity: 'Afname (W)', export_entity: 'Teruglevering (W)', charge_entity: 'Laadvermogen (W)', discharge_entity: 'Ontlaadvermogen (W)',
         loading: 'Editor laden…',
     },
@@ -183,8 +189,11 @@ export const EDITOR_LABELS: Readonly<typeof LABELS> = LABELS;
 
 export function editorLabel(lang: Lang, key: string): string {
     // An appliance's slot: its entity is labelled with its number, the rest like a cell's
-    const consumer = /^consumer_(\d)_(entity|name|icon|tap_action)$/.exec(key);
-    if (consumer) return consumer[2] === 'entity' ? LABELS[lang].consumer.replace('{n}', consumer[1]) : LABELS[lang][`cell_${consumer[2]}`];
+    const consumer = /^consumer_(\d)_(entity|name|icon|tap_action|soc_entity|always_show)$/.exec(key);
+    if (consumer) {
+        if (consumer[2] === 'entity') return LABELS[lang].consumer.replace('{n}', consumer[1]);
+        return LABELS[lang][consumer[2] === 'soc_entity' || consumer[2] === 'always_show' ? `consumer_${consumer[2]}` : `cell_${consumer[2]}`];
+    }
     const slot = /^cell_(\d)(?:_(entity|name|icon|tap_action))?$/.exec(key);
     if (slot) return slot[2] ? LABELS[lang][`cell_${slot[2]}`] : LABELS[lang].cell.replace('{n}', slot[1]);
     return LABELS[lang][key] ?? key;
@@ -205,6 +214,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Par défaut : ouvre l\'entité de l\'appareil.',
         consumer_threshold: 'En dessous de cette puissance, un appareil n\'apparaît pas dans le flux. 10 W si vide ; 0 les montre toujours.',
         cell_tap_action: 'Par défaut : ouvre l\'entité de la case, ou fait l\'« Appui » de la carte s\'il est choisi (bloc Actions).',
+        consumer_soc_entity: 'Une voiture, par exemple : sa charge remplace la part de la maison dans l\'anneau, en vert.', consumer_always_show: 'Reste affiché sous le seuil d\'affichage (une voiture branchée qui ne charge pas).',
         capacity: 'Active l\'estimation : l\'heure à laquelle la batterie sera pleine, le temps avant la réserve. Plusieurs batteries : leur capacité totale (ou une par batterie en YAML).',
         soc_entity: 'Plusieurs batteries : une entité par batterie ; la carte affiche leur charge moyenne et additionne leurs puissances.', import_entity: 'Deux capteurs positifs ; s\'il en manque un, il compte pour 0.', charge_entity: 'Deux capteurs positifs ; s\'il en manque un, il compte pour 0.',
     },
@@ -221,6 +231,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'By default: opens the appliance\'s entity.',
         consumer_threshold: 'Below this power an appliance stays out of the flow. 10 W when empty; 0 always shows them.',
         cell_tap_action: 'By default: opens the cell\'s entity, or runs the card\'s Tap action if one is set (Actions block).',
+        consumer_soc_entity: 'A car, say: its charge takes the place of the home\'s share in the ring, in green.', consumer_always_show: 'Stays shown below the display threshold (a plugged-in car that isn\'t charging).',
         capacity: 'Turns the estimate on: when the battery will be full, how long until the reserve. Several batteries: their total capacity (or one each in YAML).',
         soc_entity: 'Several batteries: one entity each; the card shows their average charge and adds up their powers.', import_entity: 'Two positive sensors; a missing one counts as 0.', charge_entity: 'Two positive sensors; a missing one counts as 0.',
     },
@@ -237,6 +248,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Standard: öffnet die Entität des Geräts.',
         consumer_threshold: 'Unter dieser Leistung erscheint ein Gerät nicht im Fluss. Leer: 10 W; 0 zeigt sie immer.',
         cell_tap_action: 'Standard: öffnet die Entität des Feldes, oder führt das „Tippen“ der Karte aus, falls gewählt (Block Aktionen).',
+        consumer_soc_entity: 'Ein Auto zum Beispiel: seine Ladung ersetzt im Ring den Anteil am Haus, in Grün.', consumer_always_show: 'Bleibt unter der Anzeigeschwelle sichtbar (ein angestecktes Auto, das nicht lädt).',
         capacity: 'Schaltet die Schätzung ein: wann die Batterie voll ist, wie lange bis zur Reserve. Mehrere Batterien: die Gesamtkapazität (oder je eine in YAML).',
         soc_entity: 'Mehrere Batterien: je eine Entität; die Karte zeigt die mittlere Ladung und addiert die Leistungen.', import_entity: 'Zwei positive Sensoren; ein fehlender zählt als 0.', charge_entity: 'Zwei positive Sensoren; ein fehlender zählt als 0.',
     },
@@ -253,6 +265,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Por defecto: abre la entidad del aparato.',
         consumer_threshold: 'Por debajo de esta potencia, un aparato no aparece en el flujo. 10 W si está vacío; 0 los muestra siempre.',
         cell_tap_action: 'Por defecto: abre la entidad de la casilla, o ejecuta el «Toque» de la tarjeta si está elegido (bloque Acciones).',
+        consumer_soc_entity: 'Un coche, por ejemplo: su carga sustituye a la parte de la casa en el anillo, en verde.', consumer_always_show: 'Sigue visible por debajo del umbral (un coche enchufado que no carga).',
         capacity: 'Activa la estimación: cuándo estará llena la batería, cuánto falta para la reserva. Varias baterías: su capacidad total (o una por batería en YAML).',
         soc_entity: 'Varias baterías: una entidad por batería; la tarjeta muestra su carga media y suma sus potencias.', import_entity: 'Dos sensores positivos; si falta uno, cuenta como 0.', charge_entity: 'Dos sensores positivos; si falta uno, cuenta como 0.',
     },
@@ -269,6 +282,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Predefinito: apre l\'entità dell\'apparecchio.',
         consumer_threshold: 'Sotto questa potenza un apparecchio non compare nel flusso. 10 W se vuoto; 0 li mostra sempre.',
         cell_tap_action: 'Predefinito: apre l\'entità della casella, o esegue il «Tocco» della scheda se impostato (blocco Azioni).',
+        consumer_soc_entity: 'Un\'auto, ad esempio: la sua carica sostituisce la quota della casa nell\'anello, in verde.', consumer_always_show: 'Resta visibile sotto la soglia (un\'auto collegata che non sta caricando).',
         capacity: 'Attiva la stima: quando la batteria sarà piena, quanto manca alla riserva. Più batterie: la capacità totale (o una per batteria in YAML).',
         soc_entity: 'Più batterie: un\'entità per batteria; la scheda mostra la carica media e somma le potenze.', import_entity: 'Due sensori positivi; se ne manca uno, conta 0.', charge_entity: 'Due sensori positivi; se ne manca uno, conta 0.',
     },
@@ -285,6 +299,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         consumer_tap_action: 'Standaard: opent de entiteit van het apparaat.',
         consumer_threshold: 'Onder dit vermogen verschijnt een apparaat niet in de stroom. Leeg: 10 W; 0 toont ze altijd.',
         cell_tap_action: 'Standaard: opent de entiteit van het vak, of voert het „Tikken” van de kaart uit als dat is ingesteld (blok Acties).',
+        consumer_soc_entity: 'Een auto bijvoorbeeld: de lading vervangt het aandeel van het huis in de ring, in het groen.', consumer_always_show: 'Blijft zichtbaar onder de drempel (een aangesloten auto die niet laadt).',
         capacity: 'Zet de schatting aan: wanneer de batterij vol is, hoe lang tot de reserve. Meerdere batterijen: de totale capaciteit (of één per batterij in YAML).',
         soc_entity: 'Meerdere batterijen: één entiteit per batterij; de kaart toont de gemiddelde lading en telt de vermogens op.', import_entity: 'Twee positieve sensoren; een ontbrekende telt als 0.', charge_entity: 'Twee positieve sensoren; een ontbrekende telt als 0.',
     },
@@ -296,6 +311,8 @@ export const EDITOR_HELPERS: Readonly<typeof HELPERS> = HELPERS;
 export function editorHelper(lang: Lang, key: string, block?: string): string | undefined {
     if (/^cell_\d_tap_action$/.test(key)) return HELPERS[lang].cell_tap_action;
     if (/^consumer_\d_tap_action$/.test(key)) return HELPERS[lang].consumer_tap_action;
+    const own = /^consumer_\d_(soc_entity|always_show)$/.exec(key);
+    if (own) return HELPERS[lang][`consumer_${own[1]}`];
     if (key === 'consumer_1_entity') return HELPERS[lang].consumers;
     return HELPERS[lang][block && key === 'invert' ? `${block}_invert` : key];
 }
@@ -456,6 +473,8 @@ function consumerFields(data: Record<string, unknown>): SchemaItem[] {
             fields.push(
                 { name: `consumer_${n}_name`, selector: { text: {} } },
                 { name: `consumer_${n}_icon`, selector: { icon: {} } },
+                { name: `consumer_${n}_soc_entity`, selector: sensor({ device_class: 'battery' }) },
+                { name: `consumer_${n}_always_show`, selector: { boolean: {} } },
                 { name: `consumer_${n}_tap_action`, selector: { ui_action: {} } },
             );
         }
@@ -467,6 +486,7 @@ function consumerFields(data: Record<string, unknown>): SchemaItem[] {
 function consumerSlots(config: EnergySkyCardConfig): Record<string, unknown> {
     return Object.fromEntries((config.consumers ?? []).flatMap((c, i) => [
         [`consumer_${i + 1}_entity`, c.entity], [`consumer_${i + 1}_name`, c.name], [`consumer_${i + 1}_icon`, c.icon], [`consumer_${i + 1}_tap_action`, c.tap_action],
+        [`consumer_${i + 1}_soc_entity`, c.soc_entity], [`consumer_${i + 1}_always_show`, c.always_show],
     ]));
 }
 
@@ -477,10 +497,11 @@ function consumersFromSlots(value: Record<string, unknown>): ConsumerConfig[] {
         const entity = value[`consumer_${n}_entity`];
         if (typeof entity !== 'string' || !entity) continue;
         const consumer: ConsumerConfig = { entity };
-        for (const field of ['name', 'icon'] as const) {
+        for (const field of ['name', 'icon', 'soc_entity'] as const) {
             const v = value[`consumer_${n}_${field}`];
             if (typeof v === 'string' && v) consumer[field] = v;
         }
+        if (value[`consumer_${n}_always_show`] === true) consumer.always_show = true;
         const tap = value[`consumer_${n}_tap_action`];
         if (isAction(tap)) consumer.tap_action = tap;
         consumers.push(consumer);

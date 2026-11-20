@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- An appliance's charge: `consumers[].soc_entity` (a car's battery, say) fills the appliance's ring in green, the battery's colour, with the number in its disc and « Car · 7.2 kW · 64 % » in its title. `consumers[].always_show: true` keeps it in the flow below `consumer_threshold`, a plugged-in car that isn't charging. Both in the editor's Appliances section.
 - A self-sufficiency cell (`cells: [self_sufficiency]`, « Today's self-sufficiency » in the editor's cell choices): the share of the home's use not bought from the grid since midnight, `82 %`, the same figure as the Energy dashboard's gauge. Read from the Energy dashboard's meters through Home Assistant's statistics, every 5 minutes, nothing to set; offered in the editor when the Energy dashboard has a grid meter. A tap opens the Energy dashboard.
 - Editor: choosing « Two sensors » no longer switches back to « One sensor » before the sensors are picked.
 - Battery estimate: with `battery.capacity` (kWh), the Battery cell tells when the battery will be full (`78 % ↑ · 14:20`) or how long until its reserve (`64 % ↓ · 5 h 30`), and the flow shows it under the Battery node's power; the whole sentence (« Full at 14:20 ») is in the title. Read from the battery power's 5 minute average (or `smoothing`'s), rounded to 10 minutes, nothing while idle or beyond a day. `max_soc`, `reserve_soc` and `estimate` (`charge` / `discharge`: `time`, `duration` or `off`; `with_temperature`: `replace` or `both`; `flow`) set it, all in the editor's Battery section once a capacity is set.
