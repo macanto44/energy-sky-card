@@ -59,9 +59,33 @@ function sunNow(config: EnergySkyCardConfig, hass: HomeAssistant, now: number): 
     return typeof latitude === 'number' && typeof longitude === 'number' ? sunPosition(now, latitude, longitude) : undefined;
 }
 
-/** East (0) to west (1) along the day's arc, whichever hemisphere: in the north the sun crosses the south */
-export function eastToWest(az: number, latitude: number): number {
-    return clamp01(latitude >= 0 ? (az - 90) / 180 : (((90 - az) % 360) + 360) % 360 / 180);
+const RAD = Math.PI / 180;
+
+/**
+ * A body's hour angle (degrees, -180 … 180: negative before it culminates,
+ * 0 on the meridian) and declination, from its elevation and azimuth (from
+ * north towards east) seen at a latitude
+ */
+export function hourAngle(alt: number, az: number, latitude: number): { ha: number; dec: number } {
+    const [a, z, l] = [alt * RAD, az * RAD, latitude * RAD];
+    const dec = Math.asin(Math.max(-1, Math.min(1, Math.cos(l) * Math.cos(a) * Math.cos(z) + Math.sin(l) * Math.sin(a))));
+    const ha = Math.atan2(-Math.cos(a) * Math.sin(z), Math.cos(l) * Math.sin(a) - Math.sin(l) * Math.cos(a) * Math.cos(z));
+    return { ha: ha / RAD, dec: dec / RAD };
+}
+
+/**
+ * Rising (0) to setting (1) along the body's arc of the day, at any latitude
+ * and season: its hour angle over the half-arc it spends above the horizon.
+ * The azimuth alone would park a summer sun on an edge for hours (it rises
+ * north of east) and, south of the equator or in the tropics, jump across.
+ */
+export function arcPlace(alt: number, az: number, latitude: number): number {
+    const { ha, dec } = hourAngle(alt, az, latitude);
+    const cosHalf = -Math.tan(latitude * RAD) * Math.tan(dec * RAD);
+    // Never rises: the top of its (unseen) arc; never sets: the whole circle
+    if (cosHalf >= 1) return 0.5;
+    const half = cosHalf <= -1 ? 180 : Math.acos(cosHalf) / RAD;
+    return clamp01((ha + half) / (2 * half));
 }
 
 /** The strength of the dawn / dusk glow at a sun elevation (degrees) */
@@ -82,7 +106,8 @@ export function celestial(config: EnergySkyCardConfig, hass: HomeAssistant, bg: 
     // Day deepens into night from 5° above the horizon to 4° below; the stars come out from 1° below to 8° below
     const day = clamp01((sun.alt + 4) / 9);
     let stars = clamp01((-sun.alt - 1) / 7);
-    const rising = eastToWest(sun.az, lat) < 0.5;
+    // Dawn before the sun's culmination, dusk after (its hour angle, past midnight negative again)
+    const rising = hourAngle(sun.alt, sun.az, lat).ha < 0;
     const through = bg.sky === 'solid' ? 0 : weather ? GLOW_THROUGH[weather] ?? 0.3 : 1;
     const view: Celestial = { day, stars, twilight: twilightStrength(sun.alt) * through, dawn: rising };
 
@@ -92,7 +117,7 @@ export function celestial(config: EnergySkyCardConfig, hass: HomeAssistant, bg: 
         const p = clamp01(bg.haloAlpha / 0.55);
         const clear = bg.sky === 'tempo' || weather === 'sunny' || weather === 'windy';
         view.sun = {
-            u: eastToWest(sun.az, lat), v: clamp01(sun.alt / 60), p,
+            u: arcPlace(sun.alt, sun.az, lat), v: clamp01(sun.alt / 60), p,
             opacity: clamp01((sun.alt + 1) / 3),
             warmth: clamp01(1 - sun.alt / 25),
             rays: clear && sun.alt > 8 && p > 0.05 ? (p > 0.8 ? 12 : 6) : 0,
@@ -108,7 +133,7 @@ export function celestial(config: EnergySkyCardConfig, hass: HomeAssistant, bg: 
         const opacity = mix(byNight, byDay, day);
         if (opacity > 0.02) {
             view.moon = {
-                u: eastToWest(m.az, lat), v: clamp01(m.alt / 60), lit: m.lit,
+                u: arcPlace(m.alt, m.az, lat), v: clamp01(m.alt / 60), lit: m.lit,
                 rotate: Math.round(lat >= 0 ? m.limb - 90 : -m.limb - 90), opacity,
             };
             // Its light hides the faint stars

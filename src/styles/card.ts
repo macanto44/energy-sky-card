@@ -1,6 +1,6 @@
 // The card's stylesheet: typography (brief §5.2), sky layers, motion.
 
-import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOW_COLOURS, FOG_ALPHA, MOONLIGHT, SIDE_HALO, SIDE_SKY_FROM, SUN_BLOOM, SUN_BREATHE, SUN_GLOW, TWILIGHT } from '../sky';
+import { CLOUD_MAX_ALPHA, CLOUD_RGB, FLOOR_GLOW, FLOW_COLOURS, FOG_ALPHA, MOONLIGHT, SIDE_HALO, SIDE_SKY_FROM, SUN_BLOOM, SUN_BREATHE, SUN_GLOW, TWILIGHT } from '../sky';
 import { FLOW_HEIGHT, MAX_CONSUMERS, NODE_HEIGHT, WIRE_KEYS } from '../flow';
 
 const cloud = (alpha: number) => `rgba(${CLOUD_RGB.join(', ')}, ${alpha})`;
@@ -8,6 +8,9 @@ const rgb = (c: readonly number[]) => c.join(', ');
 /** The dawn / dusk glow, from the bottom: its low colour, 55 % of it in its mid colour at 45 %, none from 85 % */
 const twilight = (tone: { low: readonly number[]; mid: readonly number[] }) =>
     `linear-gradient(0deg, rgba(${rgb(tone.low)}, ${TWILIGHT.alpha}) 0%, rgba(${rgb(tone.mid)}, ${TWILIGHT.alpha * 0.55}) 45%, rgba(${rgb(tone.mid)}, 0) 85%)`;
+/** The same glow carried on under the sky, over the flow's floor: from the low colour at the seam down to nothing (sky.ts, FLOOR_GLOW) */
+const floorGlow = (tone: { low: readonly number[]; mid: readonly number[] }) =>
+    `linear-gradient(180deg, rgba(${rgb(tone.low)}, ${TWILIGHT.alpha}) 0, rgba(${rgb(tone.mid)}, ${TWILIGHT.alpha * 0.55}) ${FLOOR_GLOW.mid}px, rgba(${rgb(tone.mid)}, 0) ${FLOOR_GLOW.end}px)`;
 const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
 /** Side layout: the gradient from SIDE_SKY_FROM down, its first stop a mix of the top two */
 const SIDE_SKY = `linear-gradient(180deg, color-mix(in srgb, var(--esc-c0, #4b90d5) ${pct(1 - SIDE_SKY_FROM / 0.6)}, var(--esc-c1, #2169b0)) 0%, var(--esc-c1, #2169b0) ${pct((0.6 - SIDE_SKY_FROM) / (1 - SIDE_SKY_FROM))}, var(--esc-c2, #1d4f87) 100%)`;
@@ -386,14 +389,18 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 /*
  * The energy flow (flow: tap or always): the card sets its own height (the grid's
  * rows: auto), the sky stays on the top part at its usual height, and the
- * flow unfolds below on the gradient's last colour (the darkest).
+ * flow unfolds below on the sky's last colour (--esc-floor: the day's over
+ * the night's by the sun's height, set by the card), with dawn and dusk
+ * carried on below the seam (.floor).
  */
 :host([data-flow]) { height: auto; --esc-top-h: 248px; }
 :host([data-flow][data-layout="side"]) { --esc-top-h: 120px; }
 :host([data-flow]) ha-card { height: auto; }
 :host([data-flow]) .content { height: var(--esc-top-h); }
 :host([data-flow]) .sky { bottom: auto; height: var(--esc-top-h); }
-:host([data-flow][data-mode="day"]) ha-card { background: var(--esc-c2, #1d4f87); }
+:host([data-flow]) ha-card { background: var(--esc-floor, var(--esc-n2, #0b1026)); }
+.floor { position: absolute; left: 0; right: 0; top: var(--esc-top-h); height: ${FLOOR_GLOW.end}px; z-index: 0; pointer-events: none; opacity: var(--esc-twilight, 0); background: ${floorGlow(TWILIGHT.dusk)}; }
+:host([data-dawn]) .floor { background: ${floorGlow(TWILIGHT.dawn)}; }
 :host([data-ready][data-flow]:not([data-motion="off"])) ha-card { transition: background-color 3s ease-in-out; }
 :host([data-flow="tap"]) .hero, :host([data-flow="tap"]) .context { cursor: pointer; }
 :host([data-flow="tap"]) .hero:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
@@ -410,8 +417,7 @@ ha-card:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 /* Grid ↔ battery: one link, dotted while idle; battery → grid is drawn only while a battery sells (it lies on the same line) */
 .wire[data-wire="bg"][data-level="0"] { display: none; }
 /* The bridge: where grid ↔ battery passes under sun → home, a gap of the panel's colour */
-.panel { --esc-panel: var(--esc-c2, #1d4f87); }
-:host([data-mode="night"]) .panel { --esc-panel: var(--esc-n2, #0b1026); }
+.panel { --esc-panel: var(--esc-floor, var(--esc-n2, #0b1026)); }
 .wire .gap { stroke: var(--esc-panel); stroke-opacity: 1; stroke-width: 10px; stroke-linecap: butt; }
 ${LEVELS.map(([w, d], i) => `.wire[data-level="${i + 1}"] { --esc-w: ${w}px; --esc-dur: ${d}s; }`).join('\n')}
 ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.wire.${k} { color: ${flowColour(k)}; }`).join(' ')}
@@ -435,7 +441,8 @@ ${[...WIRE_KEYS, ...Array.from({ length: MAX_CONSUMERS }, (_, i) => `c${i}`)].ma
     gap: 8px;
     padding: 0 10px 0 6px;
     border-radius: ${NODE_HEIGHT / 2}px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, ${NODE_GLASS_ALPHA}), rgba(255, 255, 255, 0.06));
+    /* The glass fades as dawn or dusk lights the floor behind it (the white text keeps its contrast) */
+    background: linear-gradient(180deg, rgba(255, 255, 255, calc(${NODE_GLASS_ALPHA} * (1 - var(--esc-twilight, 0)))), rgba(255, 255, 255, calc(0.06 * (1 - var(--esc-twilight, 0)))));
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 .node[hidden] { display: none; }

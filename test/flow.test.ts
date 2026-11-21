@@ -5,7 +5,8 @@ import { CARD_NAME } from '../src/constants';
 import { CARD_CSS, FLOW_COLOURS, NODE_GLASS_ALPHA } from '../src/styles/card';
 import { COMPACT_WIDTH, CONSUMER_ICON, FLOW_HEIGHT, NODE_HEIGHT, WIRE_KEYS, energyFlows, flowGeometry, flowLevel, flowView } from '../src/flow';
 import { entity } from './helpers';
-import { DEFAULT_PALETTES, NIGHT_PALETTE, composite, contrastRatio, hexToRgb, type Rgb } from '../src/sky';
+import { DEFAULT_PALETTES, DEFAULT_SOLID_COLOR, FLOOR_GLOW, NIGHT_PALETTE, TWILIGHT, WEATHER, composite, computeBackground, contrastRatio, floorGlowAlpha, floorGlowRgb, floorRgb, hexToRgb, solidPalette, twilightAlpha, twilightRgb, type Palette, type Rgb } from '../src/sky';
+import { twilightStrength } from '../src/celestial';
 import { $ as find, ANNEX_B, FULL_CONFIG, actionsOf, makeHass, measure, mountCard, nb, press, tap, unmeasure } from './helpers';
 import type { EnergySkyCardConfig } from '../src/types';
 
@@ -450,6 +451,17 @@ describe('the expandable card', () => {
         expect($('ha-card').style.getPropertyValue('--esc-n0')).toBe('#1d2b4d');
         expect(() => card.setConfig({ ...FULL_CONFIG, background: 'cloudy' as any })).toThrow(/background: tempo, solid or weather/);
         expect(() => card.setConfig({ ...FULL_CONFIG, background_color: 'blue' })).toThrow(/background_color/);
+        expect(() => card.setConfig({ ...FULL_CONFIG, background: 'weather' })).toThrow(/needs a weather_entity/);
+    });
+
+    it('redraws the weather sky when only the weather changes (the power sensors quiet, at night)', () => {
+        const hass = makeHass({ ...ANNEX_B, 'weather.home': 'clear-night' });
+        const { card, $ } = mount({ background: 'weather', weather_entity: 'weather.home' }, hass as never);
+        expect($('.wx').querySelectorAll('.drop').length).toBe(0);
+        // Every other entity as it was: the same objects, the same last_updated
+        card.hass = { ...hass, states: { ...hass.states, 'weather.home': entity('weather.home', 'pouring') } };
+        expect(card.getAttribute('data-stars')).toBe('none');
+        expect($('.wx').querySelectorAll('.drop').length).toBe(80);
     });
 
     it('rejects more than four appliances, one without an entity, or a bad tap action', () => {
@@ -493,6 +505,62 @@ describe('contrast of the flow\'s text', () => {
             expect(contrastRatio(composite(glass, WHITE, 0.78), glass)).toBeGreaterThanOrEqual(3);
         });
     }
+
+    /*
+     * The floor follows the sky: day over night by the sun's height, dawn and
+     * dusk carried on below the seam (floorGlow*), the glass fading as they
+     * strengthen. Along the sun's course from -9° to 13°, at full strength
+     * (no weather dimming it), every sky, every node's height in the glow.
+     */
+    const SKIES: [string, Palette, Palette][] = [
+        ...Object.entries(DEFAULT_PALETTES).map(([key, day]) => [key, day, NIGHT_PALETTE] as [string, Palette, Palette]),
+        ...Object.entries(WEATHER).map(([key, look]) => [`weather ${key}`, look.day, look.night] as [string, Palette, Palette]),
+        ['solid', solidPalette(DEFAULT_SOLID_COLOR), NIGHT_PALETTE],
+    ];
+    for (const [name, day, night] of SKIES) {
+        it(`keeps the flow readable from night to day through dawn and dusk on ${name}`, () => {
+            let values = Infinity, labels = Infinity;
+            for (let alt = -9; alt <= 13; alt += 0.25) {
+                const weight = Math.min(Math.max((alt + 4) / 9, 0), 1);
+                const strength = twilightStrength(alt);
+                for (const tone of [TWILIGHT.dawn, TWILIGHT.dusk]) for (let d = 10; d <= FLOOR_GLOW.end; d += 2) {
+                    const floor = composite(floorRgb(day, night, weight), floorGlowRgb(tone, d), floorGlowAlpha(d) * strength);
+                    const glass = composite(floor, WHITE, NODE_GLASS_ALPHA * (1 - strength));
+                    values = Math.min(values, contrastRatio(WHITE, glass));
+                    labels = Math.min(labels, contrastRatio(composite(glass, WHITE, 0.78), glass));
+                }
+            }
+            expect(values).toBeGreaterThanOrEqual(4.5);
+            expect(labels).toBeGreaterThanOrEqual(3);
+        });
+    }
+
+    it('meets the sky at the seam: the floor\'s glow starts as the sky\'s ends', () => {
+        for (const tone of [TWILIGHT.dawn, TWILIGHT.dusk]) {
+            expect(floorGlowAlpha(0)).toBeCloseTo(twilightAlpha(1));
+            floorGlowRgb(tone, 0).forEach((c, i) => expect(c).toBeCloseTo(twilightRgb(tone, 1)[i], 9));
+        }
+        expect(floorGlowAlpha(FLOOR_GLOW.end)).toBe(0);
+        // Gone above the wires' crossing (panel padding + half the shortest flow), where the bridge is the floor's plain colour
+        expect(FLOOR_GLOW.end).toBeLessThan(10 + FLOW_HEIGHT / 2);
+        expect(floorRgb(DEFAULT_PALETTES.Bleu, NIGHT_PALETTE, 1)).toEqual(hexToRgb(DEFAULT_PALETTES.Bleu[2]));
+        expect(floorRgb(DEFAULT_PALETTES.Bleu, NIGHT_PALETTE, 0)).toEqual(hexToRgb(NIGHT_PALETTE[2]));
+    });
+
+    it('paints the floor as the sky stands: halfway through dusk, half day and half night, the glow on', () => {
+        const sun = { entity_id: 'sun.sun', state: 'above_horizon', attributes: { elevation: 0.5, azimuth: 300 }, last_changed: '', last_updated: '' };
+        const config: EnergySkyCardConfig = { ...FULL_CONFIG, flow: 'always' };
+        const card = mountCard(config, { ...DAY, 'sun.sun': sun as never });
+        const style = find(card, 'ha-card').style;
+        expect(Number(style.getPropertyValue('--esc-day'))).toBeCloseTo(0.5);
+        expect(Number(style.getPropertyValue('--esc-twilight'))).toBe(1);
+        expect(card.hasAttribute('data-dawn')).toBe(false);
+        const floor = style.getPropertyValue('--esc-floor').match(/\d+/g)!.map(Number);
+        const { palette, nightPalette } = computeBackground(config, card.hass!);
+        expect(floor).toEqual(floorRgb(palette, nightPalette, 0.5).map(c => Math.round(c * 255)));
+        expect(find(card, '.floor')).not.toBeNull();
+        expect(CARD_CSS).toContain(':host([data-flow]) ha-card { background: var(--esc-floor');
+    });
 
     it('draws the three sources and the appliances in their own colours, which a theme or flow_colors can change', () => {
         expect(Object.keys(FLOW_COLOURS)).toEqual(['sun', 'grid', 'batt', 'use']);

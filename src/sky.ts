@@ -87,6 +87,28 @@ export function twilightRgb(tone: { low: Rgb; mid: Rgb }, y: number): Rgb {
     return tone.mid.map((c, i) => (c + (tone.low[i] - c) * t) / 255) as Rgb;
 }
 
+/**
+ * Under the sky, the flow's floor: the sky's last colour, the day's over the
+ * night's by the day's weight (--esc-day), so the seam never shows while the
+ * sky turns. Its dawn and dusk: the twilight's glow carried on below the
+ * horizon, at the sky's bottom alpha and colour where they meet, its mid colour
+ * at 55 % of it FLOOR_GLOW.mid px down, gone at FLOOR_GLOW.end px (above the
+ * wires' crossing, whose bridge is the floor's plain colour).
+ */
+export const FLOOR_GLOW = { mid: 40, end: 100 } as const;
+export function floorRgb(palette: Palette, nightPalette: Palette, day: number): Rgb {
+    return composite(hexToRgb(nightPalette[2]), hexToRgb(palette[2]), Math.min(Math.max(day, 0), 1));
+}
+/** The floor's twilight at d px below the sky, for strength 1: its alpha and colour */
+export function floorGlowAlpha(d: number): number {
+    if (d <= FLOOR_GLOW.mid) return TWILIGHT.alpha * (1 - 0.45 * d / FLOOR_GLOW.mid);
+    return d >= FLOOR_GLOW.end ? 0 : TWILIGHT.alpha * 0.55 * (FLOOR_GLOW.end - d) / (FLOOR_GLOW.end - FLOOR_GLOW.mid);
+}
+export function floorGlowRgb(tone: { low: Rgb; mid: Rgb }, d: number): Rgb {
+    const t = Math.min(Math.max(d / FLOOR_GLOW.mid, 0), 1);
+    return tone.low.map((c, i) => (c + (tone.mid[i] - c) * t) / 255) as Rgb;
+}
+
 /** Three clouds: width and height (% of the card), top (%), one crossing in s, phase offset in s */
 export const CLOUDS = [
     { width: 110, height: 38, top: 2, period: 47, delay: 9 },

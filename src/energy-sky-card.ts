@@ -6,7 +6,7 @@ import { CARD_CSS, FLOW_COLOUR_VARS } from './styles/card';
 import { CELL_KINDS, CUSTOM_CELL_ICON, MAX_CELLS, METRIC_ICONS, batteryCapacity, estimateAverageMs, batteryPower, batteryPowerEntities, buildView, cellEntity, configuredCells, metricForm, productionEntities, staleReadings, trackedEntities, type CardView, type MetricKey, type ViewOptions } from './model';
 import { cardLanguage, localize, numberLocale } from './localize';
 import { formatPercent } from './format';
-import { CLOUDS, SUN_CLEARANCE, WEATHER, computeBackground, isHexColor, type Background } from './sky';
+import { CLOUDS, SUN_CLEARANCE, WEATHER, computeBackground, floorRgb, isHexColor, type Background } from './sky';
 import { celestial, moonMarkup, type Celestial } from './celestial';
 import { weatherMarkup } from './weather';
 import { coveredBy, starsMarkup, type Box } from './stars';
@@ -145,6 +145,9 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             if (o.soc_entity !== undefined && (typeof o.soc_entity !== 'string' || !o.soc_entity)) throw configError('consumers : soc_entity doit être une entité', 'consumers: soc_entity must be an entity');
             if (o.always_show !== undefined && typeof o.always_show !== 'boolean') throw configError('consumers : always_show doit valoir true ou false', 'consumers: always_show must be true or false');
         }
+    }
+    if (c.background === 'weather' && (typeof c.weather_entity !== 'string' || !c.weather_entity)) {
+        throw configError('background: weather demande une weather_entity', 'background: weather needs a weather_entity');
     }
     if (c.background_color !== undefined && !isHexColor(c.background_color)) {
         throw configError('background_color : une couleur hexadécimale (#rrggbb)', 'background_color: a hex colour (#rrggbb)');
@@ -499,7 +502,7 @@ export class EnergySkyCard extends HTMLElement {
                             <div class="value line"><span class="value-main"></span><span class="extra"></span></div>
                         </div>`).join('')}</div>
                 </div>
-                ${config.flow ? flowMarkup(config.consumers?.length ?? 0) : ''}
+                ${config.flow ? `<div class="floor" aria-hidden="true"></div>${flowMarkup(config.consumers?.length ?? 0)}` : ''}
             </ha-card>`;
         const q = (sel: string, parent: ParentNode = this.root) => find(parent, sel);
         this.refs = {
@@ -989,6 +992,8 @@ export class EnergySkyCard extends HTMLElement {
         set('--esc-day', r2(sky.day));
         set('--esc-stars', r2(sky.stars));
         set('--esc-twilight', r2(sky.twilight));
+        // The flow's floor: the sky's last colour as the sky shows it now, day over night
+        set('--esc-floor', `rgb(${floorRgb(bg.palette, bg.nightPalette, r2(sky.day)).map(c => Math.round(c * 255)).join(', ')})`);
         this.toggleAttribute('data-dawn', sky.dawn);
         const sun = this.root.querySelector<HTMLElement>('.sun');
         if (sun && sky.sun) {

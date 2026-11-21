@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { celestial, eastToWest, moonMarkup, twilightStrength } from '../src/celestial';
+import { arcPlace, celestial, hourAngle, moonMarkup, twilightStrength } from '../src/celestial';
+import { sunPosition } from '../src/astro';
 import { SUN_CLEARANCE, computeBackground } from '../src/sky';
 import { windAcross } from '../src/energy-sky-card';
 import { entity, makeHass, mountCard as mount } from './helpers';
@@ -54,16 +55,54 @@ describe('dawn and dusk', () => {
 });
 
 describe('the sun', () => {
-    it('crosses from east to west, high at noon, in either hemisphere', () => {
-        expect(eastToWest(90, 48)).toBe(0);
-        expect(eastToWest(180, 48)).toBe(0.5);
-        expect(eastToWest(270, 48)).toBe(1);
+    it('crosses from rising to setting, high at noon, in either hemisphere', () => {
+        expect(arcPlace(60, 180, 48)).toBeCloseTo(0.5);
         // South of the equator the sun crosses the north
-        expect(eastToWest(90, -33)).toBe(0);
-        expect(eastToWest(0, -33)).toBe(0.5);
-        expect(eastToWest(270, -33)).toBe(1);
+        expect(arcPlace(40, 0, -33)).toBeCloseTo(0.5);
+        expect(arcPlace(70, 0, -33)).toBeCloseTo(0.5);
+        // Before its culmination negative, after it positive
+        expect(hourAngle(20, 120, 48).ha).toBeLessThan(0);
+        expect(hourAngle(20, 240, 48).ha).toBeGreaterThan(0);
         const noon = view(CONFIG, sky(60, 180, 6000))!.sun!;
         expect(noon).toMatchObject({ u: 0.5, v: 1, p: 1, opacity: 1, warmth: 0, rays: 12 });
+    });
+
+    /*
+     * A real day, every 15 minutes the sun is up (astro.ts): it rises at the
+     * left, sets at the right, never stops nor goes back, and is in the middle
+     * at its highest, whatever the latitude and the season (a June morning in
+     * Paris, rising north of east; a December day in Sydney, in the tropics)
+     */
+    for (const [name, lat, lon, day] of [
+        ['Paris in June', 48.86, 2.35, '2026-06-21'], ['Paris in December', 48.86, 2.35, '2026-12-21'],
+        ['Sydney in December', -33.87, 151.2, '2026-12-21'], ['Sydney in June', -33.87, 151.2, '2026-06-21'],
+        ['La Réunion in December', -21.1, 55.5, '2026-12-21'], ['Martinique in June', 14.6, -61, '2026-06-21'],
+        ['Tromsø in June (midnight sun)', 69.65, 18.96, '2026-06-21'],
+    ] as const) {
+        it(`moves steadily along its arc: ${name}`, () => {
+            // From solar midnight (half a step after, where a midnight sun goes round from right to left)
+            const start = Date.parse(`${day}T00:00:00Z`) - lon / 15 * 3_600_000 + 450_000;
+            const days = Array.from({ length: 96 }, (_, i) => sunPosition(start + i * 900_000, lat, lon));
+            const up = days.filter(p => p.alt > 0);
+            const u = up.map(p => arcPlace(p.alt, p.az, lat));
+            for (let i = 1; i < u.length; i++) expect(u[i]).toBeGreaterThan(u[i - 1] - 1e-9);
+            // 15 minutes never move it more than a tenth of the way, so no jump
+            for (let i = 1; i < u.length; i++) expect(u[i] - u[i - 1]).toBeLessThan(0.1);
+            const top = up.reduce((a, b) => b.alt > a.alt ? b : a);
+            expect(arcPlace(top.alt, top.az, lat)).toBeCloseTo(0.5, 1);
+            if (up.length < days.length) {
+                expect(u[0]).toBeLessThan(0.05);
+                expect(u[u.length - 1]).toBeGreaterThan(0.95);
+            }
+        });
+    }
+
+    it('glows rose at dawn and amber at dusk in the southern summer too', () => {
+        const sydney = { latitude: -33.87, longitude: 151.2 };
+        // 06:00 and 19:30 in Sydney, 21 December: rising in the south-east, setting in the south-west
+        expect(view(CONFIG, sky(3, 117, 0, 'sunny', sydney)).dawn).toBe(true);
+        expect(view(CONFIG, sky(6, 246, 0, 'sunny', sydney)).dawn).toBe(false);
+        expect(view(CONFIG, sky(3, 117, 0, 'sunny', sydney)).sun!.u).toBeLessThan(0.05);
     });
 
     it('is warm, flattened and faint by the horizon, gone below it', () => {

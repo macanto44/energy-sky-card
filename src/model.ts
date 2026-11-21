@@ -328,6 +328,8 @@ export function trackedEntities(config: EnergySkyCardConfig): string[] {
         ...batterySocEntities(config), ...batteryPowerEntities(config), config.battery?.temperature_entity, ...(config.battery?.soc_reached_entities ?? []),
         ...gridPowerEntities(config), config.grid?.voltage_entity, config.grid?.outage_entity,
         config.forecast_tomorrow_entity, config.tariff_color_entity,
+        // The weather sky follows its condition and its wind
+        config.background === 'weather' ? config.weather_entity : undefined,
         config.sun_entity ?? 'sun.sun',
     ];
     return [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.length > 0))];

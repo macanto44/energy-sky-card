@@ -892,6 +892,11 @@ export class EnergySkyCardEditor extends HTMLElement {
         if (!this.config) return;
         const value = (e.detail?.value ?? {}) as Record<string, unknown>;
         this.config = nextConfig(this.config, value);
+        // The weather sky needs its entity: the first weather one, until another is picked
+        if (this.config.background === 'weather' && !this.config.weather_entity) {
+            const weather = Object.keys(this._hass?.states ?? {}).find(id => id.startsWith('weather.'));
+            if (weather) this.config = { ...this.config, weather_entity: weather };
+        }
         if (this.form) {
             // The free-cell fields follow the slots' choices, even before an entity is picked
             const data = { ...formData(this.config), ...Object.fromEntries(Object.entries(value).filter(([key]) => SLOT_KEY.test(key))) };

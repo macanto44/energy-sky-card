@@ -454,3 +454,17 @@ describe('folded sections', () => {
         expect(consumers.filter(i => i.type === 'expandable').map(i => i.title)).toEqual(['Voiture', 'Appareil 2']);
     });
 });
+
+describe('the weather sky in the form', () => {
+    it('picks a weather entity when the weather sky is chosen without one, and keeps the one picked', () => {
+        const { editor, changes, change } = mount();
+        editor.hass = makeHass({ 'sensor.production_pv': 0, 'weather.maison': 'sunny', 'weather.forecast': 'rainy' });
+        change({ background: 'weather' });
+        expect(changes.at(-1)).toMatchObject({ background: 'weather', weather_entity: 'weather.maison' });
+        change({ background: 'weather', weather_entity: 'weather.forecast' });
+        expect(changes.at(-1)!.weather_entity).toBe('weather.forecast');
+        // The other skies don't need one
+        change({ background: 'solid', weather_entity: undefined });
+        expect(changes.at(-1)!.weather_entity).toBeUndefined();
+    });
+});
