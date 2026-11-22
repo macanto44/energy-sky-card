@@ -61,11 +61,11 @@ Choose what's behind the numbers (`background`, or **Background** in the editor'
 
 - **Weather**: the sky follows a weather entity. Clouds drift across, rain slants down, snow falls, fog breathes, lightning flashes now and then; the wind hurries the clouds. Every weather sky keeps white text readable with its clouds or fog passing behind it.
 - **Solid**: one colour of your choosing. The card draws a gentle gradient from it, and darkens it if need be so the white text always reads.
-- **Tariff** (`tempo`, the default when `background` isn't set): by day, a gradient in today's tariff colour. It started with France's EDF Tempo (Bleu, Blanc and Rouge days), but any sensor whose state names the day's tariff works: the palettes are keyed by its states, and you can add your own.
+- **Tariff** (`tempo`): by day, a gradient in today's tariff colour, if your tariff has coloured days. Any sensor whose state names the day's tariff works: the palettes are keyed by its states, and you can add your own. France's EDF Tempo (Bleu, Blanc and Rouge days) comes built in. It's the sky a card gets when `background` isn't set; a new card starts on the weather sky when Home Assistant has a weather entity.
 
-| Tempo: Bleu day | Blanc day | Rouge day |
+| Weather: snow | Weather: sunset, partly cloudy | Tariff: a red day (EDF Tempo) |
 |---|---|---|
-| ![A blue sky card on a Bleu day](docs/images/bleu.png) | ![A grey-blue sky card on a Blanc day: the battery full](docs/images/blanc.png) | ![A red sky card on a Rouge day: the battery discharging](docs/images/rouge.png) |
+| ![The weather sky on a snowy day: snowflakes falling on a grey-blue sky, the battery full](docs/images/neige.png) | ![The weather sky at sunset: a low golden sun, the sky turning from blue to amber, clouds passing](docs/images/soir.png) | ![The tariff sky on a red day: a red gradient, the battery discharging](docs/images/rouge.png) |
 
 The real sky, where you live. The sun stands where it is: low in the east in the morning, high at noon, low in the west in the evening (from `sun.sun`), and shines as hard as your panels produce: pale on a grey morning, dazzling at full power, with fine rays in a clear sky. As it sinks it turns gold and flattens, the bottom of the sky glows rose at dawn and amber at dusk (less under clouds), and night falls degree by degree, the first stars before the last light. At night the moon rises and sets as it does above your roof, at its true phase, its lit side turned towards the sun, its light paling the stars. Clouds pass in front of both. With the weather sky, rain slants with the real wind (`wind_speed`, `wind_bearing`) and splashes on the card's edge, lightning lights the clouds from inside, and when the sun comes back after a shower a rainbow shows for a while, as long as the sun is low enough for one. Sun and moon always keep clear of the numbers: the card measures where the text is and moves them away, and every sky is tested for readable white text. The side layout keeps a simpler halo.
 
@@ -83,9 +83,11 @@ The sun's glow breathes slowly while the panels produce, and cloud shadows drift
   - **Voltage**, or `Outage` when your grid-loss alarm goes off.
   - **Tomorrow**: the production forecast.
   - **Consumption**: your home's power use.
+  - **Self-sufficiency**: the share of today's use you didn't buy from the grid, `82 %`, the Energy dashboard's figure.
   - **Any entity you like**, with your own name and icon.
 - At night, the big number can show your **home's consumption** or the **battery's charge** instead of a production of zero.
 - A reading that isn't available shows `—`, never `unknown` or `NaN`.
+- **A good day shows too**: a full battery at rest gets a golden sheen in the flow, and a day at 100 % self-sufficiency, a golden shooting star.
 - **Something wrong shows**: during a grid outage the flow's Grid node turns red and reads `Outage`, with nothing flowing through the grid. A reading that has gone quiet (no report from its integration for 30 minutes) is flagged: its cell's icon turns to a clock, its flow node's border to dashes, and both say how long it's been.
 
 ## Two shapes.
@@ -102,7 +104,7 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 - `flow: always`: the flow is always there, under the card.
 
 
-![The energy flow on a Rouge day, animated: the sun sends 6.0 kW to the home and 3.5 kW to the grid, the battery feeds the home with 2.3 kW, the home feeds a 1.6 kW boiler and a 500 W pool pump](docs/images/flux-anim.png)
+![The energy flow, animated: the sun sends 6.0 kW to the home and 3.5 kW to the grid, the battery feeds the home with 2.3 kW, the home feeds a 1.6 kW boiler and a 500 W pool pump](docs/images/flux-anim.png)
 
 - **The colour says where the energy comes from**: gold for the sun, mint for the battery, ice blue for the grid. Energy you sell stays gold on its way to the grid.
 - **The wire says how much**: the more power, the thicker the wire and the more and faster the dots that run along it. An idle wire is a faint dotted line.
@@ -128,7 +130,7 @@ White text keeps at least a 4.5:1 contrast where it sits on every default palett
 ## Set up
 
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
-2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and today's tariff colour if an entity gives it (EDF Tempo). Without an Energy dashboard, it starts on the first power sensor it finds.
+2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and the weather sky if you have a weather entity (else today's tariff colour, if a sensor gives it). Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
 4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, the big number at night, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (the home's consumption, and your appliances with a flow), **Sky** (weather, one colour or the tariff, the sun, animations), and **Actions**.
 
@@ -161,7 +163,8 @@ grid:
   voltage_entity: sensor.grid_voltage
   outage_entity: sensor.grid_lost_alarm
 forecast_tomorrow_entity: sensor.energy_production_tomorrow
-tariff_color_entity: sensor.edf_tempo_couleur_aujourd_hui
+background: weather
+weather_entity: weather.home
 ```
 
 ### Compact, with the flow
@@ -185,7 +188,8 @@ battery:
   invert: true
 grid:
   power_entity: sensor.grid_power
-tariff_color_entity: sensor.edf_tempo_couleur_aujourd_hui
+background: solid
+background_color: '#2f6f5e'
 hold_action:
   action: navigate
   navigation_path: /energy
@@ -435,12 +439,12 @@ A cell without its own `tap_action` opens its entity, unless the card has a `tap
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `background` | `tempo` | The sky: `tempo` (today's tariff colour), `solid` (`background_color`) or `weather` (`weather_entity`) |
+| `background` | `tempo` | The sky: `weather` (`weather_entity`), `solid` (`background_color`) or `tempo` (today's tariff colour). A new card starts on `weather` when Home Assistant has a weather entity |
 | `background_color` | `#3a6b8c` | The solid sky's colour (`#rrggbb`); darkened if need be so white text reads at 4.5:1. A colour picker in the editor |
 | `weather_entity` | — | A weather entity, for the weather sky. Its condition (`sunny`, `partlycloudy`, `cloudy`, `rainy`, `pouring`, `lightning`, `lightning-rainy`, `snowy`, `snowy-rainy`, `fog`, `windy`, and their kin) sets the sky; anything else reads as cloudy |
-| `tariff_color_entity` | — | Today's tariff colour, such as `Bleu`, `Blanc` or `Rouge`. An unknown state, or no entity, gives Bleu |
+| `tariff_color_entity` | — | For the tariff sky: today's tariff colour, any state named in `tariff_palettes` (built in: EDF Tempo's `Bleu`, `Blanc`, `Rouge`). An unknown state, or no entity, gives the `Bleu` palette |
 | `tariff_palettes` | the three Tempo colours | Three colours per tariff state, top to bottom. Replaces or adds palettes. YAML only |
-| `sun_entity` | `sun.sun` | Night when it's `below_horizon` |
+| `sun_entity` | `sun.sun` | Where the sun is: its `elevation` and `azimuth` place the sun, set dawn, dusk and night, and turn the moon's lit side. Without them, the card works them out from your Home Assistant's location; without that, it reads `below_horizon` as night |
 | `animate` | `true` | `false` turns every animation off |
 | `flow_colors` | gold, ice blue, mint, lilac | The flow's colours: `solar`, `grid`, `battery`, `consumption`, each any CSS colour. Also colour pickers in the editor's Layout section; a theme can set them for every card. See [The flow's colours](#the-flows-colours) |
 

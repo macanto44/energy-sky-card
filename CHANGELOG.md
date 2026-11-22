@@ -4,6 +4,11 @@ Each version's section is its GitHub release note (`release.yml`): `### ⚠️ B
 
 ## Unreleased
 
+### 🚀 Features and enhancements
+
+- Start a new card on the weather sky when Home Assistant has a weather entity (else today's tariff colour, as before)
+- Editor: list the weather sky first among the backgrounds, and call the tariff sky « Tariff » rather than « Tempo »
+
 ## [0.4.0] — 2026-11-22
 
 ### ⚠️ Breaking changes

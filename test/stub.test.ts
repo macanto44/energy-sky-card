@@ -85,6 +85,16 @@ describe('prefill from the Energy dashboard', () => {
         expect(stubConfig(undefined, undefined)).toEqual({ production_entity: 'sensor.production_pv', sun_entity: 'sun.sun' });
     });
 
+    it('starts on the weather sky when Home Assistant has a weather entity, rather than the tariff', () => {
+        const hass = house();
+        hass.states['weather.broken'] = entity('weather.broken', 'unavailable');
+        expect(stubConfig(hass, undefined).background).toBeUndefined();
+        hass.states['weather.home'] = entity('weather.home', 'partlycloudy');
+        expect(stubConfig(hass, undefined)).toEqual({
+            production_entity: 'sensor.inverter_power', background: 'weather', weather_entity: 'weather.home', sun_entity: 'sun.sun',
+        });
+    });
+
     it('asks Home Assistant for the preferences, and copes with a refusal', async () => {
         const hass = house();
         hass.callWS = (async (msg: { type: string }) => {

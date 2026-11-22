@@ -43,7 +43,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Charge (%)', power_entity: 'Puissance (W)', temperature_entity: 'Température', soc_reached_entities: 'SOC atteint',
         voltage_entity: 'Tension (V)', outage_entity: 'Alarme de coupure', outage_states: 'États de coupure',
         tariff_color_entity: 'Couleur tarifaire (Bleu / Blanc / Rouge)', sun_entity: 'Soleil',
-        background: 'Fond', background_tempo: 'Tempo : la couleur du jour', background_solid: 'Neutre : une couleur', background_weather: 'Météo',
+        background: 'Fond', background_tempo: 'Tarif : la couleur du jour', background_solid: 'Neutre : une couleur', background_weather: 'Météo',
         background_color: 'Couleur du fond', weather_entity: 'Entité météo',
         power_threshold: 'Seuil des flèches ↑ / ↓', animate: 'Animations',
         tap_action: 'Appui', hold_action: 'Appui long', double_tap_action: 'Double appui',
@@ -71,7 +71,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Charge (%)', power_entity: 'Power (W)', temperature_entity: 'Temperature', soc_reached_entities: 'SOC reached',
         voltage_entity: 'Voltage (V)', outage_entity: 'Outage alarm', outage_states: 'Outage states',
         tariff_color_entity: 'Tariff colour (Bleu / Blanc / Rouge)', sun_entity: 'Sun',
-        background: 'Background', background_tempo: 'Tempo: today\'s colour', background_solid: 'Solid: one colour', background_weather: 'Weather',
+        background: 'Background', background_tempo: 'Tariff: today\'s colour', background_solid: 'Solid: one colour', background_weather: 'Weather',
         background_color: 'Background colour', weather_entity: 'Weather entity',
         power_threshold: 'Threshold for the ↑ / ↓ arrows', animate: 'Animations',
         tap_action: 'Tap', hold_action: 'Hold', double_tap_action: 'Double tap',
@@ -99,7 +99,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Ladung (%)', power_entity: 'Leistung (W)', temperature_entity: 'Temperatur', soc_reached_entities: 'SOC erreicht',
         voltage_entity: 'Spannung (V)', outage_entity: 'Stromausfall-Alarm', outage_states: 'Ausfall-Zustände',
         tariff_color_entity: 'Tariffarbe (Bleu / Blanc / Rouge)', sun_entity: 'Sonne',
-        background: 'Hintergrund', background_tempo: 'Tempo: die Farbe des Tages', background_solid: 'Einfarbig: eine Farbe', background_weather: 'Wetter',
+        background: 'Hintergrund', background_tempo: 'Tarif: die Farbe des Tages', background_solid: 'Einfarbig: eine Farbe', background_weather: 'Wetter',
         background_color: 'Hintergrundfarbe', weather_entity: 'Wetter-Entität',
         power_threshold: 'Schwelle für die Pfeile ↑ / ↓', animate: 'Animationen',
         tap_action: 'Tippen', hold_action: 'Gedrückt halten', double_tap_action: 'Doppelt tippen',
@@ -127,7 +127,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Carga (%)', power_entity: 'Potencia (W)', temperature_entity: 'Temperatura', soc_reached_entities: 'SOC alcanzado',
         voltage_entity: 'Tensión (V)', outage_entity: 'Alarma de corte', outage_states: 'Estados de corte',
         tariff_color_entity: 'Color tarifario (Bleu / Blanc / Rouge)', sun_entity: 'Sol',
-        background: 'Fondo', background_tempo: 'Tempo: el color del día', background_solid: 'Liso: un color', background_weather: 'Tiempo',
+        background: 'Fondo', background_tempo: 'Tarifa: el color del día', background_solid: 'Liso: un color', background_weather: 'Tiempo',
         background_color: 'Color de fondo', weather_entity: 'Entidad meteorológica',
         power_threshold: 'Umbral de las flechas ↑ / ↓', animate: 'Animaciones',
         tap_action: 'Toque', hold_action: 'Toque largo', double_tap_action: 'Doble toque',
@@ -155,7 +155,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Carica (%)', power_entity: 'Potenza (W)', temperature_entity: 'Temperatura', soc_reached_entities: 'SOC raggiunto',
         voltage_entity: 'Tensione (V)', outage_entity: 'Allarme blackout', outage_states: 'Stati di blackout',
         tariff_color_entity: 'Colore tariffario (Bleu / Blanc / Rouge)', sun_entity: 'Sole',
-        background: 'Sfondo', background_tempo: 'Tempo: il colore del giorno', background_solid: 'Tinta unita: un colore', background_weather: 'Meteo',
+        background: 'Sfondo', background_tempo: 'Tariffa: il colore del giorno', background_solid: 'Tinta unita: un colore', background_weather: 'Meteo',
         background_color: 'Colore di sfondo', weather_entity: 'Entità meteo',
         power_threshold: 'Soglia delle frecce ↑ / ↓', animate: 'Animazioni',
         tap_action: 'Tocco', hold_action: 'Tocco prolungato', double_tap_action: 'Doppio tocco',
@@ -183,7 +183,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         soc_entity: 'Lading (%)', power_entity: 'Vermogen (W)', temperature_entity: 'Temperatuur', soc_reached_entities: 'SOC bereikt',
         voltage_entity: 'Spanning (V)', outage_entity: 'Stroomuitvalalarm', outage_states: 'Uitvaltoestanden',
         tariff_color_entity: 'Tariefkleur (Bleu / Blanc / Rouge)', sun_entity: 'Zon',
-        background: 'Achtergrond', background_tempo: 'Tempo: de kleur van de dag', background_solid: 'Effen: één kleur', background_weather: 'Weer',
+        background: 'Achtergrond', background_tempo: 'Tarief: de kleur van de dag', background_solid: 'Effen: één kleur', background_weather: 'Weer',
         background_color: 'Achtergrondkleur', weather_entity: 'Weerentiteit',
         power_threshold: 'Drempel voor de pijlen ↑ / ↓', animate: 'Animaties',
         tap_action: 'Tikken', hold_action: 'Lang indrukken', double_tap_action: 'Dubbel tikken',
@@ -525,7 +525,7 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, ene
         {
             name: '', type: 'expandable', flatten: true, title: t('sky'), icon: 'mdi:weather-partly-cloudy',
             schema: [
-                choice('background', ['tempo', 'solid', 'weather'], 'list'),
+                choice('background', ['weather', 'solid', 'tempo'], 'list'),
                 // The background's own field: the tariff sensor, the colour, or the weather entity
                 ...(data.background === 'solid' ? [{ name: 'background_color', selector: { color_rgb: {} } }]
                     : data.background === 'weather' ? [{ name: 'weather_entity', selector: { entity: { domain: 'weather' } } }]

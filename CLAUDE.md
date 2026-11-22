@@ -15,7 +15,7 @@ npm run dev          # rebuild on change
 npm run type-check   # tsc --noEmit, strict
 npm test             # Vitest, once (build first: test/build.test.ts checks the bundle)
 npm run test:browser # headless Chrome: animations pause off-screen, none under reduced motion, no overflow, sky off text (also in CI)
-npm run screenshots  # the README's pictures in docs/images/, in English: 3 day stills, cote.png (side), cote-flux.png (side with flow and appliances), nuit-anim.png and flux-anim.png (the night and the flow, animated PNGs)
+npm run screenshots  # the README's pictures in docs/images/, in English: the day stills (rouge, soleil, meteo, neige, soir, uni), cote.png (side), cote-flux.png (side with flow and appliances), nuit-anim.png and flux-anim.png (the night and the flow, animated PNGs)
 npm run test:coverage
 ```
 
@@ -35,7 +35,7 @@ src/
 ├── constants.ts             # Name, version, URLs: the one place to rename the card
 ├── types.ts                 # Home Assistant types and the card's config
 ├── bundles.ts               # Loads the editor bundle from beside the main one
-├── stub.ts                  # getStubConfig: Energy dashboard prefs (energy/get_prefs) + same-device sensors, Tempo, sun
+├── stub.ts                  # getStubConfig: Energy dashboard prefs (energy/get_prefs) + same-device sensors, the weather sky (else Tempo), sun
 ├── utils.ts                 # escapeHtml, numeric states, W / kWh unit conversion
 ├── localize.ts              # The card's strings in 6 languages (fr, en, de, es, it, nl: LANGUAGES), language, decimal separator
 ├── format.ts                # W / kW, kWh, V, % formatting; "—" for no reading

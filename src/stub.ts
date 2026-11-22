@@ -61,6 +61,12 @@ function tempoSensor(hass?: HomeAssistant): string | undefined {
         TEMPO_COLOURS.includes(String(s.state).toLowerCase()))?.entity_id;
 }
 
+/** A weather entity with a reading, for the weather sky */
+function weatherEntity(hass?: HomeAssistant): string | undefined {
+    return Object.values(hass?.states ?? {}).find(s =>
+        s.entity_id.startsWith('weather.') && !['unavailable', 'unknown'].includes(String(s.state)))?.entity_id;
+}
+
 /** The sensors on the same device as `entity` (from the entity registry), matching `test` */
 function siblings(hass: HomeAssistant, entity: string | null | undefined, test: (id: string, dc: unknown) => boolean): string[] {
     const device = entity ? hass.entities?.[entity]?.device_id : undefined;
@@ -142,13 +148,18 @@ export function configFromEnergy(prefs: EnergyPrefs | undefined, hass: HomeAssis
     return config;
 }
 
-/** The new card's config: the Energy dashboard's sensors when it has some, the sun and today's Tempo colour */
+/**
+ * The new card's config: the Energy dashboard's sensors when it has some, the sun, and the sky: the weather
+ * when Home Assistant has a weather entity, else today's tariff colour (Tempo) when a sensor gives it.
+ */
 export function stubConfig(hass?: HomeAssistant, prefs?: EnergyPrefs): Partial<EnergySkyCardConfig> {
     const fromEnergy = hass ? configFromEnergy(prefs, hass) : {};
-    const tariff = tempoSensor(hass);
+    const weather = weatherEntity(hass);
+    const tariff = weather ? undefined : tempoSensor(hass);
     return {
         production_entity: anyPowerSensor(hass) ?? 'sensor.production_pv',
         ...fromEnergy,
+        ...(weather ? { background: 'weather' as const, weather_entity: weather } : {}),
         ...(tariff ? { tariff_color_entity: tariff } : {}),
         sun_entity: 'sun.sun',
     };
