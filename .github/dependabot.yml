@@ -1,0 +1,11 @@
+# The GitHub Actions the workflows use, once a month, in one pull request
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [maintenance]

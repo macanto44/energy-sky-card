@@ -1,0 +1,21 @@
+name: Idea
+description: Something the card could show or do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you'd like to see, and why
+      description: The situation at home that calls for it helps more than the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How it could look
+      description: A sketch, a screenshot, or a few words. Optional.
+  - type: textarea
+    id: entities
+    attributes:
+      label: The entities it would read
+      description: Their entity IDs, states and units, if it needs some. Optional.

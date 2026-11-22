@@ -17,7 +17,9 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm run build
+      # On main only: pull requests leave the bundles alone, and they are rebuilt after the merge
       - name: Committed bundles match the sources
+        if: github.event_name == 'push'
         run: git diff --exit-code -- energy-sky-card.js energy-sky-card-editor.js
       - run: npm test
       - name: Roboto as the default font, as on Android

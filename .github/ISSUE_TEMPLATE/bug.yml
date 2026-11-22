@@ -1,0 +1,72 @@
+name: Bug
+description: Something the card shows or does wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Before you start, have a look at [Troubleshooting](https://github.com/macanto44/energy-sky-card#troubleshooting): most first-day problems are there.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reloaded the page after clearing the browser's cache (or raised the `?v=` of a manual install), and the problem is still there.
+          required: true
+        - label: I searched the existing issues.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Card version
+      description: Shown in the browser's console (F12) as « Energy Sky Card x.y.z », or under Settings → Marketplace.
+      placeholder: 0.4.0
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.11.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed through
+      options: [Marketplace / HACS, Manual (/local/)]
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Browser or app
+      placeholder: Chrome 140 on Windows, Companion app on Android 16…
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens, and what you expected
+      description: A screenshot helps a lot; drag it in here.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: The card's configuration
+      description: From the card editor's « Show code editor ». Entity IDs are fine to keep.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: states
+    attributes:
+      label: The entities' states
+      description: For a wrong number or sign, the states of the sensors involved and their unit (Developer tools → States).
+  - type: textarea
+    id: console
+    attributes:
+      label: Errors in the browser's console
+      description: F12 → Console, anything red that mentions energy-sky-card.
+      render: text
