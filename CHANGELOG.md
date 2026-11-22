@@ -1,23 +1,45 @@
 # Changelog
 
+Each version's section is its GitHub release note (`release.yml`): `### ⚠️ Breaking changes` first (else « No breaking change. » is added), then `### 🚀 Features and enhancements`, `### 🐛 Bugfixes`, `### 🌍 Translations`, `### 🧰 Maintenance`, empty ones left out; one short line per change, starting with a verb, saying what the user sees.
+
 ## Unreleased
 
-- Weather sky: the sky now follows the weather as soon as it changes, even at night when the power sensors are quiet (it waited for another sensor to change). `background: weather` without a `weather_entity` is a config error; the editor picks your first weather entity when you choose the weather sky.
-- The sun and the moon move steadily from where they rise to where they set, at any latitude and season: a June sun no longer waits at the left edge all morning, and south of the equator or in the tropics it no longer starts on the wrong side or jumps across. Dawn is rose in the southern summer too.
-- Flow: its background follows the sky above it. At dawn and dusk the glow carries on below the line and fades out, and as day turns to night the flow darkens with the sky instead of staying blue until sunset.
-- The real sky. The sun stands where `sun.sun` says, east to west, low to high, its strength following your production (rays in a clear sky above 80 %); low, it turns gold and flattens. Dawn and dusk glow at the bottom of the sky (rose, amber, dimmed by clouds) and night falls with the sun's height, the stars coming out one by one. The moon, worked out for your Home Assistant's place: its position, its true phase and the side lit by the sun, paling the stars. Weather sky: two depths of clouds, rain slanting with the real wind and splashing on the card's edge, lightning inside the clouds, a rainbow after a shower when the sun is low enough. A full, resting battery gets a golden sheen in the flow; a day at 100 % self-sufficiency, a golden shooting star. Sun and moon keep clear of the text (measured), every sky is tested for contrast; the side layout keeps its halo. Lighter on touch screens.
-- Flow: the battery's estimate reads as a sentence under its power, « Full at 14:20 », « Empty in 2 h 50 », not just the time. Where it doesn't fit (a phone), « → 100 % 14:20 »: the charge reached and when.
-- Flow: a small « % » after the charge in the Battery node's ring and in an appliance's ring showing its charge (a smaller size for 100).
-- Editor: each section keeps what nearly everyone sets on top, the rest in folded parts: « Fine tuning » (Production, Battery), « Time to full / empty » (the battery's capacity and estimate), « Voltage and outages » (Grid), « Flow colours » (Layout). Each cell and each appliance is a folded part of its own, titled with what it shows or the appliance's name; an empty one adds the next appliance. Nothing changes in the YAML.
-- Battery estimate: `battery.estimate.average` (minutes, 5 by default) sets the moving average of the battery power it reads, filled from Home Assistant's history when the dashboard opens; `0` reads the power as it is now. In the editor: « Power used: moving average / instant ». No estimate while the battery is idle or going the other way than its average.
-- An appliance's charge: `consumers[].soc_entity` (a car's battery, say) fills the appliance's ring in green, the battery's colour, with the number in its disc and « Car · 7.2 kW · 64 % » in its title. `consumers[].always_show: true` keeps it in the flow below `consumer_threshold`, a plugged-in car that isn't charging. Both in the editor's Appliances section.
-- A self-sufficiency cell (`cells: [self_sufficiency]`, « Today's self-sufficiency » in the editor's cell choices): the share of the home's use not bought from the grid since midnight, `82 %`, the same figure as the Energy dashboard's gauge. Read from the Energy dashboard's meters through Home Assistant's statistics, every 5 minutes, nothing to set; offered in the editor when the Energy dashboard has a grid meter. A tap opens the Energy dashboard.
-- Editor: choosing « Two sensors » no longer switches back to « One sensor » before the sensors are picked.
-- Battery estimate: with `battery.capacity` (kWh), the Battery cell tells when the battery will be full (`78 % ↑ · 14:20`) or how long until its reserve (`64 % ↓ · 5 h 30`), and the flow shows it under the Battery node's power; the whole sentence (« Full at 14:20 ») is in the title. Read from the battery power's 5 minute moving average, rounded to 10 minutes, nothing while idle or beyond a day. `max_soc`, `reserve_soc` and `estimate` (`charge` / `discharge`: `time`, `duration` or `off`; `with_temperature`: `replace` or `both`; `flow`) set it, all in the editor's Battery section once a capacity is set.
-- Two sensors instead of one signed sensor: `grid.import_entity` / `export_entity` (power bought and sold) and `battery.charge_entity` / `discharge_entity`, each positive. The editor's Grid and Battery sections offer « One sensor (+ / −) » or « Two sensors »; the pre-fill takes Home Assistant's two power sensors when the Energy dashboard has them.
-- Several batteries: `battery.soc_entity`, `power_entity`, `charge_entity` and `discharge_entity` take a list. One Battery cell and one node: the powers added up, the average charge (weighted by `battery.capacity` when it lists one per battery).
-- The card and its visual editor speak German, Spanish, Italian and Dutch too, following your Home Assistant profile's language (English for any other). Configuration errors stay in French or English.
-- The card is in the Marketplace / HACS default list: search for « Energy Sky Card », no custom repository to add.
+## [0.4.0] — 2026-11-22
+
+### ⚠️ Breaking changes
+
+- `background: weather` now needs a `weather_entity`: without one, the card shows a config error instead of a cloudy sky. Set one, or pick it in the editor (it offers your first weather entity).
+
+### 🚀 Features and enhancements
+
+- Show the real sky: the sun where `sun.sun` puts it, from sunrise to sunset at any latitude and season, its strength following your production
+- Glow at dawn (rose) and dusk (amber), and let night fall with the sun's height, the stars coming out one by one
+- Show the moon at its true place and phase, lit on the sun's side, worked out for your Home Assistant's location
+- Weather sky: two depths of clouds, rain slanting with the real wind, lightning inside the clouds, a rainbow after a shower
+- Add a golden sheen to a full, resting battery in the flow, and a golden shooting star on a day at 100 % self-sufficiency
+- Add a self-sufficiency cell (`self_sufficiency`): today's share not bought from the grid, the Energy dashboard's figure
+- Tell when the battery will be full or empty (`battery.capacity`), in its cell and in the flow (« Full at 14:20 »)
+- Read the battery estimate from a moving average of its power (`battery.estimate.average`), filled from history
+- Show an appliance's charge in its ring (`consumers[].soc_entity`), and keep it in the flow while idle (`always_show`)
+- Accept two positive sensors instead of one signed sensor for the grid and the battery
+- Accept several batteries: powers added up, charge averaged (weighted by capacity)
+- Let the flow's background follow the sky above it, at dawn, dusk and nightfall
+- Add a « % » after the charge in the flow's rings
+- Editor: fold each section's rarer settings, and each cell and appliance, into parts of their own
+
+### 🐛 Bugfixes
+
+- Follow the weather sky as soon as the condition changes, even at night when the power sensors are quiet
+
+### 🌍 Translations
+
+- Add German, Spanish, Italian and Dutch to the card and its editor
+
+### 🧰 Maintenance
+
+- Keep the sun and the moon clear of the text, and test every sky for contrast
+- Lighten the animations on touch screens
+- List the card in the Marketplace / HACS default list: search « Energy Sky Card », no custom repository to add
 
 ## [0.3.9] — 2026-11-18
 

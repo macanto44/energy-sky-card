@@ -80,7 +80,7 @@ test/
 
 ## Releases
 
-- `CHANGELOG.md`: a line per user-visible change.
+- `CHANGELOG.md`: a line per user-visible change, under `## Unreleased` until the release names it `## [X.Y.Z] — date`. A version's section is its release note: `release.yml` adds « 📦 Stable Release », the link to the previous release, « No breaking change. » when there is no `### ⚠️ Breaking changes`, and an install line. Sections (Music Assistant's shape), empty ones left out: `### ⚠️ Breaking changes`, `### 🚀 Features and enhancements`, `### 🐛 Bugfixes`, `### 🌍 Translations`, `### 🧰 Maintenance`. One short line each, starting with a verb, saying what the user sees; a fix to something not yet released goes into that feature's line, not Bugfixes.
 - Release: bump `version` in `package.json` (and the `?v=` in the README), `npm run build`, commit, then push a tag `vX.Y.Z`. `.github/workflows/release.yml` checks the tag matches, builds, tests and publishes a release with the two bundles attached, which is what the Marketplace / HACS install (`hacs.json` → `filename: energy-sky-card.js`).
 - `.github/workflows/ci.yml` fails if the committed bundles don't match a fresh build: commit the rebuilt files with every source change.
 - `.github/workflows/validate.yml` runs HACS's validation (category `plugin`).
