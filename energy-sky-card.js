@@ -292,7 +292,6 @@ row-gap: 3px;
 :host([data-ready][data-flow]:not([data-motion="off"])) ha-card { transition: background-color 3s ease-in-out; }
 :host([data-flow="tap"]) .hero, :host([data-flow="tap"]) .context { cursor: pointer; }
 :host([data-flow="tap"]) .hero:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
-.grabber { position: absolute; left: 50%; bottom: 5px; width: 28px; height: 3px; margin-left: -14px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); }
 .panel { position: relative; z-index: 1; margin: 0 20px; padding: 10px 0 14px; border-top: 1px solid rgba(255, 255, 255, 0.22); font-family: var(--esc-font); }
 :host([data-layout="side"]) .panel { margin: 0 18px 0 20px; }
 .flow { position: relative; height: var(--esc-flow-h); --esc-flow-h: ${$t}px; --esc-node-w: 118px; --esc-centre-w: 138px; }
@@ -387,7 +386,6 @@ ${Object.keys(jt).map(t=>`.seg[data-source="${t}"] { stroke: ${yn(t)}; }`).join(
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
                     <div class="context line" hidden><span class="context-text"></span></div>
-                    ${n.flow==="tap"?'<i class="grabber" aria-hidden="true"></i>':""}
                     <div class="grid">${o.map(a=>`
                         <div class="metric" data-metric="${a.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>

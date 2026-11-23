@@ -356,7 +356,6 @@ describe('the expandable card', () => {
         expect(card.expanded).toBe(true);
         expect(card.hasAttribute('data-expanded')).toBe(true);
         expect($('.panel').hidden).toBe(false);
-        expect($('.grabber')).toBeNull();
         expect($('.hero').hasAttribute('role')).toBe(false);
         tap($('.hero'));
         expect(events.map(e => e.type)).toEqual(['hass-action']);

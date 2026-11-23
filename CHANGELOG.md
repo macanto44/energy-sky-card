@@ -8,6 +8,7 @@ Each version's section is its GitHub release note (`release.yml`): `### ⚠️ B
 
 - Start a new card on the weather sky when Home Assistant has a weather entity (else today's tariff colour, as before)
 - Editor: list the weather sky first among the backgrounds, and call the tariff sky « Tariff » rather than « Tempo »
+- Drop the small bar between the readings and the energy flow on a card that unfolds
 
 ## [0.4.0] — 2026-11-22
 

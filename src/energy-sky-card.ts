@@ -495,7 +495,6 @@ export class EnergySkyCard extends HTMLElement {
                 <div class="content">
                     <div class="hero line"><span class="hero-value"></span><span class="hero-unit"></span></div>
                     <div class="context line" hidden><span class="context-text"></span></div>
-                    ${config.flow === 'tap' ? '<i class="grabber" aria-hidden="true"></i>' : ''}
                     <div class="grid">${cells.map(cell => `
                         <div class="metric" data-metric="${cell.key}">
                             <div class="label line"><ha-icon></ha-icon><span class="label-text"></span></div>
