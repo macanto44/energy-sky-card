@@ -114,29 +114,29 @@ ha-card {
  * slowly. --esc-p: the production share; --esc-warm: its glow's colour,
  * white-gold high up, amber by the horizon, where it also flattens.
  */
-.sun, .moon, .moonlight { position: absolute; left: var(--esc-sun-x, 80%); top: var(--esc-sun-y, 20px); width: 0; height: 0; opacity: var(--esc-sun-o, 0); }
-.sun > i { position: absolute; border-radius: 50%; }
-.sun .glow { width: ${SUN_GLOW.radius * 2}px; height: ${SUN_GLOW.radius * 2}px; margin: -${SUN_GLOW.radius}px; background: radial-gradient(closest-side, rgba(var(--esc-warm, ${rgb(SUN_GLOW.rgb)}), calc(${SUN_GLOW.alpha(0)} + ${SUN_GLOW.alpha(1) - SUN_GLOW.alpha(0)} * var(--esc-p, 0))), rgba(var(--esc-warm, ${rgb(SUN_GLOW.rgb)}), 0)); }
-.sun .bloom { width: ${SUN_BLOOM.radius * 2}px; height: ${SUN_BLOOM.radius * 2}px; margin: -${SUN_BLOOM.radius}px; background: radial-gradient(closest-side, rgba(var(--esc-bloom, ${rgb(SUN_BLOOM.rgb)}), calc(${SUN_BLOOM.alpha(0)} + ${SUN_BLOOM.alpha(1) - SUN_BLOOM.alpha(0)} * var(--esc-p, 0))), rgba(var(--esc-warm, ${rgb(SUN_BLOOM.rgb)}), 0)); }
-.sun .core {
+.sky .sun, .moon, .moonlight { position: absolute; left: var(--esc-sun-x, 80%); top: var(--esc-sun-y, 20px); width: 0; height: 0; opacity: var(--esc-sun-o, 0); }
+.sky .sun > i { position: absolute; border-radius: 50%; }
+.sky .sun .glow { width: ${SUN_GLOW.radius * 2}px; height: ${SUN_GLOW.radius * 2}px; margin: -${SUN_GLOW.radius}px; background: radial-gradient(closest-side, rgba(var(--esc-warm, ${rgb(SUN_GLOW.rgb)}), calc(${SUN_GLOW.alpha(0)} + ${SUN_GLOW.alpha(1) - SUN_GLOW.alpha(0)} * var(--esc-p, 0))), rgba(var(--esc-warm, ${rgb(SUN_GLOW.rgb)}), 0)); }
+.sky .sun .bloom { width: ${SUN_BLOOM.radius * 2}px; height: ${SUN_BLOOM.radius * 2}px; margin: -${SUN_BLOOM.radius}px; background: radial-gradient(closest-side, rgba(var(--esc-bloom, ${rgb(SUN_BLOOM.rgb)}), calc(${SUN_BLOOM.alpha(0)} + ${SUN_BLOOM.alpha(1) - SUN_BLOOM.alpha(0)} * var(--esc-p, 0))), rgba(var(--esc-warm, ${rgb(SUN_BLOOM.rgb)}), 0)); }
+.sky .sun .core {
     width: 15px; height: 15px; margin: -7.5px;
     background: radial-gradient(circle, var(--esc-core, #fff) 0 50%, var(--esc-rim, #fff4d6) 82%, var(--esc-edge, #ffe6a8) 100%);
     box-shadow: 0 0 3px 1px var(--esc-core, #fff), 0 0 12px 4px rgba(var(--esc-warm, 255, 244, 214), 0.75), 0 0 28px 9px rgba(var(--esc-warm, 255, 236, 190), calc(0.2 + 0.3 * var(--esc-p, 0)));
     transform: scale(var(--esc-sun-scale, 1), calc(var(--esc-sun-scale, 1) * var(--esc-flat, 1)));
 }
-.sun .rays { width: 0; height: 0; }
-.sun .rays b {
+.sky .sun .rays { width: 0; height: 0; }
+.sky .sun .rays b {
     position: absolute; left: -0.6px; top: calc(var(--esc-ray, 60px) * var(--l, 1) / -2); width: 1.2px; height: calc(var(--esc-ray, 60px) * var(--l, 1)); border-radius: 1px;
     background: linear-gradient(180deg, rgba(255, 252, 240, 0), rgba(255, 252, 240, 0.85) 50%, rgba(255, 252, 240, 0));
     filter: blur(0.6px); transform: rotate(var(--a)); opacity: calc(0.25 + 0.4 * var(--esc-p, 0));
 }
-.sun:not([data-rays]) .rays, .sun[data-rays="6"] .rays b:nth-child(n+7) { display: none; }
+.sky .sun:not([data-rays]) .rays, .sky .sun[data-rays="6"] .rays b:nth-child(n+7) { display: none; }
 /* The moon: its phase drawn by the card, lit side turned towards the sun (--esc-moon-r); moonlight around it */
 .moon, .moonlight { left: var(--esc-moon-x, 80%); top: var(--esc-moon-y, 20px); opacity: var(--esc-moon-o, 0); }
 .moon svg { position: absolute; width: 28px; height: 28px; left: -14px; top: -14px; overflow: visible; transform: rotate(var(--esc-moon-r, 0deg)); filter: drop-shadow(0 0 4px rgba(240, 236, 222, 0.55)) drop-shadow(0 0 14px rgba(200, 212, 255, 0.25)); }
 .moonlight::before { content: ''; position: absolute; width: ${MOONLIGHT.radius * 2}px; height: ${MOONLIGHT.radius * 2}px; margin: -${MOONLIGHT.radius}px; border-radius: 50%; background: radial-gradient(closest-side, rgba(${rgb(MOONLIGHT.rgb)}, calc(${MOONLIGHT.alpha(0)} + ${MOONLIGHT.alpha(1) - MOONLIGHT.alpha(0)} * var(--esc-moon-lit, 0))), rgba(${rgb(MOONLIGHT.rgb)}, 0)); }
 /* The side layout keeps the halo: no room for a sun or a moon clear of its text */
-:host([data-layout="side"]) .sun, :host([data-layout="side"]) .moon, :host([data-layout="side"]) .moonlight, :host(:not([data-layout="side"])) .halo { display: none; }
+:host([data-layout="side"]) .sky .sun, :host([data-layout="side"]) .moon, :host([data-layout="side"]) .moonlight, :host(:not([data-layout="side"])) .halo { display: none; }
 /*
  * A rainbow after the rain, while the sun is low enough (below 42°): the
  * sun is then behind you, so it doesn't show. Its arc rises as the sun
@@ -150,7 +150,7 @@ ha-card {
     mask-image: linear-gradient(180deg, #000 calc(var(--esc-bow-fade, 90px) - 50px), transparent var(--esc-bow-fade, 90px));
 }
 :host([data-rainbow]:not([data-layout="side"])) .rainbow { display: block; }
-:host([data-rainbow]) .sun { display: none; }
+:host([data-rainbow]) .sky .sun { display: none; }
 /* Raindrops landing: a splash on the card's bottom edge */
 .splash { position: absolute; bottom: 2px; width: 10px; height: 4px; border-radius: 50%; border-top: 1.4px solid rgba(255, 255, 255, 0.5); opacity: 0; display: none; }
 /* A full battery: a golden sheen crosses its node now and then */
@@ -160,7 +160,7 @@ ha-card {
 :host([data-golden]) .shooting:first-of-type { background: linear-gradient(90deg, rgba(255, 214, 120, 0), #ffd678 80%, #fff8e0); height: 2px; }
 /* Touch screens (phones, tablets): the far clouds and the blurs go, for the battery's sake */
 @media (pointer: coarse) {
-    .cumulus, .sun .rays b { filter: none; }
+    .cumulus, .sky .sun .rays b { filter: none; }
     .cloudband.far { display: none; }
 }
 /* Particles the card hid because they would touch text */
@@ -234,9 +234,9 @@ ${animated('[data-mode="day"]', '.drift', 'animation: esc-drift 60s linear infin
 ${animated('[data-sky="weather"]', '.cloudband', 'animation: esc-drift 60s linear infinite var(--esc-wind-dir, normal);')}
 ${animated('[data-sky="weather"]', '.drop', 'display: block; animation: esc-rain 0.7s linear infinite;')}
 ${animated('[data-sky="weather"]', '.splash', 'display: block; animation: esc-splash 0.9s ease-out infinite;')}
-${animated('[data-mode="day"][data-producing]', '.sun .bloom', 'animation: esc-sun-breathe 3s ease-in-out infinite alternate;')}
-${animated('[data-mode="day"]', '.sun .rays', 'animation: esc-sun-turn 240s linear infinite;')}
-${animated('[data-mode="day"]', '.sun .rays b', 'animation: esc-ray var(--s, 3s) ease-in-out var(--d, 0s) infinite alternate;')}
+${animated('[data-mode="day"][data-producing]', '.sky .sun .bloom', 'animation: esc-sun-breathe 3s ease-in-out infinite alternate;')}
+${animated('[data-mode="day"]', '.sky .sun .rays', 'animation: esc-sun-turn 240s linear infinite;')}
+${animated('[data-mode="day"]', '.sky .sun .rays b', 'animation: esc-ray var(--s, 3s) ease-in-out var(--d, 0s) infinite alternate;')}
 ${animated('[data-expanded]', '.node[data-full]::after', 'animation: esc-sheen 8s ease-in-out 1s infinite;')}
 ${animated('[data-sky="weather"]', '.flake', 'display: block; animation: esc-snow 8s linear infinite;')}
 ${animated('[data-sky="weather"]', '.fogband', 'animation: esc-fog 18s ease-in-out infinite alternate;')}
@@ -244,9 +244,9 @@ ${animated('[data-sky="weather"]', '.flash', 'animation: esc-flash 7s infinite;'
 /* Day ⇄ night: a 3 s cross-fade, once the first state is painted */
 :host([data-ready]:not([data-motion="off"])) .layer { transition: opacity 3s ease-in-out; }
 /* The flow's comets, along their wire (their keyframes are drawn for the width by layoutFlow), only unfolded */
-${animated('[data-expanded]', '.wire:not([data-level="0"]) .comet', 'display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow);')}
+${animated('[data-expanded]:not([data-flow-unit="energy"])', '.wire:not([data-level="0"]) .comet', 'display: inline; animation: esc-flow var(--esc-dur, 3s) linear var(--esc-delay, 0s) infinite; animation-name: var(--esc-flow);')}
 @media (prefers-reduced-motion: reduce) {
-    .halo, .star, .shooting, .drift, .layer, .comet, .cloudband, .drop, .flake, .fogband, .flash, .splash, .sun *, .node::after { animation: none !important; transition: none !important; }
+    .halo, .star, .shooting, .drift, .layer, .comet, .cloudband, .drop, .flake, .fogband, .flash, .splash, .sky .sun *, .node::after { animation: none !important; transition: none !important; }
 }
 /* Compact: the tight spacing, for a card shorter than four rows (fit() sets it last) */
 :host([data-compact]) .content { padding: 14px 20px 12px; }
@@ -475,6 +475,8 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 .nsub:empty { display: none; }
 .nsub[data-tight] { font-size: 9px; letter-spacing: -0.02em; }
 .flow[data-narrow] .nval { font-size: 13.5px; }
+/* A value that doesn't fit in full (kWh): its short form, then a size smaller */
+.flow .nval[data-tight] { font-size: 11.5px; letter-spacing: -0.02em; }
 .flow[data-narrow] .nlab { font-size: 8.5px; }
 .flow[data-narrow] .node { gap: 6px; padding: 0 8px 0 5px; }
 .flow[data-narrow] .disc { width: 32px; height: 32px; }
@@ -494,4 +496,18 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 .flow[data-compact] .node[data-consumer] .ntext { align-items: center; max-width: 100%; }
 .flow[data-compact] .node[data-consumer] .nlab { display: none; }
 .flow[data-compact] .node[data-consumer] .nval { font-size: 11.5px; font-weight: 600; line-height: 13px; }
+.flow[data-compact] .node[data-consumer] .nval[data-tight] { font-size: 10.5px; letter-spacing: 0; }
+/*
+ * The kW | kWh switch, in the flow's free top-left corner. In kWh the nodes
+ * show today's energies: the wires (live powers) stand still, faded, and
+ * « since midnight » sits under the switch.
+ */
+.unit { position: absolute; left: 0; top: 3px; z-index: 1; }
+.unit-switch { display: inline-flex; padding: 2px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.28); }
+.unit button { font: 600 10.5px/1 var(--esc-font); color: #fff; opacity: 0.85; background: none; border: 0; border-radius: 10px; padding: 5px 8px; cursor: pointer; }
+.unit button[aria-pressed="true"] { opacity: 1; background: #fff; color: var(--esc-panel); }
+.flow[data-narrow] .unit button { font-size: 10px; padding: 4px 6px; }
+.unit button:focus-visible { outline: 2px solid #fff; }
+.since { display: block; font-size: 9.5px; line-height: 11px; opacity: 0.8; padding: 4px 0 0 4px; white-space: nowrap; }
+:host([data-flow-unit="energy"]) .wires { opacity: 0.4; }
 `;

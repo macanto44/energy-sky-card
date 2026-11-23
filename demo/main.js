@@ -1,5 +1,5 @@
-// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, flowonly, sky=weather&wx=…|sky=solid&color=…, h=…, bare, probe, seek)
-import { ATTRIBUTES, CONSUMERS, MOMENT, SCENARIOS, SCENARIO_CONFIGS, CONFIG, setClock, placeFor, sunAttributes } from './scenarios.js';
+// The demo's cards: one per scenario and width (query: s=…, widths=…, lang=…, side, expand[=always], consumers=n, unit=power|energy[&kwh=big], flowonly, sky=weather&wx=…|sky=solid&color=…, h=…, bare, probe, seek)
+import { ATTRIBUTES, CONSUMERS, DAY_CHANGES, ENERGY_PREFS, MOMENT, SCENARIOS, SCENARIO_CONFIGS, CONFIG, setClock, placeFor, sunAttributes } from './scenarios.js';
 setClock(new URLSearchParams(location.search).get('at') ?? MOMENT);
 const params = new URLSearchParams(location.search);
 const only = params.get('s');
@@ -14,7 +14,13 @@ const flow = params.get('expand') === 'always' ? 'always' : 'tap';
 // ?sky=weather&wx=rainy (a condition) or ?sky=solid&color=6a4c93: the other skies
 const skyConfig = params.get('sky') === 'weather' ? { background: 'weather', weather_entity: 'weather.home' }
   : params.get('sky') === 'solid' ? { background: 'solid', ...(params.get('color') ? { background_color: `#${params.get('color')}` } : {}) } : {};
-const consumers = params.has('consumers') ? { consumers: CONSUMERS.slice(0, Number(params.get('consumers')) || 2) } : {};
+// ?unit=power|energy: an Energy dashboard (its meters, today's changes) and the flow's unit when it loads; kwh=big: figures ×10
+const unit = params.get('unit');
+const kwhScale = params.get('kwh') === 'big' ? 10 : 1;
+const consumers = params.has('consumers') ? { consumers: CONSUMERS.slice(0, Number(params.get('consumers')) || 2).map(c => unit ? c : (({ energy_entity: _e, ...rest }) => rest)(c)) } : {};
+/** The Energy dashboard's answers (the demo only): its prefs, and each meter's change since midnight */
+const callWS = async msg => msg.type === 'energy/get_prefs' ? ENERGY_PREFS
+  : msg.type === 'recorder/statistic_during_period' ? { change: DAY_CHANGES[msg.statistic_id] === undefined ? null : DAY_CHANGES[msg.statistic_id] * kwhScale } : null;
 const height = expand ? '' : params.get('h') || (side ? '120' : '');
 if (params.has('bare')) document.body.classList.add('bare');
 for (const [name, overrides] of Object.entries(SCENARIOS)) {
@@ -24,14 +30,14 @@ for (const [name, overrides] of Object.entries(SCENARIOS)) {
     const fig = document.createElement('figure');
     fig.innerHTML = `<figcaption>${name} — ${width} px</figcaption><div class="cell" style="width:${width}px${height ? `;height:${height}px` : expand ? ';height:auto' : ''}"></div>`;
     const card = document.createElement('energy-sky-card');
-    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow, ...consumers } : {}), ...skyConfig });
+    card.setConfig({ ...CONFIG, ...(SCENARIO_CONFIGS[name] ?? {}), ...(side ? { layout: 'side' } : {}), ...(expand ? { flow, ...consumers, ...(unit ? { flow_unit: unit } : {}) } : {}), ...skyConfig });
     const states = {};
     let t = 0;
     for (const [id, state] of Object.entries({ ...overrides, 'weather.home': params.get('wx') || 'sunny' })) {
       const stamp = new Date(Date.UTC(2026, 10, 15, 12, 0, t++)).toISOString();
       states[id] = { entity_id: id, state: String(state), attributes: id === 'sun.sun' ? sunAttributes(name) : ATTRIBUTES[id] ?? {}, last_changed: stamp, last_updated: stamp };
     }
-    card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' }, config: placeFor(name) };
+    card.hass = { states, language: lang, locale: { language: lang, number_format: 'language' }, config: placeFor(name), ...(unit ? { callWS } : {}) };
     fig.querySelector('.cell').appendChild(card);
     if (expand) card.expanded = true;
     // ?flowonly: the flow alone, without the top of the card (the README's animation)

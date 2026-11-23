@@ -8,8 +8,8 @@ const MAIN = 'energy-sky-card.js';
 describe.runIf(existsSync(MAIN))('main bundle', () => {
     const code = readFileSync(MAIN);
 
-    it('stays under 30 KB gzipped', () => {
-        expect(gzipSync(code).length).toBeLessThan(33 * 1024);
+    it('stays under 34 KB gzipped', () => {
+        expect(gzipSync(code).length).toBeLessThan(34 * 1024);
     });
 
     it('makes no network request at runtime', () => {

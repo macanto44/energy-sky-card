@@ -29,11 +29,11 @@ function probeOnce(query, extra, height) {
 
 /**
  * Headless Chrome sometimes dumps the page before the probe has written,
- * or before the IntersectionObserver has reported: try again, up to 3 times
+ * or before the IntersectionObserver has reported (up to 4 times in 10 on a busy machine): try again, up to 6 times
  */
 function probe(query, extra = [], height = 500, ready = cards => cards.length > 0) {
     let cards = [];
-    for (let attempt = 0; attempt < 3 && !ready(cards); attempt++) cards = probeOnce(query, extra, height);
+    for (let attempt = 0; attempt < 6 && !ready(cards); attempt++) cards = probeOnce(query, extra, height);
     return cards;
 }
 
@@ -103,6 +103,23 @@ for (const layout of ['', 'side&']) {
         }
     }
 }
+
+// The flow in kWh (an Energy dashboard, flow_unit: energy), both layouts, every language, usual and large figures, 4 appliances:
+// nothing overflows (the units kept on a phone), no comet runs; in kW the switch beside the grid leaves the comets running
+for (const layout of ['', 'side&']) {
+    for (const lang of LANGS) {
+        for (const kwh of ['', '&kwh=big']) {
+            const cards = probe(`${layout}expand=always&consumers=4&unit=energy${kwh}&s=bleu,nuit&lang=${lang}`, [], 2800, cs => cs.length === 4);
+            check(cards.length === 4, `kWh ${layout ? 'side ' : ''}${lang}${kwh ? ' large' : ''}: 4 cards rendered (got ${cards.length})`);
+            for (const c of cards) {
+                check(c.overflow === '0' && c.tall === '0' && c.comets === '0', `kWh ${layout ? 'side ' : ''}${lang}${kwh ? ' large' : ''} ${c.name}: no overflow, no comet`);
+            }
+        }
+    }
+}
+const kwCards = probe('expand=always&consumers=2&unit=power&s=bleu&widths=304,360', [], 1400, cs => cs.length === 2);
+check(kwCards.length === 2, `kW with the switch: 2 cards rendered (got ${kwCards.length})`);
+for (const c of kwCards) check(c.overflow === '0' && Number(c.comets) > 0, `kW with the switch ${c.name}: no overflow, ${c.comets} comets`);
 
 // The weather sky: its rain, clouds and lightning run on screen, nothing overflows, none under reduced motion
 for (const query of ['sky=weather&wx=lightning-rainy', 'side&sky=weather&wx=snowy', 'expand=always&sky=weather&wx=rainy']) {

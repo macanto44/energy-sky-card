@@ -55,21 +55,43 @@ export const canComputeSelfSufficiency = (meters: EnergyMeters): boolean => mete
 /** Every meter, once */
 export const meterIds = (meters: EnergyMeters): string[] => [...new Set(Object.values(meters).flat())];
 
+/** Today's energy (kWh) by what the meters count: each kind's meters summed; left out where none was read */
+export type DayTotals = Partial<Record<MeterKey, number>>;
+
+/** Each kind's meters summed, from their changes since midnight (kWh) */
+export function dayTotals(meters: EnergyMeters, changes: Record<string, number | undefined>): DayTotals {
+    const totals: DayTotals = {};
+    for (const key of Object.keys(meters) as MeterKey[]) {
+        const values = meters[key].map(id => changes[id]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+        if (values.length) totals[key] = values.reduce((a, b) => a + b, 0);
+    }
+    return totals;
+}
+
+/** The home's use today (kWh): its meter, else bought + solar + discharged − sold − charged; undefined with no meter read */
+export function homeUse(totals: DayTotals): number | undefined {
+    if (totals.home !== undefined) return Math.max(0, totals.home);
+    const sources: MeterKey[] = ['from_grid', 'solar', 'from_battery'];
+    if (!sources.some(key => totals[key] !== undefined)) return undefined;
+    const t = (key: MeterKey) => totals[key] ?? 0;
+    return Math.max(0, t('from_grid') + t('solar') + t('from_battery') - t('to_grid') - t('to_battery'));
+}
+
+/** The share (0 … 1) of today's use bought from the grid: undefined without a grid meter read, or any use */
+export function boughtShare(totals: DayTotals): number | undefined {
+    const bought = totals.from_grid;
+    const used = homeUse(totals);
+    if (bought === undefined || used === undefined || !(used > 0)) return undefined;
+    return Math.min(1, Math.max(0, bought) / used);
+}
+
 /**
  * The share (%) of today's use not bought, from each meter's change since
  * midnight (kWh). Undefined without a grid meter, a reading of it, or any use.
  */
 export function selfSufficiency(meters: EnergyMeters, changes: Record<string, number | undefined>): number | undefined {
-    const total = (key: MeterKey): number | undefined => {
-        const values = meters[key].map(id => changes[id]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
-        return values.length ? values.reduce((a, b) => a + b, 0) : undefined;
-    };
-    const bought = total('from_grid');
-    if (bought === undefined) return undefined;
-    const home = total('home');
-    const used = Math.max(0, home ?? bought + (total('solar') ?? 0) + (total('from_battery') ?? 0) - (total('to_grid') ?? 0) - (total('to_battery') ?? 0));
-    if (!(used > 0)) return undefined;
-    return (1 - Math.min(1, Math.max(0, bought) / used)) * 100;
+    const bought = boughtShare(dayTotals(meters, changes));
+    return bought === undefined ? undefined : (1 - bought) * 100;
 }
 
 /** Each meter's change since midnight (the profile's day), from Home Assistant's statistics */

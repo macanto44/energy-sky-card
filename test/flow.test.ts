@@ -485,7 +485,7 @@ describe('the expandable card', () => {
 describe('the flow\'s stylesheet', () => {
     it('keeps the sky on the top part and runs the comets only unfolded and in motion', () => {
         expect(CARD_CSS).toContain(':host([data-flow]) .sky { bottom: auto; height: var(--esc-top-h); }');
-        expect(CARD_CSS).toMatch(/:host\(\[data-motion="on"\]\[data-expanded\]\) \.wire:not\(\[data-level="0"\]\) \.comet,\s*:host\(\[data-motion="paused"\]\[data-expanded\]\) \.wire:not\(\[data-level="0"\]\) \.comet \{ display: inline; animation: esc-flow/);
+        expect(CARD_CSS).toMatch(/:host\(\[data-motion="on"\]\[data-expanded\]:not\(\[data-flow-unit="energy"\]\)\) \.wire:not\(\[data-level="0"\]\) \.comet,\s*:host\(\[data-motion="paused"\]\[data-expanded\]:not\(\[data-flow-unit="energy"\]\)\) \.wire:not\(\[data-level="0"\]\) \.comet \{ display: inline; animation: esc-flow/);
         expect(CARD_CSS).toMatch(/\n\.comet \{ display: none; \}/);
     });
 });

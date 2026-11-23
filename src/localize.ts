@@ -7,10 +7,12 @@ export type CardString =
     | 'solar' | 'home' | 'stale'
     | 'voltage' | 'outage' | 'tomorrow' | 'soc_reached' | 'soc_reached_short' | 'consumption' | 'consumption_short'
     | 'full_at' | 'full_in' | 'reserve_at' | 'reserve_in' | 'empty_at' | 'empty_in'
-    | 'self_sufficiency' | 'self_sufficiency_title';
+    | 'self_sufficiency' | 'self_sufficiency_title'
+    | 'bought_sold' | 'bought_sold_short' | 'charged_discharged' | 'charged_discharged_short' | 'since_midnight';
 
 const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString, string>> = {
     fr: {
+        bought_sold: 'acheté · revendu', bought_sold_short: 'achat · vente', charged_discharged: 'chargé · déchargé', charged_discharged_short: 'ch. · déch.', since_midnight: 'depuis 0 h',
         produced: '{value} kWh produits',
         battery: 'Batterie', grid: 'Réseau', solar: 'Solaire', home: 'Maison',
         stale: 'Pas de nouvelle valeur depuis {age}',
@@ -20,6 +22,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         full_at: 'Pleine à {time}', full_in: 'Pleine dans {time}', reserve_at: 'Réserve atteinte à {time}', reserve_in: 'Réserve dans {time}', empty_at: 'Vide à {time}', empty_in: 'Vide dans {time}',
     },
     en: {
+        bought_sold: 'bought · sold', bought_sold_short: 'in · out', charged_discharged: 'charged · discharged', charged_discharged_short: 'in · out', since_midnight: 'today',
         produced: '{value} kWh produced',
         battery: 'Battery', grid: 'Grid', solar: 'Solar', home: 'Home',
         stale: 'No new reading for {age}',
@@ -29,6 +32,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         full_at: 'Full at {time}', full_in: 'Full in {time}', reserve_at: 'Reserve at {time}', reserve_in: 'Reserve in {time}', empty_at: 'Empty at {time}', empty_in: 'Empty in {time}',
     },
     de: {
+        bought_sold: 'gekauft · verkauft', bought_sold_short: 'Kauf · Verkauf', charged_discharged: 'geladen · entladen', charged_discharged_short: 'Lad. · Entl.', since_midnight: 'heute',
         produced: '{value} kWh erzeugt',
         battery: 'Batterie', grid: 'Netz', solar: 'Solar', home: 'Haus',
         stale: 'Kein neuer Wert seit {age}',
@@ -38,6 +42,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         full_at: 'Voll um {time}', full_in: 'Voll in {time}', reserve_at: 'Reserve um {time}', reserve_in: 'Reserve in {time}', empty_at: 'Leer um {time}', empty_in: 'Leer in {time}',
     },
     es: {
+        bought_sold: 'comprada · vendida', bought_sold_short: 'compra · venta', charged_discharged: 'cargada · descargada', charged_discharged_short: 'carga · desc.', since_midnight: 'hoy',
         produced: '{value} kWh producidos',
         battery: 'Batería', grid: 'Red', solar: 'Solar', home: 'Casa',
         stale: 'Sin valor nuevo desde hace {age}',
@@ -47,6 +52,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         full_at: 'Llena a las {time}', full_in: 'Llena en {time}', reserve_at: 'Reserva a las {time}', reserve_in: 'Reserva en {time}', empty_at: 'Vacía a las {time}', empty_in: 'Vacía en {time}',
     },
     it: {
+        bought_sold: 'acquistata · venduta', bought_sold_short: 'acq. · vend.', charged_discharged: 'caricata · scaricata', charged_discharged_short: 'car. · scar.', since_midnight: 'oggi',
         produced: '{value} kWh prodotti',
         battery: 'Batteria', grid: 'Rete', solar: 'Solare', home: 'Casa',
         stale: 'Nessun nuovo valore da {age}',
@@ -56,6 +62,7 @@ const STRINGS: Record<'fr' | 'en' | 'de' | 'es' | 'it' | 'nl', Record<CardString
         full_at: 'Piena alle {time}', full_in: 'Piena tra {time}', reserve_at: 'Riserva alle {time}', reserve_in: 'Riserva tra {time}', empty_at: 'Scarica alle {time}', empty_in: 'Scarica tra {time}',
     },
     nl: {
+        bought_sold: 'gekocht · verkocht', bought_sold_short: 'in · uit', charged_discharged: 'geladen · ontladen', charged_discharged_short: 'in · uit', since_midnight: 'vandaag',
         produced: '{value} kWh opgewekt',
         battery: 'Batterij', grid: 'Net', solar: 'Zon', home: 'Huis',
         stale: 'Geen nieuwe waarde sinds {age}',

@@ -34,6 +34,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         invert: 'Inverser le signe du capteur',
         flow_color_solar: 'Couleur du solaire', flow_color_grid: 'Couleur du réseau', flow_color_battery: 'Couleur de la batterie', flow_color_consumption: 'Couleur des appareils',
         flow: 'Flux d\'énergie', flow_none: 'Aucun', flow_tap: 'Déplier en touchant le grand chiffre', flow_always: 'Toujours visible',
+        flow_unit: 'Unité du flux au chargement', flow_unit_power: 'Puissance (kW)', flow_unit_energy: 'Énergie du jour (kWh)', consumer_energy_entity: 'Énergie (kWh, facultatif)',
         layout: 'Format', layout_standard: 'Standard : les cases sous le chiffre (4 rangées)', layout_side: 'Côté : icône + valeur à droite (2 rangées)',
         cell: 'Case {n}', cell_entity: 'Entité', cell_name: 'Nom (facultatif)', cell_icon: 'Icône (facultative)', cell_tap_action: 'Appui sur la case',
         kind_none: 'Aucune', kind_battery: 'Batterie', kind_grid: 'Réseau', kind_voltage: 'Tension', kind_tomorrow: 'Prévu demain',
@@ -62,6 +63,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         invert: 'Flip the sensor\'s sign',
         flow_color_solar: 'Solar colour', flow_color_grid: 'Grid colour', flow_color_battery: 'Battery colour', flow_color_consumption: 'Appliances colour',
         flow: 'Energy flow', flow_none: 'None', flow_tap: 'Unfold on a tap on the big number', flow_always: 'Always shown',
+        flow_unit: 'Flow unit on load', flow_unit_power: 'Power (kW)', flow_unit_energy: 'Today\'s energy (kWh)', consumer_energy_entity: 'Energy (kWh, optional)',
         layout: 'Format', layout_standard: 'Standard: the cells under the number (4 rows)', layout_side: 'Side: icon + value on the right (2 rows)',
         cell: 'Cell {n}', cell_entity: 'Entity', cell_name: 'Name (optional)', cell_icon: 'Icon (optional)', cell_tap_action: 'Tap on the cell',
         kind_none: 'None', kind_battery: 'Battery', kind_grid: 'Grid', kind_voltage: 'Voltage', kind_tomorrow: 'Tomorrow',
@@ -90,6 +92,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         invert: 'Vorzeichen des Sensors umkehren',
         flow_color_solar: 'Farbe Solar', flow_color_grid: 'Farbe Netz', flow_color_battery: 'Farbe Batterie', flow_color_consumption: 'Farbe Geräte',
         flow: 'Energiefluss', flow_none: 'Keiner', flow_tap: 'Durch Tippen auf die große Zahl aufklappen', flow_always: 'Immer sichtbar',
+        flow_unit: 'Einheit des Flusses beim Laden', flow_unit_power: 'Leistung (kW)', flow_unit_energy: 'Energie heute (kWh)', consumer_energy_entity: 'Energie (kWh, optional)',
         layout: 'Format', layout_standard: 'Standard: die Felder unter der Zahl (4 Reihen)', layout_side: 'Seitlich: Symbol + Wert rechts (2 Reihen)',
         cell: 'Feld {n}', cell_entity: 'Entität', cell_name: 'Name (optional)', cell_icon: 'Symbol (optional)', cell_tap_action: 'Tippen auf das Feld',
         kind_none: 'Keines', kind_battery: 'Batterie', kind_grid: 'Netz', kind_voltage: 'Spannung', kind_tomorrow: 'Morgen',
@@ -118,6 +121,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         invert: 'Invertir el signo del sensor',
         flow_color_solar: 'Color solar', flow_color_grid: 'Color de la red', flow_color_battery: 'Color de la batería', flow_color_consumption: 'Color de los aparatos',
         flow: 'Flujo de energía', flow_none: 'Ninguno', flow_tap: 'Desplegar tocando la cifra grande', flow_always: 'Siempre visible',
+        flow_unit: 'Unidad del flujo al cargar', flow_unit_power: 'Potencia (kW)', flow_unit_energy: 'Energía de hoy (kWh)', consumer_energy_entity: 'Energía (kWh, opcional)',
         layout: 'Formato', layout_standard: 'Estándar: las casillas bajo la cifra (4 filas)', layout_side: 'Lateral: icono + valor a la derecha (2 filas)',
         cell: 'Casilla {n}', cell_entity: 'Entidad', cell_name: 'Nombre (opcional)', cell_icon: 'Icono (opcional)', cell_tap_action: 'Toque en la casilla',
         kind_none: 'Ninguna', kind_battery: 'Batería', kind_grid: 'Red', kind_voltage: 'Tensión', kind_tomorrow: 'Mañana',
@@ -146,6 +150,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         invert: 'Inverti il segno del sensore',
         flow_color_solar: 'Colore del solare', flow_color_grid: 'Colore della rete', flow_color_battery: 'Colore della batteria', flow_color_consumption: 'Colore degli apparecchi',
         flow: 'Flusso di energia', flow_none: 'Nessuno', flow_tap: 'Apri toccando il numero grande', flow_always: 'Sempre visibile',
+        flow_unit: 'Unità del flusso all\'apertura', flow_unit_power: 'Potenza (kW)', flow_unit_energy: 'Energia di oggi (kWh)', consumer_energy_entity: 'Energia (kWh, facoltativa)',
         layout: 'Formato', layout_standard: 'Standard: le caselle sotto il numero (4 righe)', layout_side: 'Laterale: icona + valore a destra (2 righe)',
         cell: 'Casella {n}', cell_entity: 'Entità', cell_name: 'Nome (facoltativo)', cell_icon: 'Icona (facoltativa)', cell_tap_action: 'Tocco sulla casella',
         kind_none: 'Nessuna', kind_battery: 'Batteria', kind_grid: 'Rete', kind_voltage: 'Tensione', kind_tomorrow: 'Domani',
@@ -174,6 +179,7 @@ const LABELS: Record<Lang, Record<string, string>> = {
         invert: 'Teken van de sensor omkeren',
         flow_color_solar: 'Kleur zon', flow_color_grid: 'Kleur net', flow_color_battery: 'Kleur batterij', flow_color_consumption: 'Kleur apparaten',
         flow: 'Energiestroom', flow_none: 'Geen', flow_tap: 'Uitklappen door op het grote getal te tikken', flow_always: 'Altijd zichtbaar',
+        flow_unit: 'Eenheid van de stroom bij laden', flow_unit_power: 'Vermogen (kW)', flow_unit_energy: 'Energie vandaag (kWh)', consumer_energy_entity: 'Energie (kWh, optioneel)',
         layout: 'Formaat', layout_standard: 'Standaard: de vakken onder het getal (4 rijen)', layout_side: 'Zijkant: icoon + waarde rechts (2 rijen)',
         cell: 'Vak {n}', cell_entity: 'Entiteit', cell_name: 'Naam (optioneel)', cell_icon: 'Icoon (optioneel)', cell_tap_action: 'Tikken op het vak',
         kind_none: 'Geen', kind_battery: 'Batterij', kind_grid: 'Net', kind_voltage: 'Spanning', kind_tomorrow: 'Morgen',
@@ -201,11 +207,11 @@ export const EDITOR_LABELS: Readonly<typeof LABELS> = LABELS;
 
 export function editorLabel(lang: Lang, key: string): string {
     // An appliance's slot: its entity is labelled with its number, the rest like a cell's
-    const consumer = /^consumer_(\d)_(entity|name|icon|tap_action|soc_entity|always_show)$/.exec(key);
+    const consumer = /^consumer_(\d)_(entity|name|icon|tap_action|soc_entity|energy_entity|always_show)$/.exec(key);
     if (consumer) {
         // Inside its section, titled with its name: its sensor is its power
         if (consumer[2] === 'entity') return LABELS[lang].power_entity;
-        return LABELS[lang][consumer[2] === 'soc_entity' || consumer[2] === 'always_show' ? `consumer_${consumer[2]}` : `cell_${consumer[2]}`];
+        return LABELS[lang][['soc_entity', 'energy_entity', 'always_show'].includes(consumer[2]) ? `consumer_${consumer[2]}` : `cell_${consumer[2]}`];
     }
     const slot = /^cell_(\d)(?:_(entity|name|icon|tap_action))?$/.exec(key);
     // The cell's choice, inside its section titled « Cell n · … »: what it shows
@@ -216,6 +222,7 @@ export function editorLabel(lang: Lang, key: string): string {
 /** The line under a field, where its label can't say it all */
 const HELPERS: Record<Lang, Record<string, string>> = {
     fr: {
+        flow_unit: 'Un bouton kW | kWh sur le flux bascule ensuite. Les kWh viennent des compteurs du tableau de bord Énergie, depuis minuit.', consumer_energy_entity: 'Son compteur d\'énergie : sa consommation du jour quand le flux est en kWh. Sans lui, l\'appareil affiche « — ».',
         soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
         stale_after: 'Une mesure sans nouvelle valeur depuis ce délai est signalée : l\'icône de sa case devient une horloge. 30 min si vide ; 0 désactive.',
         power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓. 20 W si vide.',
@@ -235,6 +242,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min si vide. 60 min lisse les nuages et les appareils qui démarrent.',
     },
     en: {
+        flow_unit: 'A kW | kWh button on the flow switches it afterwards. The kWh come from the Energy dashboard\'s meters, since midnight.', consumer_energy_entity: 'Its energy meter: today\'s use when the flow shows kWh. Without it, the appliance shows « — ».',
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
         stale_after: 'A reading with nothing new for this long is flagged: its cell\'s icon turns to a clock. 30 min when empty; 0 turns it off.',
         power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow. 20 W when empty.',
@@ -254,6 +262,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min when empty. 60 min smooths out clouds and appliances starting up.',
     },
     de: {
+        flow_unit: 'Eine Schaltfläche kW | kWh am Fluss wechselt danach. Die kWh stammen von den Zählern des Energie-Dashboards, seit Mitternacht.', consumer_energy_entity: 'Sein Energiezähler: der heutige Verbrauch, wenn der Fluss kWh zeigt. Ohne ihn zeigt das Gerät « — ».',
         soc_reached_entities: 'Ein/Aus-Entitäten (input_boolean, binary_sensor, switch), die auf „on“ gehen, wenn die Batterie die gewünschte Ladung erreicht hat, z. B. ein input_boolean, das eine Automatisierung setzt. Ist eine davon „on“, zeigt das Feld Batterie „· SOC erreicht“; sonst nichts.',
         stale_after: 'Ein Messwert ohne neuen Wert seit dieser Zeit wird markiert: Das Symbol seines Feldes wird zur Uhr. Leer: 30 min; 0 schaltet es aus.',
         power_threshold: 'Unter dieser Leistung gilt die Batterie als im Ruhezustand: kein Pfeil ↑ / ↓. Leer: 20 W.',
@@ -273,6 +282,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: 'Leer: 5 min. 60 min glättet Wolken und anlaufende Geräte.',
     },
     es: {
+        flow_unit: 'Un botón kW | kWh en el flujo cambia después. Los kWh vienen de los contadores del panel de Energía, desde medianoche.', consumer_energy_entity: 'Su contador de energía: el consumo de hoy cuando el flujo muestra kWh. Sin él, el aparato muestra « — ».',
         soc_reached_entities: 'Entidades on / off (input_boolean, binary_sensor, switch) que pasan a «on» cuando la batería alcanza la carga que buscas, por ejemplo un input_boolean activado por una automatización. Si alguna está en «on», la casilla Batería muestra «· SOC alcanzado»; si no, nada.',
         stale_after: 'Una medida sin valor nuevo durante este tiempo se señala: el icono de su casilla pasa a ser un reloj. 30 min si está vacío; 0 lo desactiva.',
         power_threshold: 'Por debajo de esta potencia, la batería se considera en reposo: sin flecha ↑ / ↓. 20 W si está vacío.',
@@ -292,6 +302,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min si está vacío. 60 min suaviza las nubes y los aparatos que arrancan.',
     },
     it: {
+        flow_unit: 'Un pulsante kW | kWh sul flusso cambia poi. I kWh vengono dai contatori della dashboard Energia, dalla mezzanotte.', consumer_energy_entity: 'Il suo contatore di energia: il consumo di oggi quando il flusso mostra i kWh. Senza, l\'apparecchio mostra « — ».',
         soc_reached_entities: 'Entità on / off (input_boolean, binary_sensor, switch) che passano a «on» quando la batteria ha raggiunto la carica desiderata, ad esempio un input_boolean attivato da un\'automazione. Se una è «on», la casella Batteria mostra «· SOC raggiunto»; altrimenti niente.',
         stale_after: 'Una misura senza un nuovo valore da questo tempo viene segnalata: l\'icona della sua casella diventa un orologio. 30 min se vuoto; 0 disattiva.',
         power_threshold: 'Sotto questa potenza la batteria è considerata a riposo: nessuna freccia ↑ / ↓. 20 W se vuoto.',
@@ -311,6 +322,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min se vuoto. 60 min attenua le nuvole e gli apparecchi che si avviano.',
     },
     nl: {
+        flow_unit: 'Een knop kW | kWh op de stroom wisselt daarna. De kWh komen van de meters van het Energie-dashboard, sinds middernacht.', consumer_energy_entity: 'Zijn energiemeter: het verbruik van vandaag als de stroom kWh toont. Zonder meter toont het apparaat « — ».',
         soc_reached_entities: 'Aan/uit-entiteiten (input_boolean, binary_sensor, switch) die „on” worden zodra de batterij de gewenste lading heeft bereikt, bijvoorbeeld een input_boolean die een automatisering aanzet. Staat er één op „on”, dan toont het vak Batterij „· SOC bereikt”; anders niets.',
         stale_after: 'Een meting zonder nieuwe waarde gedurende deze tijd wordt gemarkeerd: het icoon van het vak wordt een klok. Leeg: 30 min; 0 schakelt het uit.',
         power_threshold: 'Onder dit vermogen geldt de batterij als in rust: geen pijl ↑ / ↓. Leeg: 20 W.',
@@ -337,7 +349,7 @@ export const EDITOR_HELPERS: Readonly<typeof HELPERS> = HELPERS;
 export function editorHelper(lang: Lang, key: string, block?: string): string | undefined {
     if (/^cell_\d_tap_action$/.test(key)) return HELPERS[lang].cell_tap_action;
     if (/^consumer_\d_tap_action$/.test(key)) return HELPERS[lang].consumer_tap_action;
-    const own = /^consumer_\d_(soc_entity|always_show)$/.exec(key);
+    const own = /^consumer_\d_(soc_entity|energy_entity|always_show)$/.exec(key);
     if (own) return HELPERS[lang][`consumer_${own[1]}`];
     if (key === 'consumer_1_entity') return HELPERS[lang].consumers;
     return HELPERS[lang][block && key === 'invert' ? `${block}_invert` : key];
@@ -505,6 +517,8 @@ export function editorSchema(lang: Lang, data: Record<string, unknown> = {}, ene
             schema: [
                 choice('layout', ['standard', 'side'], 'list'),
                 choice('flow', ['none', 'tap', 'always'], 'list'),
+                // What the flow shows when the card loads (its kW | kWh button switches it)
+                ...(flow ? [choice('flow_unit', ['power', 'energy'], 'list')] : []),
                 { name: 'night_hero', selector: { select: { mode: 'dropdown', options: heroOptions } } },
                 // The flow's colours, with a flow (a theme can set them too)
                 ...(flow ? [section(t('flow_colors'), 'mdi:palette-outline', FLOW_COLOR_FIELDS.map(key => ({ name: `flow_color_${key}`, selector: { color_rgb: {} } })))] : []),
@@ -565,6 +579,7 @@ function consumerFields(lang: Lang, data: Record<string, unknown>, names: Entity
                 { name: `consumer_${n}_name`, selector: { text: {} } },
                 { name: `consumer_${n}_icon`, selector: { icon: {} } },
                 { name: `consumer_${n}_soc_entity`, selector: sensor({ device_class: 'battery' }) },
+                { name: `consumer_${n}_energy_entity`, selector: sensor({ device_class: 'energy' }) },
                 { name: `consumer_${n}_always_show`, selector: { boolean: {} } },
                 { name: `consumer_${n}_tap_action`, selector: { ui_action: {} } },
             ] : []),
@@ -577,7 +592,7 @@ function consumerFields(lang: Lang, data: Record<string, unknown>, names: Entity
 function consumerSlots(config: EnergySkyCardConfig): Record<string, unknown> {
     return Object.fromEntries((config.consumers ?? []).flatMap((c, i) => [
         [`consumer_${i + 1}_entity`, c.entity], [`consumer_${i + 1}_name`, c.name], [`consumer_${i + 1}_icon`, c.icon], [`consumer_${i + 1}_tap_action`, c.tap_action],
-        [`consumer_${i + 1}_soc_entity`, c.soc_entity], [`consumer_${i + 1}_always_show`, c.always_show],
+        [`consumer_${i + 1}_soc_entity`, c.soc_entity], [`consumer_${i + 1}_energy_entity`, c.energy_entity], [`consumer_${i + 1}_always_show`, c.always_show],
     ]));
 }
 
@@ -588,7 +603,7 @@ function consumersFromSlots(value: Record<string, unknown>): ConsumerConfig[] {
         const entity = value[`consumer_${n}_entity`];
         if (typeof entity !== 'string' || !entity) continue;
         const consumer: ConsumerConfig = { entity };
-        for (const field of ['name', 'icon', 'soc_entity'] as const) {
+        for (const field of ['name', 'icon', 'soc_entity', 'energy_entity'] as const) {
             const v = value[`consumer_${n}_${field}`];
             if (typeof v === 'string' && v) consumer[field] = v;
         }
@@ -676,6 +691,7 @@ export function formData(config: EnergySkyCardConfig): Record<string, unknown> {
         animate: true,
         night_hero: 'production',
         layout: 'standard',
+        flow_unit: 'power',
         ...config,
         // 0.3.3's expandable: true is flow: tap
         flow: config.flow ?? (config.expandable ? 'tap' : 'none'),
@@ -768,7 +784,7 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
         if (b?.invert === false) delete b.invert;
         if (b && !Object.keys(b).length) delete merged[block];
     }
-    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', layout: 'standard', background: 'tempo' };
+    const defaults: Record<string, unknown> = { production_max: DEFAULT_PRODUCTION_MAX, sun_entity: 'sun.sun', animate: true, night_hero: 'production', layout: 'standard', background: 'tempo', flow_unit: 'power' };
     for (const [key, def] of Object.entries(defaults)) {
         if (merged[key] === def && !(key in previous)) delete merged[key];
     }
@@ -777,8 +793,9 @@ export function nextConfig(previous: EnergySkyCardConfig, value: Record<string, 
     if (isRgb(picked)) merged.background_color = toHex(picked);
     if (merged.background !== 'solid' && !previous.background_color) delete merged.background_color;
     if (merged.background === 'solid' && merged.background_color === DEFAULT_SOLID_COLOR && !previous.background_color) delete merged.background_color;
-    // No flow is written as no flow option; expandable (0.3.3) is saved as flow
+    // No flow is written as no flow option (nor its unit); expandable (0.3.3) is saved as flow
     if (merged.flow === 'none') delete merged.flow;
+    if (!merged.flow) delete merged.flow_unit;
     // The colour pickers: written as flow_colors, a colour only when it isn't the default
     if (Object.keys(value).some(key => FLOW_COLOR_SLOT.test(key))) {
         const colours = { ...(previous.flow_colors ?? {}) } as Record<string, string>;

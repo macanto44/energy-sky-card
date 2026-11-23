@@ -3,7 +3,8 @@
 // and wire shows, and the drawing's geometry for a width.
 
 import { DEFAULT_POWER_THRESHOLD, MAX_CONSUMERS, batteryPower, batteryPowerEntities, batterySoc, batterySocEntities, gridOutage, gridPower, gridPowerEntities, productionEntities, productionPower, viewEstimate, type ViewOptions } from './model';
-import { formatPercent, formatPower } from './format';
+import { NO_VALUE, formatNumber, formatPercent, formatPower } from './format';
+import { boughtShare, homeUse, type DayTotals } from './selfsufficiency';
 import { localize, numberLocale, type NumberLocale } from './localize';
 import { numericState, powerW } from './utils';
 import { DEFAULT_PRODUCTION_MAX } from './sky';
@@ -76,6 +77,8 @@ export interface NodeView {
     present: boolean;
     label: string;
     value: string;
+    /** The value where it doesn't fit: narrow spaces, and kWh from 10 on without their decimal (« 19 kWh ») */
+    valueShort?: string;
     /** Ring segments around the icon, as fractions of the circle, each with its colour's source */
     ring: [number, Source | 'alert'][];
     /** Text in the disc instead of the icon (the battery's charge) */
@@ -115,6 +118,8 @@ export interface ConsumerView {
     value: string;
     /** Its share of the home's power, 0 … 1 (its ring) */
     share: number;
+    /** The value where it doesn't fit (kWh) */
+    valueShort?: string;
     level: 0 | 1 | 2 | 3 | 4;
     /** In the flow: its power reaches consumer_threshold (with 0, or always_show, always) */
     shown: boolean;
@@ -196,6 +201,72 @@ export function flowView(config: EnergySkyCardConfig, hass: HomeAssistant, optio
         }),
         levels,
         off: WIRE_KEYS.filter(k => !WIRE_ENDS[k].every(present)),
+    };
+}
+
+/** Today's energies, for the flow in kWh: the meters' totals, and each appliance's energy_entity since midnight */
+export interface DayEnergy {
+    totals: DayTotals;
+    consumers: (number | undefined)[];
+}
+
+/**
+ * Energies (kWh) as a node's value: « 4,2 · 6,1 kWh » (one figure, or two
+ * for what comes in and goes out), « — » for a missing one; and the short
+ * form, narrow spaces and no decimal from 10 kWh on (« 19 kWh »).
+ */
+export function energyText(values: (number | undefined)[], loc: NumberLocale): [string, string] {
+    if (values.every(v => v === undefined || !Number.isFinite(v))) return [NO_VALUE, NO_VALUE];
+    const text = (short: boolean) => {
+        const figures = values.map(v => v === undefined || !Number.isFinite(v) ? NO_VALUE
+            : short && Math.abs(v) >= 9.95 ? formatNumber(Math.round(v), 0, loc) : formatNumber(v, 1, loc));
+        return short ? `${figures.join('\u202F·\u202F')}\u202FkWh` : `${figures.join(' · ')} kWh`;
+    };
+    return [text(false), text(true)];
+}
+
+/**
+ * The flow in kWh: the live view (its wires, which nodes are there, the
+ * battery's charge, an outage) with today's energies in the nodes. The
+ * grid's two figures are bought · sold, the battery's charged · discharged,
+ * named by their small line (the battery's estimate gives way). The home's
+ * ring is the day's self-sufficiency (the share not bought, in the sun's
+ * colour); an appliance's, its share of the home's day; every appliance
+ * shows, its figure « — » without an energy_entity.
+ */
+export function energyView(live: FlowView, config: EnergySkyCardConfig, hass: HomeAssistant, day: DayEnergy | undefined): FlowView {
+    const loc = numberLocale(hass);
+    const t = day?.totals ?? {};
+    const used = homeUse(t);
+    const bought = boughtShare(t);
+    const node = (key: NodeKey, values: (number | undefined)[], extra: Partial<NodeView> = {}): NodeView => {
+        const [value, valueShort] = energyText(values, loc);
+        const { sub: _sub, subShort: _short, note: _note, ...rest } = live.nodes[key];
+        return { ...rest, value, valueShort, ...extra };
+    };
+    return {
+        ...live,
+        nodes: {
+            solar: node('solar', [t.solar], { ring: (t.solar ?? 0) > 0 ? [[1, 'sun']] : [] }),
+            grid: node('grid', [t.from_grid, t.to_grid], {
+                sub: localize(loc.lang, 'bought_sold'), subShort: localize(loc.lang, 'bought_sold_short'),
+            }),
+            battery: node('battery', [t.to_battery, t.from_battery], {
+                sub: localize(loc.lang, 'charged_discharged'), subShort: localize(loc.lang, 'charged_discharged_short'),
+            }),
+            home: node('home', [used], {
+                ring: bought === undefined ? [] : ([[1 - bought, 'sun'], [bought, 'grid']] as [number, Source][]).filter(([share]) => share > 0),
+            }),
+        },
+        consumers: live.consumers.map((c, i) => {
+            const kwh = config.consumers?.[i]?.energy_entity ? day?.consumers[i] : undefined;
+            const [value, valueShort] = energyText([kwh], loc);
+            return {
+                ...c, value, valueShort, shown: true,
+                share: used && kwh !== undefined ? Math.min(Math.max(kwh, 0) / used, 1) : 0,
+                level: kwh !== undefined && kwh > 0 ? (c.level || 1) : 0,
+            };
+        }),
     };
 }
 

@@ -13,10 +13,10 @@ import { coveredBy, starsMarkup, type Box } from './stars';
 import { MotionController } from './motion';
 import { Smoother, pastReadings, smoothedEntities } from './smoothing';
 import { energyPrefs, stubConfig } from './stub';
-import { canComputeSelfSufficiency, energyMeters, meterIds, nextRefreshIn, selfSufficiency, todaysChanges } from './selfsufficiency';
+import { canComputeSelfSufficiency, dayTotals, energyMeters, meterIds, nextRefreshIn, selfSufficiency, todaysChanges, type EnergyMeters } from './selfsufficiency';
 import { isAction, listenForGestures, readActions, updateTargetSemantics, type ActionConfig, type ActionsConfig } from './actions';
-import { FLOW_HEIGHT, MAX_CONSUMERS, WIRES, WIRE_KEYS, flowGeometry, flowNodeEntity, flowView, type NodeKey, type WireKey } from './flow';
-import type { EnergySkyCardConfig, HomeAssistant } from './types';
+import { FLOW_HEIGHT, MAX_CONSUMERS, WIRES, WIRE_KEYS, energyView, flowGeometry, flowNodeEntity, flowView, type DayEnergy, type NodeKey, type WireKey } from './flow';
+import type { EnergySkyCardConfig, FlowUnit, HomeAssistant } from './types';
 
 /** The hero's sizes, largest first: it steps down until the card's lines fit */
 export const HERO_SIZES = [56, 48, 40] as const;
@@ -51,6 +51,7 @@ const CHOICES: [string, string[]][] = [
     ['night_hero', ['production', 'consumption', 'battery']],
     ['layout', ['standard', 'side']],
     ['flow', ['tap', 'always']],
+    ['flow_unit', ['power', 'energy']],
     ['background', ['tempo', 'solid', 'weather']],
     ['battery.estimate.charge', ['time', 'duration', 'off']],
     ['battery.estimate.discharge', ['duration', 'time', 'off']],
@@ -137,12 +138,13 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
             throw configError(`consumers : une liste de ${MAX_CONSUMERS} appareils au plus`, `consumers: a list of at most ${MAX_CONSUMERS} appliances`);
         }
         for (const consumer of c.consumers as unknown[]) {
-            const o = (consumer && typeof consumer === 'object' ? consumer : {}) as { entity?: unknown; tap_action?: unknown; soc_entity?: unknown; always_show?: unknown };
+            const o = (consumer && typeof consumer === 'object' ? consumer : {}) as { entity?: unknown; tap_action?: unknown; soc_entity?: unknown; energy_entity?: unknown; always_show?: unknown };
             if (typeof o.entity !== 'string' || !o.entity) throw configError('consumers : chaque appareil a une entity', 'consumers: each appliance needs an entity');
             if (o.tap_action !== undefined && !isAction(o.tap_action)) {
                 throw configError('consumers : tap_action doit avoir une action (more-info, navigate, url…)', 'consumers: tap_action needs an action (more-info, navigate, url…)');
             }
             if (o.soc_entity !== undefined && (typeof o.soc_entity !== 'string' || !o.soc_entity)) throw configError('consumers : soc_entity doit être une entité', 'consumers: soc_entity must be an entity');
+            if (o.energy_entity !== undefined && (typeof o.energy_entity !== 'string' || !o.energy_entity)) throw configError('consumers : energy_entity doit être une entité', 'consumers: energy_entity must be an entity');
             if (o.always_show !== undefined && typeof o.always_show !== 'boolean') throw configError('consumers : always_show doit valoir true ou false', 'consumers: always_show must be true or false');
         }
     }
@@ -179,7 +181,7 @@ export function validateConfig(config: unknown): EnergySkyCardConfig {
 }
 
 /** A node of the flow: its pill, texts and ring segments */
-interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; sub: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[]; subTexts?: [string, string] }
+interface FlowNodeRefs { el: HTMLElement; label: HTMLElement; value: HTMLElement; sub: HTMLElement; centre: HTMLElement; segs: SVGCircleElement[]; subTexts?: [string, string]; valueTexts?: [string, string] }
 
 /** The sun's twelve rays (shown: six, or all twelve at high production): their angle, length (every other one shorter), shimmer */
 const RAYS = Array.from({ length: 12 }, (_, i) => {
@@ -222,6 +224,9 @@ interface Refs {
         nodes: Map<NodeKey, FlowNodeRefs>;
         /** The appliances, in the config's order, with their wire */
         consumers: (FlowNodeRefs & { icon: HTMLElement; wire: SVGGElement; paths: SVGPathElement[] })[];
+        /** The kW | kWh switch, and its « since midnight » line */
+        unit: HTMLElement;
+        unitButtons: HTMLButtonElement[];
     };
     metrics: Map<MetricKey, { el: HTMLElement; icon: HTMLElement; label: HTMLElement; value: HTMLElement; extra: HTMLElement; entity?: string }>;
 }
@@ -251,11 +256,17 @@ export class EnergySkyCard extends HTMLElement {
     private historyDone = false;
     /** What the last view was worked out with beside hass: the estimate's battery power and the time */
     private viewOptions: ViewOptions = {};
-    /** Today's self-sufficiency (%), read every 5 minutes while a cell shows it; the read's config, to drop an answer for an older one */
+    /** Today's self-sufficiency (%), read every 5 minutes while a cell shows it */
     private selfSufficiency?: number;
-    private selfTimer?: ReturnType<typeof setTimeout>;
+    /** What the flow shows: the powers, or today's energies (flow_unit, then the switch) */
+    private unit: FlowUnit = 'power';
+    /** Today's energies for the flow in kWh, read every 5 minutes while it shows them */
+    private day?: DayEnergy;
+    /** The Energy dashboard's meters, once read (the kWh switch shows when there are some) */
+    private meters?: EnergyMeters;
+    private dayTimer?: ReturnType<typeof setTimeout>;
     /** The read on its way, if any: a newer config or a disconnect drops its answer */
-    private selfRead?: object;
+    private dayRead?: object;
     private smoothIds: string[] = [];
     private smoothTimer?: ReturnType<typeof setInterval>;
     /** The hass the card shows: smoothed powers with smoothing, else hass itself */
@@ -306,14 +317,17 @@ export class EnergySkyCard extends HTMLElement {
         this.historyRead = undefined;
         this.historyDone = false;
         this.viewOptions = {};
-        // Today's self-sufficiency: read again for this config
+        // Today's self-sufficiency and energies: read again for this config
         this.selfSufficiency = undefined;
-        clearTimeout(this.selfTimer);
-        this.selfTimer = undefined;
-        this.selfRead = undefined;
+        this.unit = this.config.flow_unit ?? 'power';
+        this.day = undefined;
+        this.meters = undefined;
+        clearTimeout(this.dayTimer);
+        this.dayTimer = undefined;
+        this.dayRead = undefined;
         this.syncSmoothTimer();
         if (this._hass) this.update();
-        this.startSelfSufficiency();
+        this.startDay();
         this.startEstimateHistory();
     }
 
@@ -335,7 +349,7 @@ export class EnergySkyCard extends HTMLElement {
             if (this.refs && this._hass) this.paintSky();
         }, 60_000);
         this.syncSmoothTimer();
-        this.startSelfSufficiency();
+        this.startDay();
         this.startEstimateHistory();
         if (this.refs && this.resizeObserver) this.resizeObserver.observe(this.refs.card);
         this.fit();
@@ -348,9 +362,9 @@ export class EnergySkyCard extends HTMLElement {
         clearInterval(this.staleTimer);
         this.staleTimer = undefined;
         this.syncSmoothTimer();
-        clearTimeout(this.selfTimer);
-        this.selfTimer = undefined;
-        this.selfRead = undefined;
+        clearTimeout(this.dayTimer);
+        this.dayTimer = undefined;
+        this.dayRead = undefined;
         // Back on the page, the readings missed meanwhile come from the history again
         this.historyRead = undefined;
         this.historyDone = false;
@@ -373,6 +387,8 @@ export class EnergySkyCard extends HTMLElement {
         if (this.refs?.flow) this.refs.flow.panel.hidden = !next;
         if (flow === 'tap') this.refs?.heroValue.parentElement?.setAttribute('aria-expanded', String(next));
         this.fit();
+        // Unfolded on kWh: today's energies, unless a read is planned
+        this.startDay();
     }
 
     /** The side layout: the cells listed on the hero's right */
@@ -388,7 +404,7 @@ export class EnergySkyCard extends HTMLElement {
     set hass(hass: HomeAssistant) {
         this._hass = hass;
         this.update();
-        this.startSelfSufficiency();
+        this.startDay();
         this.startEstimateHistory();
     }
 
@@ -421,39 +437,75 @@ export class EnergySkyCard extends HTMLElement {
         return !!this.config && configuredCells(this.config).some(cell => cell.kind === 'self_sufficiency');
     }
 
-    /** Reads today's self-sufficiency now, unless a read is on its way or planned */
-    private startSelfSufficiency(): void {
-        if (!this.showsSelfSufficiency || !this.isConnected || !this._hass || this.selfRead || this.selfTimer) return;
-        void this.readSelfSufficiency();
+    /** The flow shows today's energies: kWh chosen, and the Energy dashboard has meters (or isn't read yet) */
+    private get showsEnergy(): boolean {
+        return !!this.config?.flow && this.unit === 'energy' && (this.meters === undefined || meterIds(this.meters).length > 0);
+    }
+
+    /** The day's figures are needed: a cell shows the self-sufficiency, or the unfolded flow its energies */
+    private get needsDay(): boolean {
+        return this.showsSelfSufficiency || (this.showsEnergy && this.open);
+    }
+
+    /** Reads the day's figures now (or, with a flow, the meters once, for its switch), unless a read is on its way or planned */
+    private startDay(): void {
+        const wanted = this.needsDay || (!!this.config?.flow && this.meters === undefined);
+        if (!wanted || !this.isConnected || !this._hass || this.dayRead || this.dayTimer) return;
+        void this.readDay();
     }
 
     /**
-     * The Energy dashboard's meters and their changes since midnight, from
-     * Home Assistant (never the internet); again in 5 minutes, or just after
-     * midnight when that comes first.
+     * The Energy dashboard's meters and their changes since midnight (and
+     * the appliances' energy_entity), from Home Assistant (never the
+     * internet): today's self-sufficiency and the flow's energies. Again in
+     * 5 minutes, or just after midnight when that comes first, while needed.
      */
-    private async readSelfSufficiency(): Promise<void> {
+    private async readDay(): Promise<void> {
         const hass = this._hass;
-        if (!hass) return;
+        const config = this.config;
+        if (!hass || !config) return;
         const read = {};
-        this.selfRead = read;
+        this.dayRead = read;
+        let meters: EnergyMeters | undefined;
         let value: number | undefined;
+        let day: DayEnergy | undefined;
+        const needed = this.needsDay;
         try {
-            const meters = energyMeters(await energyPrefs(hass));
-            value = canComputeSelfSufficiency(meters) ? selfSufficiency(meters, await todaysChanges(hass, meterIds(meters))) : undefined;
+            meters = energyMeters(await energyPrefs(hass));
+            if (needed) {
+                const own = (config.consumers ?? []).map(c => c.energy_entity);
+                const ids = [...new Set([...meterIds(meters), ...own.filter((id): id is string => !!id)])];
+                const changes = await todaysChanges(hass, ids);
+                if (this.showsSelfSufficiency) value = canComputeSelfSufficiency(meters) ? selfSufficiency(meters, changes) : undefined;
+                day = { totals: dayTotals(meters, changes), consumers: own.map(id => id ? changes[id] : undefined) };
+            }
         } catch {
             value = undefined;
         }
         // A new config or a disconnect since: this answer is no one's
-        if (this.selfRead !== read) return;
-        this.selfRead = undefined;
-        this.selfSufficiency = value;
+        if (this.dayRead !== read) return;
+        this.dayRead = undefined;
+        this.meters = meters ?? this.meters ?? energyMeters(undefined);
+        if (needed) {
+            this.selfSufficiency = value;
+            this.day = day;
+        }
         this.renderedKey = '';
         this.update();
-        if (this.isConnected) this.selfTimer = setTimeout(() => {
-            this.selfTimer = undefined;
-            this.startSelfSufficiency();
-        }, nextRefreshIn(new Date()));
+        if (this.isConnected && this.needsDay) this.dayTimer = setTimeout(() => {
+            this.dayTimer = undefined;
+            this.startDay();
+        }, needed ? nextRefreshIn(new Date()) : 0);
+    }
+
+    /** The kW | kWh switch: the flow shows the powers, or today's energies (read now if need be) */
+    setFlowUnit(unit: FlowUnit): void {
+        if (unit === this.unit) return;
+        this.unit = unit;
+        this.renderedKey = '';
+        this.update();
+        // Today's energies: read now, unless a read is planned (they came in less than 5 minutes ago)
+        this.startDay();
     }
 
     get hass(): HomeAssistant | undefined {
@@ -590,6 +642,11 @@ export class EnergySkyCard extends HTMLElement {
         const cell = path.find((t): t is HTMLElement => t instanceof HTMLElement && t.dataset.cellTarget !== undefined);
         // The big number, its line and the unfolded panel fold and unfold; hold and double tap stay the card's
         if (cell?.dataset.targetKey === 'toggle') return { ...this.actions, toggle: () => { this.expanded = !this.open; } };
+        // The kW | kWh switch: its own tap, no hold or double tap
+        if (cell?.dataset.targetKey === 'unit') {
+            const unit = cell.dataset.unit as FlowUnit;
+            return { toggle: () => this.setFlowUnit(unit) };
+        }
         const key = cell?.dataset.node ? `node:${cell.dataset.node}` : cell?.dataset.consumer ? `consumer:${cell.dataset.consumer}` : cell?.dataset.metric ?? '';
         const target = cell ? this.cellTargets.get(key) : undefined;
         if (!target) return this.actions;
@@ -602,7 +659,11 @@ export class EnergySkyCard extends HTMLElement {
         this.fitLayout();
         this.layoutFlow();
         this.placeSky();
-        for (const node of this.refs?.flow?.nodes.values() ?? []) this.fitSub(node);
+        for (const node of this.refs?.flow?.nodes.values() ?? []) {
+            this.fitValue(node);
+            this.fitSub(node);
+        }
+        for (const node of this.refs?.flow?.consumers ?? []) this.fitValue(node);
         this.clearText();
     }
 
@@ -613,7 +674,8 @@ export class EnergySkyCard extends HTMLElement {
      */
     private fitSub(node: FlowNodeRefs): void {
         const [full, short] = node.subTexts ?? ['', ''];
-        const overflows = () => node.sub.scrollWidth > node.sub.clientWidth + 1;
+        // Strict: one pixel over already draws the ellipsis
+        const overflows = () => node.sub.scrollWidth > node.sub.clientWidth;
         let narrowest: [number, string] | undefined;
         for (const tight of [false, true]) {
             node.sub.toggleAttribute('data-tight', tight);
@@ -624,6 +686,37 @@ export class EnergySkyCard extends HTMLElement {
             }
         }
         setText(node.sub, narrowest?.[1] ?? full);
+    }
+
+    /**
+     * A node's value: in full where it fits, else its short form (« 19 kWh »,
+     * narrow spaces), then that a size smaller (data-tight); in kWh, as a
+     * last resort, the figures alone (the switch says kWh).
+     */
+    private fitValue(node: FlowNodeRefs): void {
+        const [full, short] = node.valueTexts ?? ['', ''];
+        const bare = short.replace(/\u202FkWh$/, '');
+        const overflows = () => node.value.scrollWidth > node.value.clientWidth;
+        node.value.toggleAttribute('data-tight', false);
+        setText(node.value, full);
+        if (full === short || !overflows()) return;
+        setText(node.value, short);
+        if (!overflows()) return;
+        node.value.toggleAttribute('data-tight', true);
+        if (!overflows() || bare === short) return;
+        setText(node.value, bare);
+    }
+
+    /** The kW | kWh switch: shown when the Energy dashboard has meters; the pressed button; « since midnight » under it in kWh */
+    private paintUnit(): void {
+        const flow = this.refs?.flow;
+        if (!flow) return;
+        const lang = cardLanguage(this._hass);
+        const available = !!this.meters && meterIds(this.meters).length > 0;
+        if (flow.unit.hidden === available) flow.unit.hidden = !available;
+        const shown = this.showsEnergy ? 'energy' : 'power';
+        for (const button of flow.unitButtons) setAttr(button, 'aria-pressed', String(button.dataset.unit === shown));
+        setText(flow.unit.lastElementChild as HTMLElement, shown === 'energy' ? localize(lang, 'since_midnight') : '');
     }
 
     /** The flow's wires and comets, for the panel's width (redrawn only when it changes) */
@@ -675,6 +768,8 @@ export class EnergySkyCard extends HTMLElement {
                 const wire = q<SVGGElement>(`[data-wire="c${i}"]`);
                 return { ...nodeRefs(el), icon: q('ha-icon', el), wire, paths: [...wire.querySelectorAll('path')] };
             }),
+            unit: q('.unit'),
+            unitButtons: [...this.root.querySelectorAll<HTMLButtonElement>('.unit button')],
         };
     }
 
@@ -682,12 +777,19 @@ export class EnergySkyCard extends HTMLElement {
     private updateFlow(): void {
         const flow = this.refs?.flow;
         if (!flow) return;
-        const view = flowView(this.config!, this.shown ?? this._hass!, this.viewOptions);
+        const hass = this.shown ?? this._hass!;
+        const live = flowView(this.config!, hass, this.viewOptions);
+        // kWh: today's energies in the nodes; the wires stay as they are, still and faded (CSS)
+        const energy = this.showsEnergy;
+        const view = energy ? energyView(live, this.config!, hass, this.day) : live;
+        setAttr(this, 'data-flow-unit', energy ? 'energy' : null);
+        this.paintUnit();
         for (const [key, node] of flow.nodes) {
             const v = view.nodes[key];
             if (node.el.hidden === v.present) node.el.hidden = !v.present;
             setText(node.label, v.label);
-            setText(node.value, v.value);
+            node.valueTexts = [v.value, v.valueShort ?? v.value];
+            this.fitValue(node);
             node.subTexts = [v.sub ?? '', v.subShort ?? v.sub ?? ''];
             this.fitSub(node);
             node.el.dataset.note = v.note ?? '';
@@ -708,7 +810,8 @@ export class EnergySkyCard extends HTMLElement {
             node.el.dataset.title = [v.label, charge && v.value, charge].filter(Boolean).join(' · ');
             setAttr(node.el, 'title', node.el.dataset.title);
             setAttr(node.el, 'aria-label', [v.label, v.value, charge].filter(Boolean).join(' '));
-            setText(node.value, v.value);
+            node.valueTexts = [v.value, v.valueShort ?? v.value];
+            this.fitValue(node);
             setAttr(node.icon, 'icon', v.icon);
             node.el.toggleAttribute('data-idle', v.level === 0);
             setText(node.centre, v.soc === undefined ? '' : String(Math.round(v.soc)));
@@ -869,7 +972,7 @@ export class EnergySkyCard extends HTMLElement {
             } else options.estimatePower = batteryPower(this.config, this._hass);
             key += `|${options.estimatePower?.toPrecision(2) ?? ''}|${Math.floor(now / 60000)}`;
         }
-        key += `|${this.selfSufficiency ?? ''}`;
+        key += `|${this.selfSufficiency ?? ''}|${this.showsEnergy ? JSON.stringify(this.day ?? null) : ''}`;
         if (key === this.renderedKey) return;
         this.renderedKey = key;
         this.shown = shown;
@@ -994,7 +1097,7 @@ export class EnergySkyCard extends HTMLElement {
         // The flow's floor: the sky's last colour as the sky shows it now, day over night
         set('--esc-floor', `rgb(${floorRgb(bg.palette, bg.nightPalette, r2(sky.day)).map(c => Math.round(c * 255)).join(', ')})`);
         this.toggleAttribute('data-dawn', sky.dawn);
-        const sun = this.root.querySelector<HTMLElement>('.sun');
+        const sun = this.root.querySelector<HTMLElement>('.sky .sun');
         if (sun && sky.sun) {
             const w = sky.sun.warmth;
             const tone = (hi: number[], lo: number[]) => hi.map((c, i) => Math.round(c + (lo[i] - c) * w));
@@ -1139,7 +1242,9 @@ function flowMarkup(consumers: number): string {
         </div>`;
     const nodes = NODES.map(([key, icon]) => node(`data-node="${key}"`, icon)).join('')
         + Array.from({ length: consumers }, (_, i) => node(`data-consumer="${i}"`, '')).join('');
-    return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${uses}${wires}</svg>${nodes}</div></div>`;
+    // The kW | kWh switch, in the free top-left corner (shown once the Energy dashboard's meters are known)
+    const unit = `<div class="unit" hidden><span class="unit-switch" role="group" aria-label="kW / kWh">${(['power', 'energy'] as const).map(u => `<button type="button" data-unit="${u}" data-cell-target data-target-key="unit">${u === 'power' ? 'kW' : 'kWh'}</button>`).join('')}</span><span class="since"></span></div>`;
+    return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${uses}${wires}</svg>${nodes}${unit}</div></div>`;
 }
 
 /** A flow node's text and ring elements */

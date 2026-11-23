@@ -53,6 +53,8 @@ export interface ConsumerConfig {
     soc_entity?: string;
     /** Stays in the flow below consumer_threshold (with its charge) */
     always_show?: boolean;
+    /** Its energy meter (kWh): today's use, when the flow shows kWh (« — » without it) */
+    energy_entity?: string;
 }
 
 /** What the hero shows at night: production (0 W, the default), the home's consumption, or the battery */
@@ -66,6 +68,9 @@ export type SkyMode = 'tempo' | 'solid' | 'weather';
 
 /** The energy flow under the card: unfolded by a tap on the big number, or always shown */
 export type FlowMode = 'tap' | 'always';
+
+/** What the flow shows: the powers now (kW), or today's energies since midnight (kWh, from the Energy dashboard's meters) */
+export type FlowUnit = 'power' | 'energy';
 
 /** How the battery's estimate shows: a clock time, a duration, or not at all */
 export type EstimateForm = 'time' | 'duration' | 'off';
@@ -132,6 +137,8 @@ export interface EnergySkyCardConfig {
     layout?: CardLayout;
     /** The energy flow (sun, grid, battery, home) under the card: on a tap on the big number, or always; none without it */
     flow?: FlowMode;
+    /** The flow's unit when the card loads: power (default) or energy; a button on the flow switches it */
+    flow_unit?: FlowUnit;
     /** 0.3.3's name of flow: tap, still read */
     expandable?: boolean;
     /** Up to 4 appliances in the flow, around the home: the first above, the second below, and so on */

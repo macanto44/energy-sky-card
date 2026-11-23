@@ -1,6 +1,6 @@
 // The live demo (GitHub Pages): one card on the demo's sample readings, set from the controls,
 // with the YAML that makes it.
-import { ATTRIBUTES, CONFIG, CONSUMERS, MOMENT, SCENARIOS, setClock, placeFor, sunAttributes } from './scenarios.js';
+import { ATTRIBUTES, CONFIG, CONSUMERS, DAY_CHANGES, ENERGY_PREFS, MOMENT, SCENARIOS, setClock, placeFor, sunAttributes } from './scenarios.js';
 setClock(new URLSearchParams(location.search).get('at') ?? MOMENT);
 
 const form = document.getElementById('controls');
@@ -66,13 +66,15 @@ function render() {
   if (card) card.remove();
   card = document.createElement('energy-sky-card');
   card.setConfig(config);
-  card.hass = { states, language: o.lang, locale: { language: o.lang, number_format: 'language' }, config: placeFor(o.scenario) };
+  // An Energy dashboard's stand-in: its meters and today's changes, for the flow's kW | kWh switch
+  const callWS = async msg => msg.type === 'energy/get_prefs' ? ENERGY_PREFS : { change: DAY_CHANGES[msg.statistic_id] ?? null };
+  card.hass = { states, language: o.lang, locale: { language: o.lang, number_format: 'language' }, config: placeFor(o.scenario), callWS };
   // In a dashboard the grid sets the height; with a flow, the card sets its own
   cell.style.width = `${o.width}px`;
   cell.style.height = config.flow ? 'auto' : o.layout === 'side' ? '120px' : '248px';
   cell.appendChild(card);
-  hint.textContent = o.flow === 'tap' ? 'Tap the big number to unfold the energy flow, and again to fold it.'
-    : o.flow === 'always' ? 'Tap a node of the flow: in Home Assistant it opens that entity.' : 'Choose an energy flow to see where the power goes.';
+  hint.textContent = o.flow === 'tap' ? 'Tap the big number to unfold the energy flow, and again to fold it. kWh shows today\'s energies.'
+    : o.flow === 'always' ? 'Tap a node of the flow: in Home Assistant it opens that entity. kWh shows today\'s energies.' : 'Choose an energy flow to see where the power goes.';
   // The YAML, with entity ids that read like real ones
   const text = toYaml(config).replace(/(sensor|input_boolean|sun)\.[\w]+/g, id => RENAME[id] ?? id);
   yaml.textContent = text;

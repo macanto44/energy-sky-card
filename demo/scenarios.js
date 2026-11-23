@@ -22,11 +22,26 @@ const base = {
 
 /** The appliances ?consumers=n adds, the first n */
 export const CONSUMERS = [
-  { entity: 'sensor.boiler', name: 'Boiler', icon: 'mdi:water-boiler' },
+  { entity: 'sensor.boiler', name: 'Boiler', icon: 'mdi:water-boiler', energy_entity: 'sensor.boiler_energy' },
   { entity: 'sensor.pool', name: 'Pool', icon: 'mdi:pool' },
-  { entity: 'sensor.car', name: 'Car', icon: 'mdi:car-electric', soc_entity: 'sensor.car_soc', always_show: true },
-  { entity: 'sensor.heat_pump', name: 'Heat pump', icon: 'mdi:heat-pump-outline' },
+  { entity: 'sensor.car', name: 'Car', icon: 'mdi:car-electric', soc_entity: 'sensor.car_soc', always_show: true, energy_entity: 'sensor.car_energy' },
+  { entity: 'sensor.heat_pump', name: 'Heat pump', icon: 'mdi:heat-pump-outline', energy_entity: 'sensor.heat_pump_energy' },
 ];
+
+/** The Energy dashboard's prefs (?unit): its meters */
+export const ENERGY_PREFS = {
+  energy_sources: [
+    { type: 'grid', flow_from: [{ stat_energy_from: 'sensor.grid_import_energy' }], flow_to: [{ stat_energy_to: 'sensor.grid_export_energy' }] },
+    { type: 'solar', stat_energy_from: 'sensor.solar_energy' },
+    { type: 'battery', stat_energy_from: 'sensor.battery_out_energy', stat_energy_to: 'sensor.battery_in_energy' },
+  ],
+};
+/** Each meter's change since midnight (kWh): bought 4.2 + solar 18.6 + discharged 4.9 − sold 6.1 − charged 5.8 = 15.8 used; the pool has no meter */
+export const DAY_CHANGES = {
+  'sensor.grid_import_energy': 4.2, 'sensor.grid_export_energy': 6.1, 'sensor.solar_energy': 18.6,
+  'sensor.battery_out_energy': 4.9, 'sensor.battery_in_energy': 5.8,
+  'sensor.boiler_energy': 3.2, 'sensor.car_energy': 7.4, 'sensor.heat_pump_energy': 2.1,
+};
 
 /** Where the sun stands in each scenario: sun.sun's elevation and azimuth (degrees) */
 export const SUN = { nuit: [-22, 300], bleu: [38, 200], blanc: [12, 108], rouge: [58, 182], soir: [1.5, 262], extremes: [55, 175], options: [-22, 300], charge: [-40, 10], coupure: [-22, 300] };

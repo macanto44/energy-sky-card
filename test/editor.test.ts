@@ -257,7 +257,7 @@ describe('the energy flow', () => {
     it('offers a colour picker per source with a flow, showing the default or the card\'s colour', () => {
         const display = (data: Record<string, unknown>) => schemaLeaves(editorSchema('fr', data).find(b => b.title === 'Disposition')!.schema!).map(f => f.name);
         expect(display({ flow: 'none' })).toEqual(['layout', 'flow', 'night_hero']);
-        expect(display({ flow: 'always' })).toEqual(['layout', 'flow', 'night_hero', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
+        expect(display({ flow: 'always' })).toEqual(['layout', 'flow', 'flow_unit', 'night_hero', 'flow_color_solar', 'flow_color_grid', 'flow_color_battery', 'flow_color_consumption']);
         expect(editorLabel('fr', 'flow_color_consumption')).toBe('Couleur des appareils');
         const data = formData({ ...MINIMAL, flow: 'always', flow_colors: { solar: '#ff8800', grid: 'var(--accent-color)' } });
         expect(data.flow_color_solar).toEqual([255, 136, 0]);
@@ -295,7 +295,7 @@ describe('the appliances', () => {
 
     it('open one slot at a time, with a name, an icon and a tap once the entity is set', () => {
         expect(block({ flow: 'tap' })).toEqual(['consumption_entity', 'consumer_threshold', 'consumer_1_entity']);
-        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumption_entity', 'consumer_threshold', 'consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_soc_entity', 'consumer_1_always_show', 'consumer_1_tap_action', 'consumer_2_entity']);
+        expect(block({ flow: 'tap', consumer_1_entity: 'sensor.boiler' })).toEqual(['consumption_entity', 'consumer_threshold', 'consumer_1_entity', 'consumer_1_name', 'consumer_1_icon', 'consumer_1_soc_entity', 'consumer_1_energy_entity', 'consumer_1_always_show', 'consumer_1_tap_action', 'consumer_2_entity']);
         expect(editorLabel('fr', 'consumer_threshold')).toBe('Seuil d\'affichage');
         expect(editorHelper('en', 'consumer_threshold')).toMatch(/10 W when empty/);
         expect(editorLabel('fr', 'consumer_2_entity')).toBe('Puissance (W)');

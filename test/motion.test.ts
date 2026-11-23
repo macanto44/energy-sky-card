@@ -174,7 +174,7 @@ describe('the stylesheet', () => {
     });
 
     it('turns everything off under prefers-reduced-motion, as a second guard', () => {
-        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.drift, \.layer, \.comet, \.cloudband, \.drop, \.flake, \.fogband, \.flash, \.splash, \.sun \*, \.node::after \{ animation: none !important; transition: none !important; \}/);
+        expect(CARD_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.halo, \.star, \.shooting, \.drift, \.layer, \.comet, \.cloudband, \.drop, \.flake, \.fogband, \.flash, \.splash, \.sky \.sun \*, \.node::after \{ animation: none !important; transition: none !important; \}/);
     });
 
     it('cross-fades day and night over 3 s, except when motion is off', () => {
