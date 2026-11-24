@@ -216,10 +216,12 @@ export interface DayEnergy {
  * form, narrow spaces and no decimal from 10 kWh on (« 19 kWh »).
  */
 export function energyText(values: (number | undefined)[], loc: NumberLocale): [string, string] {
-    if (values.every(v => v === undefined || !Number.isFinite(v))) return [NO_VALUE, NO_VALUE];
+    // Nothing read, or under 0.05 kWh (« 0,0 »): « — », lighter than a zero.
+    const none = (v: number | undefined) => v === undefined || !Number.isFinite(v) || Math.abs(v) < 0.05;
+    if (values.every(none)) return [NO_VALUE, NO_VALUE];
     const text = (short: boolean) => {
-        const figures = values.map(v => v === undefined || !Number.isFinite(v) ? NO_VALUE
-            : short && Math.abs(v) >= 9.95 ? formatNumber(Math.round(v), 0, loc) : formatNumber(v, 1, loc));
+        const figures = values.map(v => none(v) ? NO_VALUE
+            : short && Math.abs(v!) >= 9.95 ? formatNumber(Math.round(v!), 0, loc) : formatNumber(v!, 1, loc));
         return short ? `${figures.join('\u202F·\u202F')}\u202FkWh` : `${figures.join(' · ')} kWh`;
     };
     return [text(false), text(true)];

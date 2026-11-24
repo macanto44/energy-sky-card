@@ -74,7 +74,10 @@ describe('energies as text', () => {
     it('writes one or two figures in kWh, and a short form without the decimal from 10 on', () => {
         expect(energyText([18.6], loc as any)).toEqual(['18,6 kWh', `19${nn}kWh`]);
         expect(energyText([4.2, 6.1], loc as any)).toEqual(['4,2 · 6,1 kWh', `4,2${nn}·${nn}6,1${nn}kWh`]);
-        expect(energyText([9.96, 0.04], loc as any)[1]).toBe(`10${nn}·${nn}0,0${nn}kWh`);
+        expect(energyText([9.96, 0.04], loc as any)[1]).toBe(`10${nn}·${nn}—${nn}kWh`);
+        expect(energyText([0, 6.1], loc as any)[0]).toBe('— · 6,1 kWh');
+        expect(energyText([0, 0.01], loc as any)).toEqual(['—', '—']);
+        expect(energyText([0], loc as any)).toEqual(['—', '—']);
     });
 
     it('reads « — » for a missing figure, and alone when there are none', () => {
