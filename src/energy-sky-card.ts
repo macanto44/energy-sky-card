@@ -824,7 +824,8 @@ export class EnergySkyCard extends HTMLElement {
             }
         });
         // An appliance came into or left the flow: lay the corners out again
-        const shown = view.consumers.flatMap((v, i) => v.shown ? [i] : []);
+        // In kWh the biggest day takes the first place (stable: ties keep the config's order)
+        const shown = view.consumers.flatMap((v, i) => v.shown ? [i] : []).sort((a, b) => (view.consumers[b].rank ?? 0) - (view.consumers[a].rank ?? 0));
         if (shown.join() !== this.shownConsumers.join()) {
             this.shownConsumers = shown;
             this.flowWidth = 0;

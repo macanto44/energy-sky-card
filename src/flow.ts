@@ -125,6 +125,8 @@ export interface ConsumerView {
     shown: boolean;
     /** Its charge (%), with a soc_entity: the ring and the number in the disc instead of its share */
     soc?: number;
+    /** In kWh: its day, which orders the appliances, the biggest first (the first places; a phone shows two) */
+    rank?: number;
 }
 
 export { MAX_CONSUMERS };
@@ -233,8 +235,8 @@ export function energyText(values: (number | undefined)[], loc: NumberLocale): [
  * grid's two figures are bought · sold, the battery's charged · discharged,
  * named by their small line (the battery's estimate gives way). The home's
  * ring is the day's self-sufficiency (the share not bought, in the sun's
- * colour); an appliance's, its share of the home's day; every appliance
- * shows, its figure « — » without an energy_entity.
+ * colour); an appliance's, its share of the home's day. Only the appliances
+ * with an energy_entity show, the biggest day first.
  */
 export function energyView(live: FlowView, config: EnergySkyCardConfig, hass: HomeAssistant, day: DayEnergy | undefined): FlowView {
     const loc = numberLocale(hass);
@@ -264,7 +266,7 @@ export function energyView(live: FlowView, config: EnergySkyCardConfig, hass: Ho
             const kwh = config.consumers?.[i]?.energy_entity ? day?.consumers[i] : undefined;
             const [value, valueShort] = energyText([kwh], loc);
             return {
-                ...c, value, valueShort, shown: true,
+                ...c, value, valueShort, shown: !!config.consumers?.[i]?.energy_entity, rank: kwh ?? 0,
                 share: used && kwh !== undefined ? Math.min(Math.max(kwh, 0) / used, 1) : 0,
                 level: kwh !== undefined && kwh > 0 ? (c.level || 1) : 0,
             };

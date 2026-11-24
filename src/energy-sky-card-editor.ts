@@ -222,7 +222,7 @@ export function editorLabel(lang: Lang, key: string): string {
 /** The line under a field, where its label can't say it all */
 const HELPERS: Record<Lang, Record<string, string>> = {
     fr: {
-        flow_unit: 'Un bouton kW | kWh sur le flux bascule ensuite. Les kWh viennent des compteurs du tableau de bord Énergie, depuis minuit.', consumer_energy_entity: 'Son compteur d\'énergie : sa consommation du jour quand le flux est en kWh. Sans lui, l\'appareil affiche « — ».',
+        flow_unit: 'Un bouton kW | kWh sur le flux bascule ensuite. Les kWh viennent des compteurs du tableau de bord Énergie, depuis minuit.', consumer_energy_entity: 'Son compteur d\'énergie : sa consommation du jour quand le flux est en kWh. Sans lui, l\'appareil n\'apparaît pas dans le flux en kWh.',
         soc_reached_entities: 'Entités on / off (input_boolean, binary_sensor, switch) qui passent à « on » quand la batterie a atteint la charge que vous visez, par exemple un input_boolean activé par une automatisation. Si l\'une est à « on », la case Batterie affiche « · SOC atteint » ; sinon rien.',
         stale_after: 'Une mesure sans nouvelle valeur depuis ce délai est signalée : l\'icône de sa case devient une horloge. 30 min si vide ; 0 désactive.',
         power_threshold: 'En dessous de cette puissance, la batterie est considérée au repos : pas de flèche ↑ / ↓. 20 W si vide.',
@@ -242,7 +242,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min si vide. 60 min lisse les nuages et les appareils qui démarrent.',
     },
     en: {
-        flow_unit: 'A kW | kWh button on the flow switches it afterwards. The kWh come from the Energy dashboard\'s meters, since midnight.', consumer_energy_entity: 'Its energy meter: today\'s use when the flow shows kWh. Without it, the appliance shows « — ».',
+        flow_unit: 'A kW | kWh button on the flow switches it afterwards. The kWh come from the Energy dashboard\'s meters, since midnight.', consumer_energy_entity: 'Its energy meter: today\'s use when the flow shows kWh. Without it, the appliance stays out of the flow in kWh.',
         soc_reached_entities: 'On / off entities (input_boolean, binary_sensor, switch) that turn on when the battery has reached the charge you aim for, e.g. an input_boolean set by an automation. When any is on, the Battery cell reads "· SOC reached"; otherwise nothing.',
         stale_after: 'A reading with nothing new for this long is flagged: its cell\'s icon turns to a clock. 30 min when empty; 0 turns it off.',
         power_threshold: 'Below this power the battery counts as idle: no ↑ / ↓ arrow. 20 W when empty.',
@@ -262,7 +262,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min when empty. 60 min smooths out clouds and appliances starting up.',
     },
     de: {
-        flow_unit: 'Eine Schaltfläche kW | kWh am Fluss wechselt danach. Die kWh stammen von den Zählern des Energie-Dashboards, seit Mitternacht.', consumer_energy_entity: 'Sein Energiezähler: der heutige Verbrauch, wenn der Fluss kWh zeigt. Ohne ihn zeigt das Gerät « — ».',
+        flow_unit: 'Eine Schaltfläche kW | kWh am Fluss wechselt danach. Die kWh stammen von den Zählern des Energie-Dashboards, seit Mitternacht.', consumer_energy_entity: 'Sein Energiezähler: der heutige Verbrauch, wenn der Fluss kWh zeigt. Ohne ihn erscheint das Gerät nicht im Fluss in kWh.',
         soc_reached_entities: 'Ein/Aus-Entitäten (input_boolean, binary_sensor, switch), die auf „on“ gehen, wenn die Batterie die gewünschte Ladung erreicht hat, z. B. ein input_boolean, das eine Automatisierung setzt. Ist eine davon „on“, zeigt das Feld Batterie „· SOC erreicht“; sonst nichts.',
         stale_after: 'Ein Messwert ohne neuen Wert seit dieser Zeit wird markiert: Das Symbol seines Feldes wird zur Uhr. Leer: 30 min; 0 schaltet es aus.',
         power_threshold: 'Unter dieser Leistung gilt die Batterie als im Ruhezustand: kein Pfeil ↑ / ↓. Leer: 20 W.',
@@ -282,7 +282,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: 'Leer: 5 min. 60 min glättet Wolken und anlaufende Geräte.',
     },
     es: {
-        flow_unit: 'Un botón kW | kWh en el flujo cambia después. Los kWh vienen de los contadores del panel de Energía, desde medianoche.', consumer_energy_entity: 'Su contador de energía: el consumo de hoy cuando el flujo muestra kWh. Sin él, el aparato muestra « — ».',
+        flow_unit: 'Un botón kW | kWh en el flujo cambia después. Los kWh vienen de los contadores del panel de Energía, desde medianoche.', consumer_energy_entity: 'Su contador de energía: el consumo de hoy cuando el flujo muestra kWh. Sin él, el aparato no aparece en el flujo en kWh.',
         soc_reached_entities: 'Entidades on / off (input_boolean, binary_sensor, switch) que pasan a «on» cuando la batería alcanza la carga que buscas, por ejemplo un input_boolean activado por una automatización. Si alguna está en «on», la casilla Batería muestra «· SOC alcanzado»; si no, nada.',
         stale_after: 'Una medida sin valor nuevo durante este tiempo se señala: el icono de su casilla pasa a ser un reloj. 30 min si está vacío; 0 lo desactiva.',
         power_threshold: 'Por debajo de esta potencia, la batería se considera en reposo: sin flecha ↑ / ↓. 20 W si está vacío.',
@@ -302,7 +302,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min si está vacío. 60 min suaviza las nubes y los aparatos que arrancan.',
     },
     it: {
-        flow_unit: 'Un pulsante kW | kWh sul flusso cambia poi. I kWh vengono dai contatori della dashboard Energia, dalla mezzanotte.', consumer_energy_entity: 'Il suo contatore di energia: il consumo di oggi quando il flusso mostra i kWh. Senza, l\'apparecchio mostra « — ».',
+        flow_unit: 'Un pulsante kW | kWh sul flusso cambia poi. I kWh vengono dai contatori della dashboard Energia, dalla mezzanotte.', consumer_energy_entity: 'Il suo contatore di energia: il consumo di oggi quando il flusso mostra i kWh. Senza, l\'apparecchio non appare nel flusso in kWh.',
         soc_reached_entities: 'Entità on / off (input_boolean, binary_sensor, switch) che passano a «on» quando la batteria ha raggiunto la carica desiderata, ad esempio un input_boolean attivato da un\'automazione. Se una è «on», la casella Batteria mostra «· SOC raggiunto»; altrimenti niente.',
         stale_after: 'Una misura senza un nuovo valore da questo tempo viene segnalata: l\'icona della sua casella diventa un orologio. 30 min se vuoto; 0 disattiva.',
         power_threshold: 'Sotto questa potenza la batteria è considerata a riposo: nessuna freccia ↑ / ↓. 20 W se vuoto.',
@@ -322,7 +322,7 @@ const HELPERS: Record<Lang, Record<string, string>> = {
         estimate_average: '5 min se vuoto. 60 min attenua le nuvole e gli apparecchi che si avviano.',
     },
     nl: {
-        flow_unit: 'Een knop kW | kWh op de stroom wisselt daarna. De kWh komen van de meters van het Energie-dashboard, sinds middernacht.', consumer_energy_entity: 'Zijn energiemeter: het verbruik van vandaag als de stroom kWh toont. Zonder meter toont het apparaat « — ».',
+        flow_unit: 'Een knop kW | kWh op de stroom wisselt daarna. De kWh komen van de meters van het Energie-dashboard, sinds middernacht.', consumer_energy_entity: 'Zijn energiemeter: het verbruik van vandaag als de stroom kWh toont. Zonder meter staat het apparaat niet in de stroom in kWh.',
         soc_reached_entities: 'Aan/uit-entiteiten (input_boolean, binary_sensor, switch) die „on” worden zodra de batterij de gewenste lading heeft bereikt, bijvoorbeeld een input_boolean die een automatisering aanzet. Staat er één op „on”, dan toont het vak Batterij „· SOC bereikt”; anders niets.',
         stale_after: 'Een meting zonder nieuwe waarde gedurende deze tijd wordt gemarkeerd: het icoon van het vak wordt een klok. Leeg: 30 min; 0 schakelt het uit.',
         power_threshold: 'Onder dit vermogen geldt de batterij als in rust: geen pijl ↑ / ↓. Leeg: 20 W.',

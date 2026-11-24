@@ -10,7 +10,7 @@ Each version's section is its GitHub release note (`release.yml`): `### ⚠️ B
 - Editor: list the weather sky first among the backgrounds, and call the tariff sky « Tariff » rather than « Tempo »
 - Drop the small bar between the readings and the energy flow on a card that unfolds
 - Add a kW | kWh switch to the energy flow: today's energies since midnight from the Energy dashboard, bought · sold for the grid and charged · discharged for the battery, « — » for nothing yet (`flow_unit` opens on kWh)
-- Show an appliance's day in the flow in kWh with its own meter (`consumers[].energy_entity`)
+- Show an appliance's day in the flow in kWh with its own meter (`consumers[].energy_entity`), the biggest first; those without one stay out
 
 ### 🐛 Bugfixes
 

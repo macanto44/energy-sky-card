@@ -18,14 +18,15 @@ const PREFS: EnergyPrefs = { energy_sources: [
 ] };
 /** Today: bought 4.2 + solar 18.6 + discharged 4.9 − sold 6.1 − charged 5.8 = 15.8 kWh used */
 const CHANGES: Record<string, number> = {
-    'sensor.bought': 4.2, 'sensor.sold': 6.1, 'sensor.solar': 18.6, 'sensor.discharged': 4.9, 'sensor.charged': 5.8, 'sensor.boiler_energy': 3.2,
+    'sensor.bought': 4.2, 'sensor.sold': 6.1, 'sensor.solar': 18.6, 'sensor.discharged': 4.9, 'sensor.charged': 5.8, 'sensor.boiler_energy': 3.2, 'sensor.car_energy': 7.4,
 };
 const CONSUMERS = [
     { entity: 'sensor.boiler', name: 'Ballon', energy_entity: 'sensor.boiler_energy' },
     { entity: 'sensor.pool', name: 'Piscine' },
+    { entity: 'sensor.car', name: 'Voiture', energy_entity: 'sensor.car_energy' },
 ];
 const CONFIG: EnergySkyCardConfig = { ...FULL_CONFIG, expandable: undefined, flow: 'always', consumers: CONSUMERS };
-const READINGS = { ...ANNEX_B, 'sensor.boiler': 1200, 'sensor.pool': 0 };
+const READINGS = { ...ANNEX_B, 'sensor.boiler': 1200, 'sensor.pool': 0, 'sensor.car': 0 };
 
 afterEach(() => { document.body.innerHTML = ''; vi.useRealTimers(); unmeasure(); });
 
@@ -88,7 +89,7 @@ describe('energies as text', () => {
 
 describe('the flow in kWh', () => {
     const hass = makeHass(READINGS);
-    const day = { totals: dayTotals(energyMeters(PREFS), CHANGES), consumers: [3.2, undefined] };
+    const day = { totals: dayTotals(energyMeters(PREFS), CHANGES), consumers: [3.2, undefined, 7.4] };
     const view = () => energyView(flowView(CONFIG, hass), CONFIG, hass, day);
 
     it('puts today\'s energies in the nodes, bought · sold and charged · discharged named by their small line', () => {
@@ -117,10 +118,10 @@ describe('the flow in kWh', () => {
         expect(v.consumers[0].share).toBeCloseTo(3.2 / 15.8);
     });
 
-    it('shows every appliance, « — » without an energy_entity', () => {
+    it('shows only the appliances with an energy_entity, ranked by their day', () => {
         const v = view();
-        expect(v.consumers.map(c => [c.value, c.shown])).toEqual([['3,2 kWh', true], ['—', true]]);
-        expect(v.consumers[1].level).toBe(0);
+        expect(v.consumers.map(c => [c.value, c.shown, c.rank])).toEqual([['3,2 kWh', true, 3.2], ['—', false, 0], ['7,4 kWh', true, 7.4]]);
+        expect(v.consumers[2].level).toBeGreaterThan(0);
     });
 
     it('reads « — » before the meters are read', () => {
@@ -169,8 +170,10 @@ describe('the card\'s kW | kWh switch', () => {
         expect(value('grid')).toBe('4,2 · 6,1 kWh');
         expect($('[data-node="grid"] .nsub').textContent).toBe('acheté · revendu');
         expect($('[data-consumer="0"] .nval').textContent).toBe('3,2 kWh');
-        expect($('[data-consumer="1"] .nval').textContent).toBe('—');
-        expect($('[data-consumer="1"]').hidden).toBe(false);
+        // The pool has no meter: out; the car's bigger day takes the first place (above), the boiler the second
+        expect($('[data-consumer="1"]').hidden).toBe(true);
+        expect($('[data-consumer="2"] .nval').textContent).toBe('7,4 kWh');
+        expect([$('[data-consumer="2"]').dataset.side, $('[data-consumer="0"]').dataset.side]).toEqual(['above', 'below']);
         expect(asked).toContain('sensor.boiler_energy');
         // Back to the powers
         tap($('[data-unit="power"]'));
@@ -230,7 +233,7 @@ describe('the options', () => {
         expect(display({ flow: 'tap' })).toContain('flow_unit');
         expect(editorLabel('fr', 'flow_unit_energy')).toBe('Énergie du jour (kWh)');
         expect(editorLabel('fr', 'consumer_2_energy_entity')).toBe('Énergie (kWh, facultatif)');
-        expect(editorHelper('fr', 'consumer_2_energy_entity')).toMatch(/« — »/);
+        expect(editorHelper('fr', 'consumer_2_energy_entity')).toMatch(/n'apparaît pas/);
         for (const lang of LANGUAGES) {
             for (const key of ['flow_unit', 'flow_unit_power', 'flow_unit_energy', 'consumer_1_energy_entity']) expect(editorLabel(lang, key), `${lang} ${key}`).not.toBe(key);
         }
