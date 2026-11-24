@@ -131,7 +131,7 @@ describe('the flow in kWh', () => {
 
     it('has its words in every language', () => {
         for (const lang of LANGUAGES) {
-            for (const key of ['bought_sold', 'bought_sold_short', 'charged_discharged', 'charged_discharged_short', 'since_midnight'] as const) {
+            for (const key of ['bought_sold', 'bought_sold_short', 'charged_discharged', 'charged_discharged_short'] as const) {
                 expect(localize(lang, key), `${lang} ${key}`).toBeTruthy();
             }
         }
@@ -171,13 +171,11 @@ describe('the card\'s kW | kWh switch', () => {
         expect($('[data-consumer="0"] .nval').textContent).toBe('3,2 kWh');
         expect($('[data-consumer="1"] .nval').textContent).toBe('—');
         expect($('[data-consumer="1"]').hidden).toBe(false);
-        expect($('.since').textContent).toBe('depuis 0 h');
         expect(asked).toContain('sensor.boiler_energy');
         // Back to the powers
         tap($('[data-unit="power"]'));
         expect(card.hasAttribute('data-flow-unit')).toBe(false);
         expect(value('grid')).toMatch(/W$/);
-        expect($('.since').textContent).toBe('');
     });
 
     it('opens on kWh with flow_unit: energy, and reads them again every 5 minutes', async () => {

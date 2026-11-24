@@ -499,8 +499,7 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 .flow[data-compact] .node[data-consumer] .nval[data-tight] { font-size: 10.5px; letter-spacing: 0; }
 /*
  * The kW | kWh switch, in the flow's free top-left corner. In kWh the nodes
- * show today's energies: the wires (live powers) stand still, faded, and
- * « since midnight » sits under the switch.
+ * show today's energies: the wires (live powers) stand still, faded.
  */
 .unit { position: absolute; left: 0; top: 3px; z-index: 1; }
 .unit-switch { display: inline-flex; padding: 2px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.28); }
@@ -508,6 +507,5 @@ ${(Object.keys(FLOW_COLOURS) as (keyof typeof FLOW_COLOURS)[]).map(k => `.seg[da
 .unit button[aria-pressed="true"] { opacity: 1; background: #fff; color: var(--esc-panel); }
 .flow[data-narrow] .unit button { font-size: 10px; padding: 4px 6px; }
 .unit button:focus-visible { outline: 2px solid #fff; }
-.since { display: block; font-size: 9.5px; line-height: 11px; opacity: 0.8; padding: 4px 0 0 4px; white-space: nowrap; }
 :host([data-flow-unit="energy"]) .wires { opacity: 0.4; }
 `;

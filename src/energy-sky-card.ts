@@ -224,7 +224,7 @@ interface Refs {
         nodes: Map<NodeKey, FlowNodeRefs>;
         /** The appliances, in the config's order, with their wire */
         consumers: (FlowNodeRefs & { icon: HTMLElement; wire: SVGGElement; paths: SVGPathElement[] })[];
-        /** The kW | kWh switch, and its « since midnight » line */
+        /** The kW | kWh switch */
         unit: HTMLElement;
         unitButtons: HTMLButtonElement[];
     };
@@ -707,16 +707,14 @@ export class EnergySkyCard extends HTMLElement {
         setText(node.value, bare);
     }
 
-    /** The kW | kWh switch: shown when the Energy dashboard has meters; the pressed button; « since midnight » under it in kWh */
+    /** The kW | kWh switch: shown when the Energy dashboard has meters; the pressed button */
     private paintUnit(): void {
         const flow = this.refs?.flow;
         if (!flow) return;
-        const lang = cardLanguage(this._hass);
         const available = !!this.meters && meterIds(this.meters).length > 0;
         if (flow.unit.hidden === available) flow.unit.hidden = !available;
         const shown = this.showsEnergy ? 'energy' : 'power';
         for (const button of flow.unitButtons) setAttr(button, 'aria-pressed', String(button.dataset.unit === shown));
-        setText(flow.unit.lastElementChild as HTMLElement, shown === 'energy' ? localize(lang, 'since_midnight') : '');
     }
 
     /** The flow's wires and comets, for the panel's width (redrawn only when it changes) */
@@ -1243,7 +1241,7 @@ function flowMarkup(consumers: number): string {
     const nodes = NODES.map(([key, icon]) => node(`data-node="${key}"`, icon)).join('')
         + Array.from({ length: consumers }, (_, i) => node(`data-consumer="${i}"`, '')).join('');
     // The kW | kWh switch, in the free top-left corner (shown once the Energy dashboard's meters are known)
-    const unit = `<div class="unit" hidden><span class="unit-switch" role="group" aria-label="kW / kWh">${(['power', 'energy'] as const).map(u => `<button type="button" data-unit="${u}" data-cell-target data-target-key="unit">${u === 'power' ? 'kW' : 'kWh'}</button>`).join('')}</span><span class="since"></span></div>`;
+    const unit = `<div class="unit" hidden><span class="unit-switch" role="group" aria-label="kW / kWh">${(['power', 'energy'] as const).map(u => `<button type="button" data-unit="${u}" data-cell-target data-target-key="unit">${u === 'power' ? 'kW' : 'kWh'}</button>`).join('')}</span></div>`;
     return `<div class="panel" id="esc-flow" hidden><style class="flow-keyframes"></style><div class="flow"><svg class="wires" aria-hidden="true" viewBox="0 0 400 ${FLOW_HEIGHT}">${uses}${wires}</svg>${nodes}${unit}</div></div>`;
 }
 
