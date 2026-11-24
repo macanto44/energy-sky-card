@@ -2,7 +2,7 @@
 
 Each version's section is its GitHub release note (`release.yml`): `### ⚠️ Breaking changes` first (else « No breaking change. » is added), then `### 🚀 Features and enhancements`, `### 🐛 Bugfixes`, `### 🌍 Translations`, `### 🧰 Maintenance`, empty ones left out; one short line per change, starting with a verb, saying what the user sees.
 
-## Unreleased
+## [0.5.0] — 2026-11-24
 
 ### 🚀 Features and enhancements
 

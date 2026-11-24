@@ -1,6 +1,6 @@
 // The README's pictures, from the built card in the local demo (headless Chrome):
 // docs/images/rouge.png (the tariff sky, a Tempo Rouge day), soleil.png / meteo.png / neige.png / soir.png (weather; soir: a sunset), uni.png (one colour), docs/images/cote.png (the side layout), docs/images/cote-flux.png
-// (side, with the flow and four appliances), docs/images/flux-anim.png (the flow, animated), and docs/images/nuit-anim.png, an
+// (side, with the flow and four appliances), docs/images/flux-kwh.png (the flow in kWh), docs/images/flux-anim.png (the flow, animated), and docs/images/nuit-anim.png, an
 // animated PNG of the night sky (4 s, looping: the twinkle's cycle), 2 × like the stills.
 // Usage: npm run build && npm run screenshots   (CHROME=/path/to/chrome to override)
 import { execFileSync } from 'node:child_process';
@@ -47,6 +47,9 @@ console.log('docs/images/uni.png');
 // The side layout with its flow always shown and four appliances, at night (a still)
 shoot('docs/images/cote-flux.png', 'nuit', 900, 2, 406, '&side&expand=always&consumers=4', 440);
 console.log('docs/images/cote-flux.png');
+// The flow in kWh: today's energies, the appliances with a meter, the biggest first (a still)
+shoot('docs/images/flux-kwh.png', 'rouge', 3000, 1.5, 285, '&expand=always&consumers=4&flowonly&sky=weather&wx=sunny&unit=energy', 440);
+console.log('docs/images/flux-kwh.png');
 
 /** A PNG's chunks: [type, data] */
 function chunks(png) {

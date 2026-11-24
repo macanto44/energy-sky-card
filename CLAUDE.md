@@ -15,7 +15,7 @@ npm run dev          # rebuild on change
 npm run type-check   # tsc --noEmit, strict
 npm test             # Vitest, once (build first: test/build.test.ts checks the bundle)
 npm run test:browser # headless Chrome: animations pause off-screen, none under reduced motion, no overflow, sky off text (also in CI)
-npm run screenshots  # the README's pictures in docs/images/, in English: the day stills (rouge, soleil, meteo, neige, soir, uni), cote.png (side), cote-flux.png (side with flow and appliances), nuit-anim.png and flux-anim.png (the night and the flow, animated PNGs)
+npm run screenshots  # the README's pictures in docs/images/, in English: the day stills (rouge, soleil, meteo, neige, soir, uni), cote.png (side), cote-flux.png (side with flow and appliances), flux-kwh.png (the flow in kWh), nuit-anim.png and flux-anim.png (the night and the flow, animated PNGs)
 npm run test:coverage
 ```
 

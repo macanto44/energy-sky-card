@@ -13,7 +13,7 @@
 | **One colour** | **Night** |
 | ![The card on a deep green gradient of the user's choosing](docs/images/uni.png) | ![The night card, animated: stars twinkle and a shooting star passes](docs/images/nuit-anim.png) |
 
-Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a sky that tells you something too: the weather outside, a colour of your choosing, or the colour of today's tariff if yours has coloured days; a starry sky by night. Tap the big number and the card unfolds to show where the energy is going.
+Energy Sky Card is a Home Assistant dashboard card for homes with solar panels, and optionally a battery. It shows how much the panels produce right now, what they made today, and your battery and grid, on a sky that tells you something too: the weather outside, a colour of your choosing, or the colour of today's tariff if yours has coloured days; a starry sky by night. Tap the big number and the card unfolds to show where the energy is going: right now in kW, or **your whole day in kWh** with one tap.
 
 It's free, open source and made for Home Assistant. The card speaks French, English, German, Spanish, Italian and Dutch. You can [try it live](https://macanto44.github.io/energy-sky-card/) in your browser first, on sample readings.
 
@@ -46,7 +46,7 @@ The card ships as two files that sit in the same folder:
 1. Download [`energy-sky-card.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card.js) and [`energy-sky-card-editor.js`](https://github.com/macanto44/energy-sky-card/releases/latest/download/energy-sky-card-editor.js) from the [latest release](https://github.com/macanto44/energy-sky-card/releases/latest).
 2. Copy both to the same folder, for example `/config/www/energy-sky-card/`.
 3. Go to **Settings → Dashboards → ⋮ → Resources → Add resource** and add:
-   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.4.0`
+   - URL: `/local/energy-sky-card/energy-sky-card.js?v=0.5.0`
    - Type: **JavaScript module**
 4. Refresh your browser.
 
@@ -100,7 +100,7 @@ The **standard** layout puts the cells under the big number, in four rows. The *
 
 Under the card, in either layout, the energy flows between four nodes: the sun on the left, the home on the right, the grid above and the battery below. Show it two ways:
 
-- `flow: tap`: a tap on the big number or the line under it unfolds the card, and a tap on the unfolded part folds it again. A small handle under the card hints at it.
+- `flow: tap`: a tap on the big number or the line under it unfolds the card, and a tap on the unfolded part folds it again.
 - `flow: always`: the flow is always there, under the card.
 
 
@@ -117,6 +117,18 @@ Under the card, in either layout, the energy flows between four nodes: the sun o
 
 ![The side layout at night with its flow always shown: the grid feeds the home, which feeds a boiler, a heat pump and a pool pump](docs/images/cote-flux.png)
 
+### Your day in kWh.
+
+A **kW | kWh** switch sits in the flow's top-left corner. **kW** shows the energy moving now; **kWh** shows **your day since midnight**, from your Energy dashboard's meters, the same figures as its own graphs:
+
+![The energy flow in kWh: 18.6 kWh from the sun, 4.2 kWh bought and 6.1 kWh sold, 5.8 kWh into the battery and 4.9 kWh out, 15.8 kWh used at home; the car's 7.4 kWh first among the appliances](docs/images/flux-kwh.png)
+
+- **Every node tells its day**: the sun what it made, the home what it used, and **two figures** for the grid (`4.2 · 6.1 kWh`, bought · sold) and the battery (`5.8 · 4.9 kWh`, in · out).
+- **The home's ring is your day's self-sufficiency**: gold for the share the sun and the battery covered, blue for what you bought.
+- **Your appliances' day**, with their own meter (`energy_entity`: a car charger's, a water heater's…), **the biggest first**: on a phone, where two fit, you see your two biggest users. An appliance without a meter stays out of the kWh view.
+- **The wires stand still**, faded: they still show the paths the energy takes, while the figures tell the day.
+- Nothing to set: the switch shows as soon as you have an Energy dashboard (and only then), and the card reads it again every 5 minutes. A figure still at zero reads `—`. To open the flow on kWh, set `flow_unit: energy`.
+
 With `flow: tap`, the rest of the card keeps its own tap action, so a menu or a pop-up you open from the card still works; with `flow: always`, the big number keeps it too. Hold and double tap stay the card's everywhere.
 
 ## At home on any screen.
@@ -132,7 +144,7 @@ White text keeps at least a 4.5:1 contrast where it sits on every default palett
 1. Edit your dashboard, select **Add card** and search for **Energy Sky Card**.
 2. The card fills itself in from your **Energy dashboard**: solar, battery and grid power, plus the sensors on the same devices (battery charge and temperature, grid voltage, today's energy, tomorrow's forecast), and the weather sky if you have a weather entity (else today's tariff colour, if a sensor gives it). Without an Energy dashboard, it starts on the first power sensor it finds.
 3. **Check the signs.** The card expects grid power positive when you buy, and battery power positive when it charges. If the Grid cell reads `-748 W` while you're buying, or the battery shows `↓` while charging, tick **Flip the sensor's sign** in the Grid or Battery section.
-4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, the big number at night, and the energy flow), **Cells** (the four cells and their taps), **Appliances** (the home's consumption, and your appliances with a flow), **Sky** (weather, one colour or the tariff, the sun, animations), and **Actions**.
+4. Adjust the rest in the editor's sections: **Production**, **Battery**, **Grid**, **Layout** (standard or side, the big number at night, and the energy flow, in kW or kWh), **Cells** (the four cells and their taps), **Appliances** (the home's consumption, and your appliances with a flow), **Sky** (weather, one colour or the tariff, the sun, animations), and **Actions**.
 
 Everything is in the editor except the palettes, which are YAML only. In YAML, the smallest card is:
 
@@ -258,6 +270,7 @@ consumers:
     icon: mdi:car-electric
     soc_entity: sensor.car_battery_level   # its charge in the ring
     always_show: true                       # shown even while it isn't charging
+    energy_entity: sensor.ev_charger_energy # its day in kWh, when the flow shows kWh
     tap_action:
       action: navigate
       navigation_path: /car
@@ -416,8 +429,9 @@ All under `grid:`.
 | --- | --- | --- |
 | `layout` | `standard` | `standard`: the cells under the big number, four rows (248 px). `side`: the cells on the right, one line each, the icon standing for the name, two rows (120 px) |
 | `flow` | none | The energy flow under the card: `tap` (unfolded by a tap on the big number or its line) or `always` (always shown). See [The energy flow](#the-energy-flow). 0.3.3's `expandable: true` still reads as `flow: tap` |
+| `flow_unit` | `power` | What the flow shows when the card loads: `power` (kW, now) or `energy` (kWh, today since midnight). The **kW \| kWh** switch in the flow changes it afterwards; it needs an Energy dashboard. See [Your day in kWh](#your-day-in-kwh) |
 | `consumer_threshold` | `10` | Below this power, in W, an appliance stays out of the flow (as does one without a reading); the others take its place. `0` always shows them |
-| `consumers` | — | Up to four appliances in the energy flow, around the home (needs `flow`): each `{ entity, name, icon, tap_action, soc_entity, always_show }`, the entity a power sensor. `name` and `icon` default to the entity's. `soc_entity`: a charge (%), a car's say, shown in the appliance's ring in green with the number in its disc. `always_show: true` keeps it in the flow below `consumer_threshold`. See [The energy flow](#the-energy-flow) |
+| `consumers` | — | Up to four appliances in the energy flow, around the home (needs `flow`): each `{ entity, name, icon, tap_action, soc_entity, always_show, energy_entity }`, the entity a power sensor. `name` and `icon` default to the entity's. `soc_entity`: a charge (%), a car's say, shown in the appliance's ring in green with the number in its disc. `always_show: true` keeps it in the flow below `consumer_threshold`. `energy_entity`: its energy meter (kWh), for its day when the flow shows kWh; without one, it stays out of the kWh view. See [The energy flow](#the-energy-flow) |
 | `cells` | automatic | Up to four cells, in order. Without it: Battery, Grid, Voltage and Tomorrow, those whose entities are set. See below |
 
 Each entry in `cells` is one of:
@@ -510,6 +524,12 @@ It needs `battery.soc_reached_entities`, and one of them `on`. See ["SOC reached
 
 **The flow is cut off**
 Its height must be **auto** in the sections view: open the card's **Layout** tab and set the rows to auto.
+
+**No kW | kWh switch in the flow**
+It needs an Energy dashboard with at least one meter (**Settings → Dashboards → Energy**): the kWh are its figures.
+
+**An appliance is missing from the flow in kWh**
+Give it its energy meter (`energy_entity`, **Energy (kWh, optional)** in its part of the editor's Appliances section). It must have statistics in Home Assistant (a `state_class`), like any meter in the Energy dashboard.
 
 **The Home node doesn't open anything**
 Without `consumption_entity`, the card works out the home's power from the other readings, and there's no entity to open.
